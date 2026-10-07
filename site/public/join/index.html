@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Join a Vocab Live, Blast or Match game with the code on the board.">
+<title>Join a Game | Vocabulary</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect x=%2720%27 y=%2710%27 width=%2736%27 height=%2728%27 rx=%276%27 fill=%27%239db8f2%27/%3E%3Crect x=%278%27 y=%2724%27 width=%2738%27 height=%2730%27 rx=%276%27 fill=%27%231d4ed8%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/book.css">
+<script src="../assets/icons.js" defer></script>
+<script src="../assets/book.js" defer></script>
+<link rel="stylesheet" href="../assets/flashcards.css?v=3d33d304">
+<link rel="stylesheet" href="../assets/live.css?v=734a0d99">
+<script src="../assets/live-blast.js?v=ea9fcad6" defer></script>
+<script src="../assets/live-match.js?v=f39b1d30" defer></script>
+<script src="../assets/live-celebrate.js?v=b55c9a9c" defer></script>
+<script src="../assets/live-doodle.js?v=4df95aaf" defer></script>
+<script src="../assets/live-join.js?v=80e2cae5" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to the page</a><div class="topbar"><div class="topbar-inner">
+<a class="brand" href="../index.html">
+<span class="dot" aria-hidden="true"></span>
+<span class="mascot" aria-hidden="true"><svg viewBox="0 0 64 64" role="img" aria-label="Flashcards" xmlns="http://www.w3.org/2000/svg">
+<rect x="20" y="10" width="36" height="28" rx="6" fill="#9db8f2"/>
+<rect x="8" y="24" width="38" height="30" rx="6" fill="#1d4ed8"/>
+<rect x="15" y="34" width="22" height="4" rx="2" fill="#ffffff"/>
+<rect x="15" y="42" width="14" height="4" rx="2" fill="#ffffff"/>
+</svg></span>
+<span>Vocabulary</span>
+</a>
+<nav class="inline-links" aria-label="Site"><a href="../flashcards/" class="active">Flashcards</a><a href="../live/">Host a game</a><a href="../join/">Join a game</a></nav>
+<button class="menu-btn" id="openDrawer" aria-expanded="false" aria-controls="drawer">&#9776; Menu</button>
+</div></div><div class="drawer-backdrop" id="drawerBackdrop"></div>
+<div class="drawer" id="drawer" aria-label="Menu">
+<button class="drawer-close" id="closeDrawer" aria-label="Close the menu">&times;</button>
+<h2 class="drawer-title">Menu</h2>
+<nav class="drawer-links" aria-label="Site"><a href="../flashcards/">Flashcards</a><a href="../live/">Host a game</a><a href="../join/">Join a game</a></nav>
+
+</div><main id="main" class="container lv-page lv-join">
+
+<section class="lv-step lv-card" id="jnCode">
+<h1>Join a game</h1>
+<form id="jnCodeForm" class="lv-form">
+<label class="lv-q" for="jnCodeInput">Enter the join code</label>
+<input id="jnCodeInput" class="lv-code-input" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="6" aria-describedby="jnCodeNote">
+<p class="lv-small" id="jnCodeNote">It is the six letters and numbers on the board.</p>
+<button type="submit" class="btn lv-big">Continue</button>
+</form>
+<p class="lv-error" id="jnCodeError" role="alert"></p>
+<button type="button" class="linkbtn lv-rejoin" id="jnRejoin" hidden>Rejoin the game I was in</button>
+</section>
+
+<section class="lv-step lv-card" id="jnName" hidden>
+<p class="lv-eyebrow" id="jnGameTitle"></p>
+<form id="jnNameForm" class="lv-form">
+<div id="jnTyped" hidden>
+<label class="lv-q" for="jnNick">Enter your first name and last initial only.</label>
+<input id="jnNick" data-live-nickname class="lv-nick-input" type="text" autocomplete="off" spellcheck="false" maxlength="16">
+<p class="lv-small">For example: Maria G.</p>
+</div>
+<p class="lv-q" id="jnRandom" hidden>You will get a random fun name.</p>
+<button type="submit" class="btn lv-big">Join game</button>
+</form>
+<p class="lv-error" id="jnNameError" role="alert"></p>
+</section>
+
+<section class="lv-step lv-card" id="jnWait" hidden>
+<p class="lv-eyebrow">You are in</p>
+<p class="lv-me" id="jnMe"></p>
+<div class="lv-myteam" id="jnTeam" hidden></div>
+<div class="lv-pick-join" id="jnPick" hidden>
+<div class="lv-countdown" id="jnCountdown" hidden><span class="lv-countdown-num" id="jnCountdownNum"></span><span class="lv-countdown-text" id="jnCountdownText"></span></div>
+<p class="lv-pick-title" id="jnPickTitle">Pick your team</p>
+<div class="lv-pick-grid" id="jnPickGrid"></div>
+<p class="lv-pick-msg" id="jnPickMsg" role="status"></p>
+</div>
+<p class="lv-lede" id="jnWaitText">Look up at the board. Your teacher will start the game soon.</p>
+</section>
+<section class="lv-doodle" id="jnDoodle" hidden aria-label="Drawing pad"></section>
+
+<section class="lv-step" id="jnPlay" hidden>
+<div class="lv-playbar">
+<span class="lv-badge" id="jnBadge"></span>
+<span class="lv-progress"><span class="lv-progress-fill" id="jnFill"></span></span>
+<span class="lv-progress-num" id="jnNum"></span>
+<span class="lv-fire" id="jnFire" hidden></span>
+<span class="bl-time lv-clock" id="jnClock" hidden aria-label="Time left"></span>
+</div>
+<div class="lv-pu" id="jnPu" hidden></div>
+<div class="lv-pu-vote" id="jnPuVote" hidden role="status"></div>
+<div class="lv-prompt">
+<span class="lv-prompt-label" id="jnPromptLabel"></span>
+<p class="lv-prompt-text" id="jnPrompt"></p>
+<img class="lv-prompt-img" id="jnImg" alt="" hidden>
+</div>
+<p class="lv-teamnote" id="jnTeamNote"></p>
+<div class="lv-options" id="jnOptions"></div>
+<div class="lv-feedback" id="jnFeedback" hidden role="status" aria-live="assertive"></div>
+<div class="lv-hold" id="jnHold" hidden role="alert"></div>
+</section>
+<div class="lv-idle" id="jnIdle" hidden role="alertdialog" aria-label="Still there?"><div class="lv-idle-card"><span class="lv-idle-icon" aria-hidden="true">😴</span><strong>Still there?</strong><span>Tap anywhere to keep playing. Your team is carrying on without you.</span></div></div>
+<div class="lv-pu-sheet" id="jnPuSheet" hidden></div>
+<div class="lv-toast" id="jnToast" role="status" aria-live="polite"></div>
+
+<section class="lv-step lv-blast" id="jnBlast" hidden>
+<div class="bl-top">
+<span class="lv-badge" id="blTeam"></span>
+<span class="bl-score" id="blScore"></span>
+<span class="bl-time" id="blTime" aria-label="Time left"></span>
+</div>
+<div class="lv-pu" id="blPu" hidden></div>
+<div class="bl-prompt"><span class="lv-prompt-label">Blast the term for</span><p class="bl-prompt-text" id="blPrompt"></p><img class="lv-prompt-img" id="blImg" alt="" hidden></div>
+<div class="bl-field" id="blField">
+<svg class="bl-lasers" id="blLasers" aria-hidden="true"></svg>
+<div class="bl-rocks" id="blRocks"></div>
+<div class="bl-ships" id="blShips"></div>
+<div class="lv-hold bl-hold" id="blHold" hidden role="alert"></div>
+</div>
+<p class="bl-msg" id="blMsg" role="status" aria-live="polite"></p>
+<p class="bl-others" id="blOthers"></p>
+</section>
+
+<section class="lv-step lv-match" id="jnMatch" hidden>
+<div class="mt-top">
+<span class="lv-badge" id="mtName"></span>
+<span class="mt-found" id="mtFound"></span>
+<span class="mt-time" id="mtTime" aria-label="Your time"></span>
+</div>
+<p class="lv-small mt-help" id="mtHelp"></p>
+<p class="mt-msg" id="mtMsg" role="status" aria-live="polite"></p>
+<div class="mt-grid" id="mtGrid"></div>
+<div class="lv-card mt-done" id="mtDone" hidden>
+<p class="lv-done-emoji" aria-hidden="true">&#x1F3C1;</p>
+<p class="lv-me" id="mtDoneText"></p>
+<p class="lv-lede" id="mtDoneMore"></p>
+</div>
+</section>
+
+<section class="lv-step lv-card" id="jnDone" hidden>
+<p class="lv-done-emoji" id="jnDoneEmoji" aria-hidden="true"></p>
+<p class="lv-me" id="jnDoneText"></p>
+<ol class="lv-podium lv-mini-podium" id="jnPodium" aria-label="Winners"></ol>
+<p class="lv-lede" id="jnDoneMore"></p>
+<div class="lv-stats lv-stats-mini" id="jnStats" hidden></div>
+</section>
+
+<section class="lv-step lv-card" id="jnGone" hidden>
+<p class="lv-me" id="jnGoneText"></p>
+<button type="button" class="btn" id="jnGoneBtn">Join a game</button>
+</section>
+
+<p class="lv-status" id="jnStatus" role="status" aria-live="polite"></p>
+</main><footer><div class="container">Vocabulary &middot; Flashcards and live vocabulary games </div></footer>
+</body>
+</html>

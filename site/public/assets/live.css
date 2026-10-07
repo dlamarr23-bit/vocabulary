@@ -1,0 +1,855 @@
+/* ============================================================
+   Live games: the host screen (live/) and the join screen (join/).
+   Loaded after book.css and flashcards.css. The host screen is read from
+   the back of a classroom, so its type is big.
+   ============================================================ */
+
+.lv-page{ padding-top:1.75rem; padding-bottom:3rem; }
+.lv-page [hidden]{ display:none !important; }
+.lv-page h1{ font-size:clamp(1.7rem, 4vw, 2.4rem); margin:0 0 .3em; }
+.lv-lede{ color:var(--ink-soft); font-size:1.05rem; margin:0 0 1.125rem; max-width:62ch; }
+.lv-small{ color:var(--ink-soft); font-size:.9rem; margin:0.25rem 0 0; }
+.lv-q{ display:block; font-weight:700; font-size:1.05rem; margin:0 0 0.625rem; }
+.lv-eyebrow{ font-size:.8rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--accent-dark); margin:0 0 0.375rem; }
+.lv-error{ color:var(--bad-ink); font-weight:600; margin:0.625rem 0 0; min-height:1.2em; }
+.lv-error:empty{ min-height:0; margin:0; }
+.lv-note{ background:var(--accent-tint); color:var(--ink); font-weight:600; border-radius:var(--radius-sm); padding:0.625rem 0.875rem; margin:0.625rem 0 1.25rem; }
+.lv-note:empty{ display:none; }
+.lv-status{ text-align:center; color:var(--ink-soft); font-weight:600; font-size:.92rem; margin:1rem 0 0; }
+.lv-status:empty{ margin:0; }
+.btn.lv-big{ padding:0.875rem 1.75rem; font-size:1.05rem; }
+.btn:disabled{ opacity:.55; cursor:default; }
+
+/* ---------------- host: setting up ---------------- */
+.lv-host .lv-step{ max-width:68.75rem; margin:0 auto; }
+#lvSetup{ max-width:56.25rem; }
+.lv-resume{ display:flex; flex-wrap:wrap; align-items:center; gap:0.625rem; background:#fff8e1; border:1.5px solid #f2d27a; border-radius:var(--radius-sm); padding:0.625rem 0.875rem; margin-bottom:1.125rem; font-weight:600; }
+.lv-field{ display:block; margin-bottom:1.375rem; }
+.lv-field select, .lv-opt select, .lv-opt input[type="number"]{ font:inherit; font-size:1rem; padding:0.625rem 0.75rem; border:1.5px solid var(--line); border-radius:var(--radius-sm); background:#fff; color:var(--ink); max-width:100%; }
+.lv-field select{ width:100%; }
+.lv-field select:focus, .lv-opt select:focus, .lv-opt input[type="number"]:focus{ outline:0.1875rem solid var(--accent); outline-offset:1px; }
+.lv-group{ border:none; padding:0; margin:0 0 1.375rem; min-width:0; }
+.lv-choices{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:0.875rem; }
+.lv-choices-3{ grid-template-columns:repeat(3, minmax(0, 1fr)); }
+@media (max-width:600px){ .lv-choices, .lv-choices-3{ grid-template-columns:1fr; } }
+.lv-host [data-for][hidden]{ display:none; }
+.lv-choice{ position:relative; display:grid; justify-items:center; gap:0.375rem; text-align:center; background:#fff; border:2px solid var(--line); border-radius:var(--radius); padding:1.125rem 1rem 1rem; cursor:pointer; box-shadow:var(--shadow-sm); }
+.lv-choice:hover{ border-color:var(--accent); }
+.lv-choice input{ position:absolute; opacity:0; pointer-events:none; }
+.lv-choice:has(input:checked){ border-color:var(--accent); background:var(--accent-tint); box-shadow:inset 0 0 0 1px var(--accent); }
+.lv-choice:has(input:focus-visible){ outline:0.1875rem solid var(--accent); outline-offset:2px; }
+.lv-choice-art svg{ width:5.25rem; height:3.25rem; }
+.lv-choice-art svg .a{ fill:var(--accent); }
+.lv-choice-art svg .b{ fill:color-mix(in srgb, var(--accent) 38%, #fff); }
+.lv-choice-art svg .w{ fill:#fff; }
+.lv-choice-art svg path.w{ fill:none; stroke:#fff; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
+.lv-choice-art svg .as{ fill:none; stroke:var(--accent); stroke-width:3.2; stroke-linecap:round; }
+.lv-choice-art svg .bs{ fill:none; stroke:color-mix(in srgb, var(--accent) 38%, #fff); stroke-width:3; stroke-linecap:round; }
+.lv-choice-title{ font-weight:700; font-size:1.02rem; }
+.lv-choice-text{ color:var(--ink-soft); font-size:.88rem; line-height:1.45; }
+.lv-more{ background:#fff; border:1px solid var(--line); border-radius:var(--radius); padding:0.375rem 1.125rem; margin:0 0 1.375rem; box-shadow:var(--shadow-sm); }
+.lv-opt{ display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:0.75rem 0; border-bottom:1px solid var(--line); cursor:pointer; }
+.lv-opt:last-child{ border-bottom:none; }
+.lv-opt-note{ display:block; font-weight:400; font-size:.86rem; color:var(--ink-soft); }
+
+/* ---------------- host: the lobby ---------------- */
+.lv-joinbox{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:1.375rem 2rem; background:#fff; border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:1.625rem 2rem; }
+.lv-join-step{ font-size:clamp(1.1rem, 2.4vw, 1.6rem); font-weight:600; margin:0 0 0.375rem; }
+.lv-join-step strong{ color:var(--accent-dark); overflow-wrap:anywhere; }
+.lv-code{ font-size:clamp(3rem, 9vw, 6.2rem); font-weight:800; letter-spacing:.14em; line-height:1.05; margin:0.375rem 0 0; font-variant-numeric:tabular-nums; color:var(--ink); }
+.lv-qr{ width:11.875rem; height:11.875rem; flex:none; background:#fff; border-radius:0.75rem; padding:0.375rem; border:1px solid var(--line); }
+.lv-qr svg{ width:100%; height:100%; display:block; }
+@media (max-width:640px){ .lv-qr{ width:9.375rem; height:9.375rem; } .lv-joinbox{ padding:1.25rem; } }
+/* The QR code with its caption underneath; the invite buttons sit right
+   under the big code (Gennaro, 2026-10-01). */
+.lv-qr-side{ display:flex; flex-direction:column; align-items:center; gap:0.5rem; flex:none; }
+.lv-qr-side[hidden]{ display:none; }
+.lv-join-or{ color:var(--ink-soft); font-size:1rem; margin:0; text-align:center; max-width:11.875rem; }
+.lv-invite{ display:flex; flex-wrap:wrap; gap:0.625rem; margin:1rem 0 0; }
+.lv-invite-btn{ flex:0 0 auto; padding-left:1.5rem; padding-right:1.5rem; text-align:center; text-decoration:none; background:var(--accent-tint); color:var(--accent-dark); border:1.5px solid var(--accent); box-shadow:none; }
+.lv-invite-btn:hover{ background:var(--accent); color:#fff; }
+.lv-toast{ position:fixed; left:1.5rem; bottom:1.5rem; z-index:50; margin:0; max-width:calc(100vw - 3rem); background:#1b1f2a; color:#fff; font-weight:600; padding:0.875rem 1.375rem; border-radius:0.75rem; box-shadow:var(--shadow); opacity:0; transform:translateY(0.75rem); pointer-events:none; transition:opacity .2s, transform .2s; overflow-wrap:anywhere; }
+.lv-toast.show{ opacity:1; transform:none; }
+@media (prefers-reduced-motion:reduce){ .lv-toast{ transition:none; } }
+.lv-lobby-bar{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:0.75rem 1.25rem; margin:1.375rem 0 0.875rem; }
+.lv-lobby-bar h2{ margin:0; }
+.lv-lobby-actions{ display:flex; flex-wrap:wrap; gap:0.625rem; }
+.lv-count{ font-size:1.25rem; font-weight:700; margin:0; }
+.lv-players{ list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:0.625rem; }
+.lv-player{ display:inline-flex; align-items:center; gap:0.5rem; background:#fff; border:1.5px solid var(--line); border-radius:62.4375rem; padding:0.375rem 0.5rem 0.375rem 0.875rem; font-weight:700; font-size:1.02rem; box-shadow:var(--shadow-sm); }
+.lv-player.off{ opacity:.55; }
+/* Only a student who has just joined pops in; the rest hold still. */
+.lv-player.pop{ animation:lvPop .25s ease; }
+.lv-dot{ width:0.5625rem; height:0.5625rem; border-radius:50%; background:var(--good); flex:none; }
+.lv-player.off .lv-dot{ background:#b8bfd0; }
+.lv-x{ border:none; background:var(--paper-soft); color:var(--ink-soft); border-radius:62.4375rem; height:1.875rem; min-width:1.875rem; padding:0 0.5625rem; font:inherit; font-size:.8rem; font-weight:700; cursor:pointer; }
+.lv-x:hover{ background:var(--bad-tint); color:var(--bad-ink); }
+.lv-x.rename:hover{ background:var(--accent-tint); color:var(--accent-dark); }
+.lv-x.sure{ background:var(--bad); color:#fff; }
+@keyframes lvPop{ from{ transform:scale(.85); opacity:0; } to{ transform:none; opacity:1; } }
+@media (prefers-reduced-motion:reduce){ .lv-player, .lv-lane-fill, .lv-progress-fill{ animation:none !important; transition:none !important; } }
+
+/* ---------------- host: teams ---------------- */
+.lv-mini-code{ letter-spacing:.08em; color:var(--ink); }
+.lv-teams{ display:grid; grid-template-columns:repeat(auto-fill, minmax(14.375rem, 1fr)); gap:0.875rem; }
+.lv-team{ background:#fff; border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow-sm); }
+.lv-team-head{ display:flex; align-items:center; gap:0.625rem; background:var(--team); color:#fff; padding:0.75rem 0.875rem; font-weight:800; font-size:1.1rem; }
+.lv-emoji{ font-size:1.7rem; line-height:1; }
+.lv-team ul{ list-style:none; margin:0; padding:0.625rem 0.875rem 0.875rem; display:grid; gap:0.375rem; }
+.lv-team li{ display:flex; align-items:center; justify-content:space-between; gap:0.5rem; font-weight:600; }
+.lv-team li.off{ opacity:.55; }
+
+/* ---------------- host: the race ---------------- */
+.lv-race{ list-style:none; margin:0; padding:0; display:grid; gap:0.625rem; }
+.lv-lane{ display:grid; grid-template-columns:minmax(9.375rem, 26%) 1fr auto; align-items:center; gap:1rem; background:#fff; border:1px solid var(--line); border-radius:var(--radius-sm); padding:0.625rem 1rem; box-shadow:var(--shadow-sm); }
+.lv-lane-name{ display:flex; align-items:center; gap:0.625rem; min-width:0; }
+.lv-lane-name .lv-emoji{ width:2.875rem; height:2.875rem; border-radius:0.75rem; background:var(--team); display:grid; place-items:center; flex:none; font-size:1.6rem; }
+.lv-lane-text{ min-width:0; }
+.lv-lane-title{ display:block; font-weight:800; font-size:1.1rem; overflow-wrap:anywhere; }
+.lv-lane-members{ display:block; font-size:.84rem; color:var(--ink-soft); overflow-wrap:anywhere; }
+.lv-track{ position:relative; height:1.375rem; border-radius:62.4375rem; background:var(--paper-soft); border:1px solid var(--line); overflow:hidden; }
+.lv-lane-fill{ position:absolute; inset:0 auto 0 0; width:0; background:var(--team); border-radius:62.4375rem; transition:width .45s cubic-bezier(.2,.8,.2,1); }
+.lv-ticks{ position:absolute; inset:0; display:flex; pointer-events:none; }
+.lv-ticks span{ flex:1; border-right:2px solid rgba(27,31,42,.13); }
+.lv-ticks span:last-child{ border-right:none; }
+.lv-lane-num{ font-weight:800; font-size:1.25rem; font-variant-numeric:tabular-nums; min-width:4.2em; text-align:right; }
+.lv-lane.finished{ border-color:var(--team); box-shadow:0 0 0 2px var(--team), var(--shadow-sm); }
+.lv-medal{ font-size:1.4rem; }
+@media (max-width:700px){
+  .lv-lane{ grid-template-columns:1fr auto; }
+  .lv-track{ grid-column:1 / -1; grid-row:2; }
+}
+
+/* ---------------- host: the end ---------------- */
+.lv-done-title{ text-align:center; font-size:clamp(2.2rem, 5vw, 3.4rem); margin:0 0 1.25rem; position:relative; z-index:3; background:linear-gradient(100deg, #7a5200 0%, #a8770a 35%, #e0a800 46%, #ffd84d 50%, #e0a800 54%, #a8770a 65%, #7a5200 100%); background-size:250% 100%; filter:drop-shadow(0 2px 0 rgba(90,60,0,.25)); -webkit-background-clip:text; background-clip:text; color:transparent; animation:lvTitleShine 4s linear infinite; }
+@keyframes lvTitleShine{ from{ background-position:100% 0; } to{ background-position:-150% 0; } }
+@media (prefers-reduced-motion:reduce){ .lv-done-title{ animation:none; } }
+.lv-podium{ list-style:none; margin:0 auto 1.75rem; padding:1.875rem 0 2.125rem; display:flex; flex-wrap:wrap; justify-content:center; align-items:flex-end; gap:0 0.625rem; position:relative; }
+/* A glow behind the winner and a floor for the blocks to stand on. */
+.lv-podium::before{ content:""; position:absolute; left:50%; top:-0.625rem; width:min(32.5rem, 90%); height:22.5rem; transform:translateX(-50%); background:radial-gradient(closest-side, rgba(242,183,5,.35), rgba(242,183,5,0)); pointer-events:none; }
+.lv-podium::after{ content:""; position:absolute; left:50%; bottom:0.375rem; width:min(51.25rem, 96%); height:2.875rem; transform:translateX(-50%); background:radial-gradient(closest-side, rgba(20,30,60,.28), rgba(20,30,60,0)); pointer-events:none; }
+.lv-step-block{ width:min(18.75rem, 100%); text-align:center; position:relative; z-index:1; display:flex; flex-direction:column; align-items:center;
+  --metal:linear-gradient(180deg, #fff3b0 0%, #f7cf3d 22%, #d9a514 55%, #a8770a 100%); --metal-top:linear-gradient(180deg, #fffbe0, #f7d65a); --metal-ink:#5a3d00; }
+.lv-step-block.p1{ order:2; z-index:2; } .lv-step-block.p2{ order:1; } .lv-step-block.p3{ order:3; }
+/* Olympic colors: gold, silver and bronze blocks (Gennaro, 2026-09-29). */
+.lv-step-block.p2{ --metal:linear-gradient(180deg, #ffffff 0%, #dfe3e9 22%, #b4bbc6 55%, #7f8896 100%); --metal-top:linear-gradient(180deg, #ffffff, #e3e7ec); --metal-ink:#353c48; }
+.lv-step-block.p3{ --metal:linear-gradient(180deg, #ffe1c4 0%, #e3a56b 22%, #c07a3c 55%, #87501f 100%); --metal-top:linear-gradient(180deg, #fff0e2, #e9b582); --metal-ink:#43250a; }
+.lv-step-card{ position:relative; width:calc(100% - 1.25rem); background:#fff; border:1px solid var(--line); border-top:0.375rem solid var(--team); border-radius:var(--radius); padding:1rem 0.75rem 0.875rem; box-shadow:0 0.875rem 1.875rem rgba(20,30,60,.16); margin-bottom:1.625rem; }
+.lv-step-block.p1 .lv-step-card{ box-shadow:0 0 0 0.25rem #f2b705, 0 1.125rem 2.5rem rgba(242,183,5,.4); }
+.lv-crown{ position:absolute; left:50%; top:-3.625rem; transform:translateX(-50%) rotate(-8deg); font-size:3.4rem; filter:drop-shadow(0 0.25rem 0.375rem rgba(0,0,0,.25)); }
+.lv-step-card .lv-emoji{ display:inline-block; font-size:3.4rem; line-height:1.1; }
+.lv-step-block.p1 .lv-step-card .lv-emoji{ font-size:4.4rem; }
+.lv-step-name{ display:block; font-weight:800; font-size:clamp(1.4rem, 2.6vw, 1.8rem); line-height:1.15; margin-top:0.375rem; overflow-wrap:anywhere; }
+.lv-step-block.p1 .lv-step-name{ font-size:clamp(1.7rem, 3.4vw, 2.3rem); }
+.lv-step-members{ display:block; color:var(--ink-soft); font-size:1.02rem; font-weight:600; margin-top:0.25rem; }
+/* The 3D block: a metal front face, a lighter top face in perspective, a
+   medal, and a shine that sweeps across now and then. */
+.lv-step-base{ position:relative; width:100%; color:var(--metal-ink); font-weight:800; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:0.375rem; padding-top:1.125rem;
+  background:var(--metal);
+  box-shadow:inset 0.5rem 0 0.875rem rgba(255,255,255,.35), inset -0.75rem 0 1.125rem rgba(0,0,0,.2), 0 0.75rem 1.5rem rgba(20,30,60,.25); }
+.lv-step-shine{ position:absolute; inset:0; overflow:hidden; pointer-events:none; }
+.lv-step-shine::after{ content:""; position:absolute; top:-20%; bottom:-20%; left:-60%; width:40%; background:linear-gradient(100deg, rgba(255,255,255,0), rgba(255,255,255,.65), rgba(255,255,255,0)); transform:skewX(-18deg); animation:lvShine 3.2s ease-in-out var(--shine, 2.6s) infinite; pointer-events:none; }
+
+.lv-step-top{ position:absolute; left:0; right:0; bottom:100%; height:1.375rem; background:var(--metal-top); clip-path:polygon(7% 0, 93% 0, 100% 100%, 0 100%); }
+.lv-step-block.p1 .lv-step-base{ height:11.875rem; }
+.lv-step-block.p2 .lv-step-base{ height:8.75rem; }
+.lv-step-block.p3 .lv-step-base{ height:6.25rem; }
+.lv-medal{ width:3.625rem; height:3.625rem; border-radius:50%; display:grid; place-items:center; font-size:1.6rem; font-weight:800; color:#5a3d00; box-shadow:0 0.25rem 0.625rem rgba(0,0,0,.3), inset 0 -0.25rem 0.375rem rgba(0,0,0,.18), inset 0 0.25rem 0.375rem rgba(255,255,255,.6); border:0.1875rem solid rgba(255,255,255,.8); }
+.lv-medal.m1{ background:radial-gradient(circle at 35% 30%, #fff6bf, #f2b705 55%, #b8860b); }
+.lv-medal.m2{ background:radial-gradient(circle at 35% 30%, #ffffff, #c9ced6 55%, #8a929e); color:#3b4250; }
+.lv-medal.m3{ background:radial-gradient(circle at 35% 30%, #ffe0c2, #d0894a 55%, #8b5a2b); color:#4a2a0c; }
+.lv-step-block.p3 .lv-medal{ width:2.875rem; height:2.875rem; font-size:1.3rem; }
+.lv-step-place{ position:relative; font-size:1.7rem; text-shadow:0 1px 0 rgba(255,255,255,.6); }
+.lv-medal{ position:relative; }
+.lv-step-block.p1 .lv-step-place{ font-size:2rem; }
+.lv-step-block.p3 .lv-step-place{ font-size:1.35rem; }
+/* Sun rays turning slowly behind the winner. */
+.lv-rays{ position:absolute; left:50%; top:38%; width:35rem; height:35rem; margin:-18.75rem 0 0 -17.5rem; border-radius:50%; z-index:-1; pointer-events:none;
+  background:repeating-conic-gradient(rgba(242,183,5,.32) 0deg 9deg, rgba(242,183,5,0) 9deg 22.5deg);
+  -webkit-mask:radial-gradient(closest-side, #000 25%, transparent 100%); mask:radial-gradient(closest-side, #000 25%, transparent 100%);
+  animation:lvSpin 24s linear infinite, lvFade 1s ease-out var(--land, 1.8s) both; }
+/* The reveal: the blocks rise one after another, then the teams land on them
+   and dance: the winner jumps and wiggles, 2nd and 3rd bob along. */
+@keyframes lvRise{ from{ transform:scaleY(0); } to{ transform:scaleY(1); } }
+@keyframes lvLand{ 0%{ opacity:0; transform:translateY(-2.5rem) scale(.9); } 70%{ opacity:1; transform:translateY(0.375rem) scale(1.02); } 100%{ transform:none; } }
+@keyframes lvGlow{ 0%, 100%{ opacity:.35; transform:scale(1); } 50%{ opacity:1; transform:scale(1.03); } }
+@keyframes lvShine{ 0%{ transform:translateX(0) skewX(-18deg); } 45%, 100%{ transform:translateX(475%) skewX(-18deg); } }
+@keyframes lvSpin{ to{ transform:rotate(360deg); } }
+@keyframes lvFade{ from{ opacity:0; } to{ opacity:1; } }
+@keyframes lvDance{ 0%, 100%{ transform:translateY(0) rotate(0); } 15%{ transform:translateY(-1.625rem) rotate(-14deg) scale(1.08); } 30%{ transform:translateY(0) rotate(0) scale(1, .92); } 45%{ transform:translateY(-1.125rem) rotate(14deg) scale(1.05); } 60%{ transform:translateY(0) rotate(0) scale(1, .94); } 75%{ transform:rotate(-10deg); } 90%{ transform:rotate(10deg); } }
+@keyframes lvBob{ 0%, 100%{ transform:translateY(0) rotate(-6deg); } 50%{ transform:translateY(-0.625rem) rotate(6deg); } }
+@keyframes lvCrown{ 0%, 100%{ transform:translateX(-50%) rotate(-8deg); } 50%{ transform:translateX(-50%) translateY(-0.5rem) rotate(8deg); } }
+.lv-step-base{ transform-origin:bottom; animation:lvRise .6s cubic-bezier(.2,.9,.3,1.2) var(--rise, 0s) both; }
+.lv-step-card{ animation:lvLand .6s ease-out var(--land, .45s) both; }
+.lv-step-block.p1 .lv-step-card{ animation:lvLand .7s ease-out var(--land, 1.7s) both; }
+.lv-step-block.p1 .lv-step-card::after{ content:""; position:absolute; inset:-0.5rem; border-radius:calc(var(--radius) + 0.5rem); box-shadow:0 0 0 0.25rem rgba(242,183,5,.8), 0 0 2.5rem rgba(242,183,5,.6); pointer-events:none; opacity:0; will-change:opacity, transform; animation:lvGlow 2s ease-in-out var(--dance, 2.5s) infinite; }
+.lv-step-block.p1 .lv-emoji{ animation:lvDance 1.6s ease-in-out var(--dance, 2.4s) infinite; transform-origin:bottom center; }
+.lv-step-block.p2 .lv-emoji{ animation:lvBob 1.2s ease-in-out var(--dance, 1.7s) infinite; }
+.lv-step-block.p3 .lv-emoji{ animation:lvBob 1.2s ease-in-out var(--dance, 1.1s) infinite reverse; }
+.lv-crown{ animation:lvCrown 1.6s ease-in-out var(--dance, 2.4s) infinite; }
+/* Each player's name pops up in turn. */
+.lv-step-members{ display:flex; flex-wrap:wrap; justify-content:center; gap:0.25rem 0.375rem; }
+.lv-step-who{ display:inline-block; padding:2px 0.625rem; border-radius:62.4375rem; background:color-mix(in srgb, var(--team) 14%, #fff); color:var(--ink); font-size:1.02rem; animation:lvNamePop .45s cubic-bezier(.2,.9,.3,1.5) var(--pop, 0s) both; }
+.lv-step-block.p1 .lv-step-who{ font-size:1.12rem; }
+.lv-step-score{ display:block; margin-top:0.375rem; font-weight:800; font-size:1.1rem; color:var(--ink-soft); }
+@keyframes lvNamePop{ 0%{ opacity:0; transform:scale(.3) translateY(0.625rem); } 100%{ opacity:1; transform:none; } }
+/* The other teams, cheering along the bottom: a wave that runs along the row. */
+.lv-crowd{ position:relative; z-index:4; display:flex; flex-wrap:wrap; justify-content:center; gap:0.625rem 0.875rem; max-width:62.5rem; max-height:40vh; overflow:hidden; margin:-0.375rem auto 1.75rem; padding:0.625rem 0.75rem 0.5rem; background:color-mix(in srgb, var(--paper-soft) 90%, transparent); border-radius:var(--radius) var(--radius) 0 0; animation:lvFade .8s ease-out var(--crowd, 0s) both; }
+.lv-crowd[hidden]{ display:none; }
+.lv-fan{ display:flex; flex-direction:column; align-items:center; width:5.25rem; text-align:center; animation:lvWave 1.4s ease-in-out calc(var(--crowd, 0s) + var(--i) * .1s) infinite; }
+.lv-fan-emoji{ font-size:2.2rem; line-height:1; }
+.lv-fan-hands{ font-size:1.2rem; line-height:1; margin-top:-0.25rem; animation:lvHands .7s ease-in-out infinite alternate; }
+.lv-fan-name{ font-size:.78rem; font-weight:700; color:var(--ink-soft); margin-top:0.1875rem; line-height:1.2; overflow-wrap:anywhere; border-bottom:0.1875rem solid var(--team); padding-bottom:2px; }
+@keyframes lvWave{ 0%, 60%, 100%{ transform:translateY(0); } 20%{ transform:translateY(-1rem) rotate(-6deg); } 40%{ transform:translateY(0) rotate(6deg); } }
+@keyframes lvHands{ from{ transform:rotate(-12deg) translateY(0); } to{ transform:rotate(12deg) translateY(-0.25rem); } }
+/* The whole screen says who won, then shrinks away onto the podium. */
+.lv-takeover{ position:fixed; inset:0; z-index:1050; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1vh; padding:1rem; text-align:center; pointer-events:none;
+  background:radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--team) 55%, #fff) 0%, var(--team) 55%, color-mix(in srgb, var(--team) 70%, #000) 100%);
+  color:#fff; text-shadow:0 0.375rem 1.5rem rgba(0,0,0,.35); animation:lvTakeIn .6s cubic-bezier(.2,.9,.3,1.3) both; }
+.lv-takeover.away{ animation:lvTakeOut .6s ease-in both; }
+.lv-takeover-emoji{ font-size:min(24vw, 28vh); line-height:1; animation:lvDance 1.2s ease-in-out .5s infinite; }
+.lv-takeover-name{ font-size:min(11vw, 15vh); font-weight:800; line-height:1.02; text-transform:uppercase; overflow-wrap:anywhere; max-width:95vw; }
+.lv-takeover-win{ font-size:min(16vw, 20vh); font-weight:800; line-height:1; color:#ffe066; animation:lvWinPulse .8s ease-in-out .4s infinite alternate; }
+@keyframes lvTakeIn{ from{ opacity:0; transform:scale(1.6); } to{ opacity:1; transform:none; } }
+@keyframes lvTakeOut{ to{ opacity:0; transform:scale(.2) translateY(20vh); } }
+@keyframes lvWinPulse{ from{ transform:scale(1); } to{ transform:scale(1.12) rotate(-2deg); } }
+@media (prefers-reduced-motion:reduce){ .lv-step-base, .lv-step-card, .lv-step-block.p1 .lv-step-card, .lv-step-block .lv-emoji, .lv-crown, .lv-rays, .lv-step-who, .lv-crowd, .lv-fan, .lv-fan-hands, .lv-takeover, .lv-takeover *, .lv-step-shine::after{ animation:none; } .lv-step-shine{ display:none; } }
+@media (max-width:640px){ .lv-step-block{ width:min(18.75rem, 100%); margin-bottom:0.75rem; } .lv-step-block.p1{ order:0; } .lv-rays{ width:22.5rem; height:22.5rem; margin:-12.5rem 0 0 -11.25rem; } }
+/* Confetti and fireworks over everything, letting clicks through. */
+.lv-celebrate{ position:fixed; inset:0; width:100%; height:100%; pointer-events:none; z-index:1000; }
+.lv-stats{ max-width:61.25rem; margin:0 auto 1.5rem; }
+.lv-stats h3{ text-align:center; font-size:1.6rem; margin:0 0 0.875rem; }
+.lv-stats h4{ margin:0 0 0.5rem; font-size:1.15rem; }
+.lv-stat-tiles{ display:grid; grid-template-columns:repeat(auto-fit, minmax(11.875rem, 1fr)); gap:0.75rem; margin-bottom:1rem; }
+.lv-stat-tile{ background:#fff; border:1px solid var(--line); border-radius:var(--radius); padding:0.875rem 1rem; box-shadow:var(--shadow-sm); text-align:center; display:flex; flex-direction:column; gap:2px; min-width:0; }
+.lv-stat-big{ font-size:2rem; font-weight:800; line-height:1.1; font-variant-numeric:tabular-nums; color:var(--accent-dark); }
+.lv-stat-label{ font-weight:700; }
+.lv-stat-small{ color:var(--ink-soft); font-size:.88rem; overflow-wrap:anywhere; }
+.lv-missed{ background:#fff; border:1px solid var(--line); border-radius:var(--radius); padding:1.125rem 1.25rem; box-shadow:var(--shadow-sm); overflow-x:auto; margin-bottom:1rem; }
+.lv-speed{ display:grid; grid-template-columns:repeat(auto-fit, minmax(16.25rem, 1fr)); gap:0.75rem; }
+.lv-speed[hidden]{ display:none; }
+.lv-speed-col{ background:#fff; border:1px solid var(--line); border-radius:var(--radius); padding:1rem 1.25rem; box-shadow:var(--shadow-sm); }
+.lv-speed-col .lv-small{ margin:0 0 0.5rem; }
+.lv-speed-list{ margin:0; padding-left:1.4em; }
+.lv-speed-list li{ padding:0.375rem 0; border-bottom:1px solid var(--line); }
+.lv-speed-list li:last-child{ border-bottom:0; }
+.lv-speed-term{ display:inline-block; max-width:75%; vertical-align:top; overflow-wrap:anywhere; }
+.lv-speed-time{ float:right; font-weight:700; font-variant-numeric:tabular-nums; }
+.lv-missed-table{ width:100%; border-collapse:collapse; font-size:.95rem; }
+.lv-missed-table th, .lv-missed-table td{ text-align:left; padding:0.5rem 0.625rem; border-bottom:1px solid var(--line); vertical-align:top; }
+.lv-missed-table td:nth-child(n+3), .lv-missed-table th:nth-child(n+3){ text-align:right; font-variant-numeric:tabular-nums; }
+.lv-done-actions{ justify-content:center; }
+
+/* ---------------- join: the student screens ---------------- */
+.lv-join .lv-step{ max-width:40rem; margin:0 auto; }
+.lv-card{ background:#fff; border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:1.625rem 1.625rem 1.5rem; text-align:center; }
+.lv-form{ display:grid; justify-items:center; gap:0.75rem; }
+.lv-code-input, .lv-nick-input{ font:inherit; font-weight:800; text-align:center; width:min(22.5rem, 100%); border:2px solid var(--line); border-radius:var(--radius-sm); padding:0.75rem; background:var(--paper-soft); color:var(--ink); }
+.lv-code-input{ font-size:2rem; letter-spacing:.3em; text-transform:uppercase; }
+.lv-nick-input{ font-size:1.3rem; }
+.lv-code-input:focus, .lv-nick-input:focus{ outline:0.1875rem solid var(--accent); outline-offset:1px; border-color:var(--accent); background:#fff; }
+.lv-rejoin{ margin-top:0.875rem; font-size:.92rem; color:var(--accent-dark); }
+.lv-me{ font-size:1.6rem; font-weight:800; margin:0.25rem 0 0.75rem; overflow-wrap:anywhere; }
+.lv-myteam{ display:inline-grid; gap:0.25rem; background:var(--team); color:#fff; border-radius:var(--radius); padding:0.875rem 1.375rem; margin:0 0 0.875rem; }
+.lv-myteam .lv-emoji{ font-size:2.4rem; }
+.lv-myteam strong{ font-size:1.25rem; }
+.lv-myteam span{ font-size:.92rem; opacity:.95; }
+
+.lv-playbar{ display:flex; align-items:center; gap:0.75rem; margin-bottom:0.875rem; }
+.lv-badge{ display:inline-flex; align-items:center; gap:0.5rem; background:var(--team, var(--accent)); color:#fff; border-radius:62.4375rem; padding:0.375rem 0.875rem 0.375rem 0.5rem; font-weight:800; white-space:nowrap; max-width:70%; overflow:hidden; text-overflow:ellipsis; }
+.lv-badge .lv-emoji{ font-size:1.3rem; }
+.lv-progress{ flex:1; height:0.875rem; background:var(--line); border-radius:62.4375rem; overflow:hidden; min-width:3.75rem; }
+.lv-progress-fill{ display:block; height:100%; width:0; background:var(--team, var(--accent)); transition:width .35s ease; }
+.lv-progress-num{ font-weight:800; font-variant-numeric:tabular-nums; }
+.lv-prompt{ position:relative; background:#fff; border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:1.75rem 1.375rem 1.375rem; text-align:center; display:grid; justify-items:center; gap:0.75rem; }
+.lv-prompt-label{ font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--ink-soft); }
+.lv-prompt-text{ font-size:clamp(1.1rem, 3vw, 1.45rem); font-weight:600; line-height:1.4; margin:0; overflow-wrap:anywhere; }
+.lv-prompt-text.long{ font-size:clamp(1rem, 2.4vw, 1.15rem); font-weight:500; }
+.lv-prompt-img{ max-width:min(16.25rem, 100%); max-height:11.25rem; object-fit:contain; border-radius:var(--radius-sm); }
+.lv-teamnote{ text-align:center; color:var(--ink-soft); font-weight:600; font-size:.92rem; margin:0.75rem 0; }
+.lv-teamnote:empty{ margin:0.375rem 0; }
+.lv-options{ display:grid; gap:0.625rem; }
+.lv-option{ width:100%; text-align:left; font:inherit; font-size:1.02rem; font-weight:500; color:var(--ink); background:#fff; border:2px solid var(--line); border-radius:var(--radius-sm); padding:1rem 1.125rem; cursor:pointer; box-shadow:var(--shadow-sm); line-height:1.4; overflow-wrap:anywhere; }
+.lv-option:hover:not(:disabled){ border-color:var(--accent); background:var(--accent-tint); }
+.lv-option:disabled{ cursor:default; opacity:.6; }
+.lv-continue{ justify-self:center; margin-top:0.375rem; min-width:10rem; }
+.lv-wait-note{ font-size:.9rem; color:var(--ink-soft); }
+.lv-wait-note:empty{ display:none; }
+.lv-done-line{ display:block; }
+.lv-none{ text-align:center; background:var(--paper-soft); border:2px dashed var(--line); border-radius:var(--radius-sm); padding:1.125rem; font-weight:600; color:var(--ink-soft); }
+.lv-feedback{ margin-top:0.875rem; border-radius:var(--radius); padding:1.125rem 1.25rem; text-align:center; font-weight:600; font-size:1.05rem; display:grid; gap:0.375rem; }
+.lv-feedback.ok{ background:var(--good-tint); color:var(--good-ink); border:2px solid var(--good); }
+.lv-feedback.bad{ background:var(--bad-tint); color:var(--bad-ink); border:2px solid var(--bad); }
+.lv-feedback strong{ font-size:1.3rem; }
+.lv-wait-bar{ height:0.375rem; background:rgba(0,0,0,.08); border-radius:62.4375rem; overflow:hidden; margin-top:0.375rem; }
+.lv-wait-bar span{ display:block; height:100%; background:currentColor; width:100%; }
+.lv-done-emoji{ font-size:4rem; margin:0; line-height:1.1; }
+#jnPlay.locked .lv-prompt, #jnPlay.locked .lv-teamnote, #jnPlay.locked .lv-options{ display:none; }
+.lv-fb-prompt{ font-weight:500; font-size:.95rem; color:var(--ink-soft); background:rgba(255,255,255,.7); border-radius:0.625rem; padding:0.5rem 0.75rem; }
+.lv-feedback b{ font-weight:800; }
+
+/* ---------------- Blast (live-blast.js) ---------------- */
+.lv-blast{ max-width:61.25rem; margin:0 auto; }
+.bl-top, .mt-top{ display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap; margin-bottom:0.625rem; }
+.bl-score, .mt-found{ font-weight:800; font-size:1.1rem; }
+.bl-time, .mt-time{ margin-left:auto; font-weight:800; font-size:1.3rem; font-variant-numeric:tabular-nums; background:#fff; border:1px solid var(--line); border-radius:62.4375rem; padding:0.25rem 0.875rem; }
+.bl-prompt{ background:#fff; border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow-sm); padding:0.5rem 1rem; text-align:center; display:grid; grid-template-columns:1fr auto; grid-template-rows:auto 1fr; align-items:center; column-gap:0.75rem; height:7.2rem; overflow:hidden; margin-bottom:0.625rem; }
+.bl-prompt .lv-prompt-label{ grid-column:1 / -1; }
+.bl-prompt-text{ margin:0; font-weight:600; font-size:1.25rem; line-height:1.3; max-height:100%; overflow:hidden; align-self:center; }
+.bl-prompt .lv-prompt-img{ grid-row:2; grid-column:2; max-height:5rem; max-width:7rem; width:auto; margin:0; object-fit:contain; }
+.bl-prompt .lv-prompt-img[hidden]{ display:none; }
+.bl-field{ position:relative; height:min(62vh, 35rem); min-height:22.5rem; border-radius:var(--radius); overflow:hidden; background:radial-gradient(ellipse at 50% 40%, #1d2a6b 0%, #10163d 55%, #080b22 100%); box-shadow:var(--shadow); touch-action:manipulation; }
+.bl-field::before{ content:""; position:absolute; inset:0; background-image:radial-gradient(1.5px 1.5px at 12% 18%, #fff8 50%, transparent 51%), radial-gradient(1.5px 1.5px at 72% 28%, #fff6 50%, transparent 51%), radial-gradient(1.2px 1.2px at 40% 70%, #fff7 50%, transparent 51%), radial-gradient(1.2px 1.2px at 88% 76%, #fff6 50%, transparent 51%), radial-gradient(1px 1px at 25% 52%, #fff5 50%, transparent 51%), radial-gradient(1px 1px at 58% 88%, #fff5 50%, transparent 51%); pointer-events:none; }
+.bl-lasers{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:2; }
+.bl-laser{ stroke:#9be7ff; stroke-width:4; stroke-linecap:round; animation:bl-fade .45s ease-out forwards; }
+.bl-laser.ok{ stroke:#8ce99a; }
+.bl-laser.bad{ stroke:#ff8787; }
+@keyframes bl-fade{ from{ opacity:1; } to{ opacity:0; } }
+.bl-rocks, .bl-ships{ position:absolute; inset:0; }
+.bl-rocks{ z-index:1; }
+.bl-ships{ z-index:3; pointer-events:none; }
+.bl-rock{ position:absolute; transform:translate(-50%, -50%); width:6.25rem; height:6.25rem; border:0; background:none; color:#fff; font-family:inherit; font-weight:700; font-size:0.9375rem; line-height:1.15; padding:0.5rem; display:grid; place-items:center; text-align:center; overflow-wrap:break-word; hyphens:auto; cursor:crosshair; filter:drop-shadow(0 0.375rem 0.625rem rgba(0,0,0,.55)); }
+/* The rock itself: a lumpy, cratered stone that tumbles a little as it drifts. */
+.bl-rock-body{ position:absolute; inset:0; animation:bl-tumble 9s ease-in-out infinite alternate; }
+.bl-rock-text{ position:relative; z-index:1; max-width:96%; overflow-wrap:normal; word-break:normal; padding:2px 0.375rem; border-radius:0.5rem; background:rgba(10,8,6,.45); text-shadow:0 1px 0.1875rem #000, 0 0 0.375rem rgba(0,0,0,.8); }
+@keyframes bl-tumble{ from{ transform:rotate(-14deg) scale(1); } to{ transform:rotate(14deg) scale(1.02); } }
+.bl-rock:hover, .bl-rock:focus-visible{ outline:none; filter:drop-shadow(0 0 0.1875rem #9be7ff) drop-shadow(0 0 0.75rem rgba(155, 231, 255, .85)); }
+.bl-rock:focus-visible .bl-rock-text{ outline:2px solid #9be7ff; }
+@media (prefers-reduced-motion:reduce){ .bl-rock-body{ animation:none; } }
+.bl-rock:disabled{ opacity:.6; }
+.bl-ship{ position:absolute; transform:translate(-50%, -50%); width:4rem; height:4rem; display:grid; place-items:center; }
+.bl-ship-body{ width:3.25rem; height:3.25rem; border-radius:50%; background:var(--team, #3b4ea8); border:0.1875rem solid rgba(255,255,255,.75); display:grid; place-items:center; font-size:1.5rem; box-shadow:0 0 0.75rem rgba(0,0,0,.4); position:relative; z-index:1; }
+.bl-ship.mine .bl-ship-body{ border-color:#ffe066; box-shadow:0 0 0 0.3125rem rgba(255, 224, 102, .45), 0 0 1.375rem rgba(255, 224, 102, .6); }
+.bl-ship.away{ opacity:.35; }
+.bl-barrel{ position:absolute; left:50%; top:50%; width:2.75rem; height:0.625rem; margin-top:-0.3125rem; background:#dee2f5; border-radius:0.3125rem; transform-origin:0 50%; transition:transform .12s linear; }
+.bl-ship.left .bl-ship-name{ left:0; }
+.bl-ship.right .bl-ship-name{ right:0; }
+.bl-ship.bottom .bl-ship-name{ top:auto; bottom:100%; margin:0 0 2px; }
+.bl-ship-name{ position:absolute; top:100%; white-space:nowrap; font-size:.75rem; font-weight:700; color:#fff; background:rgba(0,0,0,.45); border-radius:62.4375rem; padding:1px 0.5rem; margin-top:2px; }
+.bl-ships.stunned .bl-ship.mine .bl-ship-body{ filter:grayscale(1); opacity:.6; }
+.bl-burst{ position:absolute; width:7.5rem; height:7.5rem; margin:-3.75rem 0 0 -3.75rem; border-radius:50%; z-index:2; pointer-events:none; animation:bl-burst .7s ease-out forwards; }
+.bl-burst.ok{ background:radial-gradient(circle, rgba(140, 233, 154, .9), rgba(140, 233, 154, 0) 70%); }
+.bl-burst.bad{ background:radial-gradient(circle, rgba(255, 135, 135, .9), rgba(255, 135, 135, 0) 70%); }
+@keyframes bl-burst{ from{ transform:scale(.3); opacity:1; } to{ transform:scale(1.4); opacity:0; } }
+.bl-msg{ min-height:1.4em; text-align:center; font-weight:700; margin:0.625rem 0 2px; color:var(--bad-ink); }
+.bl-msg.good{ color:var(--good-ink, #1b6b35); }
+.bl-others{ text-align:center; color:var(--ink-soft); font-size:.9rem; margin:0; }
+@media (prefers-reduced-motion:reduce){ .bl-laser, .bl-burst{ animation-duration:.01s; } .bl-barrel{ transition:none; } }
+
+/* ---------------- Match (live-match.js) ---------------- */
+.lv-match{ max-width:61.25rem; margin:0 auto; }
+.mt-help{ margin:0 0 0.25rem; }
+.mt-msg{ min-height:1.3em; font-weight:700; color:var(--bad-ink); margin:0 0 0.5rem; }
+.mt-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(9.375rem, 1fr)); gap:0.625rem; }
+.mt-tile{ position:relative; min-height:6.875rem; font:inherit; font-size:.92rem; font-weight:600; line-height:1.35; color:var(--ink); background:#fff; border:2px solid var(--line); border-radius:var(--radius-sm); padding:0.625rem; cursor:pointer; box-shadow:var(--shadow-sm); display:grid; place-items:center; text-align:center; overflow-wrap:anywhere; transition:opacity .25s, transform .15s; }
+.mt-tile:hover{ border-color:var(--accent); }
+.mt-tile.up{ border-color:var(--accent); background:var(--accent-tint); }
+.mt-tile.right{ border-color:var(--good); background:var(--good-tint); }
+.mt-tile.wrong{ border-color:var(--bad); background:var(--bad-tint); animation:mt-shake .35s; }
+.mt-tile.gone{ opacity:0; pointer-events:none; }
+.mt-face{ display:grid; gap:0.375rem; justify-items:center; }
+.mt-face img{ max-width:100%; max-height:4.375rem; object-fit:contain; }
+.mt-back{ display:none; font-size:1.8rem; font-weight:800; color:#fff; }
+.hidden-cards .mt-tile:not(.up):not(.gone){ background:linear-gradient(135deg, var(--accent), var(--accent-dark)); border-color:var(--accent-dark); }
+.hidden-cards .mt-tile:not(.up):not(.gone) .mt-face{ visibility:hidden; }
+.hidden-cards .mt-tile:not(.up):not(.gone) .mt-back{ display:block; position:absolute; }
+.mt-done{ text-align:center; margin-top:1rem; }
+@keyframes mt-shake{ 25%{ transform:translateX(-0.3125rem); } 75%{ transform:translateX(0.3125rem); } }
+@media (prefers-reduced-motion:reduce){ .mt-tile{ transition:none; animation:none !important; } }
+
+/* ---------------- lobby music and settings (host screen) ---------------- */
+.lv-music-pick{ display:flex; flex-wrap:wrap; align-items:center; gap:0.5rem; }
+.lv-music-pick select{ font:inherit; font-size:.95rem; border:1.5px solid var(--line); border-radius:0.625rem; padding:0.5rem 0.625rem; background:#fff; color:var(--ink); }
+.lv-music{ display:inline-flex; align-items:center; gap:0.625rem; flex-wrap:wrap; max-width:100%; background:#fff; border:1px solid var(--line); border-radius:62.4375rem; box-shadow:var(--shadow-sm); padding:0.5rem 1rem 0.5rem 0.625rem; margin:0.875rem 0 0.75rem; }
+.lv-music[hidden]{ display:none; }
+.lv-music-label{ font-size:.86rem; font-weight:700; color:var(--ink-soft); order:1; padding-left:0.375rem; }
+.lv-music-btn{ order:3; width:2.5rem; height:2.5rem; border-radius:50%; border:none; background:var(--accent); color:#fff; display:grid; place-items:center; cursor:pointer; padding:0; flex:none; }
+.lv-music-btn svg{ width:1.375rem; height:1.375rem; }
+.lv-music-btn.muted{ background:#fff; color:var(--ink-soft); box-shadow:inset 0 0 0 2px var(--line); }
+.lv-music-btn:disabled{ background:var(--line); cursor:default; }
+.lv-music-btn:focus-visible{ outline:0.1875rem solid var(--accent); outline-offset:2px; }
+.lv-music select{ order:2; font:inherit; font-size:.9rem; border:1.5px solid var(--line); border-radius:0.5rem; padding:0.375rem 0.5rem; background:#fff; color:var(--ink); max-width:12.5rem; }
+.lv-music input[type=range]{ order:4; width:6.875rem; accent-color:var(--accent); }
+.lv-lobby-opts{ margin-top:1.375rem; background:#fff; border:1px solid var(--line); border-radius:var(--radius-sm); padding:0.75rem 1.125rem; }
+.lv-lobby-opts > summary{ cursor:pointer; font-weight:700; font-size:1rem; }
+.lv-lobby-opts[open] > summary{ margin-bottom:0.375rem; }
+.lv-lobby-opts-body{ display:grid; grid-template-columns:repeat(auto-fill, minmax(15rem, 1fr)); gap:0.75rem 1.125rem; margin-top:0.625rem; }
+.lv-lobby-opts-body .lv-opt{ display:grid; gap:0.375rem; margin:0; }
+.lv-lobby-opts-body .lv-opt[hidden]{ display:none; }
+.lv-opt-name{ font-weight:700; font-size:.9rem; }
+.lv-lobby-opts-body select{ font:inherit; font-size:.95rem; border:1.5px solid var(--line); border-radius:0.625rem; padding:0.5rem 0.625rem; background:#fff; color:var(--ink); }
+/* The song menu and its Listen button stay on one line. */
+.lv-music-pick{ flex-wrap:nowrap; flex:none; }
+.lv-music-pick select{ min-width:0; max-width:13.75rem; }
+.lv-volume{ width:12.5rem; max-width:45vw; accent-color:var(--accent); flex:none; }
+.lv-default{ display:flex; align-items:center; gap:0.875rem; margin:0 0 1.125rem; cursor:pointer; font-size:.95rem; }
+.lv-default input{ width:1.625rem; height:1.625rem; margin:0; accent-color:var(--accent); flex:none; }
+@media (max-width:520px){ .lv-music-pick select{ max-width:9.375rem; } }
+/* Each music row: the song and Listen, then its own mute and volume. */
+.lv-music-ctl{ display:grid; gap:0.5rem; justify-items:end; flex:none; }
+.lv-vol-row{ display:flex; align-items:center; gap:0.5rem; }
+.lv-mute{ width:2.25rem; height:2.25rem; border-radius:50%; border:none; background:var(--accent); color:#fff; display:grid; place-items:center; cursor:pointer; padding:0; flex:none; }
+.lv-mute svg{ width:1.25rem; height:1.25rem; }
+.lv-mute.muted{ background:#fff; color:var(--ink-soft); box-shadow:inset 0 0 0 2px var(--line); }
+.lv-mute:focus-visible{ outline:0.1875rem solid var(--accent); outline-offset:2px; }
+.lv-vol-row .lv-volume{ width:10.625rem; }
+/* Demo mode: a banner over the host screen, with the button that ends the game. */
+.lv-demo-banner{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:0.625rem 1rem; background:#fff4d6; border:2px dashed #e0a800; border-radius:var(--radius-sm); padding:0.625rem 1rem; margin:0 0 1rem; }
+.lv-demo-banner[hidden]{ display:none; }
+.lv-demo-text{ font-size:.95rem; }
+.lv-demo-win{ background:#c92a2a; border-color:#c92a2a; font-weight:800; letter-spacing:.02em; }
+.lv-demo-win:hover{ background:#a61e1e; border-color:#a61e1e; }
+.lv-demo-pick{ background:#fff8e6; border:1.5px solid #f2d27a; border-radius:var(--radius-sm); padding:0.75rem 0.875rem; }
+/* The teams screen: the join address and a big code for students still joining. */
+.lv-late-join{ display:flex; flex-wrap:wrap; align-items:baseline; gap:0.375rem 1rem; background:#fff; border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow-sm); padding:0.875rem 1.375rem; margin:0 0 1rem; font-size:1.3rem; font-weight:600; }
+.lv-late-join strong{ color:var(--accent-dark); }
+.lv-late-code{ font-size:3rem; font-weight:800; letter-spacing:.14em; color:var(--ink); line-height:1.1; }
+@media (max-width:600px){ .lv-late-join{ font-size:1.05rem; } .lv-late-code{ font-size:2.2rem; } }
+
+/* ---------------- students pick their teams ---------------- */
+.lv-pick{ margin:1rem 0 0.5rem; }
+.lv-pick-bar{ display:flex; flex-wrap:wrap; align-items:center; gap:0.625rem 0.875rem; background:#fff; border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow-sm); padding:0.75rem 1.125rem; margin-bottom:0.875rem; }
+.lv-pick-label{ font-size:1.05rem; margin-right:auto; }
+.lv-pick-secs{ display:flex; align-items:center; gap:0.5rem; font-weight:600; }
+.lv-pick-secs select{ font:inherit; padding:0.5rem 0.625rem; border:1.5px solid var(--line); border-radius:0.625rem; background:#fff; color:var(--ink); }
+.lv-pick-secs[hidden]{ display:none; }
+.lv-team-count{ margin-left:auto; font-size:.9rem; opacity:.9; }
+.lv-team-empty{ color:var(--ink-soft); font-style:italic; }
+/* The countdown: huge, and red with a pulse for the last three seconds. */
+.lv-countdown{ display:flex; flex-direction:column; align-items:center; gap:0.25rem; background:#fff; border:0.1875rem solid var(--accent); border-radius:var(--radius); box-shadow:var(--shadow-sm); padding:0.625rem 1.125rem 0.875rem; margin:0 0 0.875rem; text-align:center; }
+.lv-countdown[hidden]{ display:none; }
+.lv-countdown-num{ font-size:clamp(4.5rem, 14vw, 9rem); font-weight:800; line-height:1; color:var(--accent-dark); font-variant-numeric:tabular-nums; }
+.lv-countdown-text{ font-size:1.15rem; font-weight:700; color:var(--ink); }
+.lv-countdown.urgent{ border-color:#d62828; background:#fff1f1; }
+.lv-countdown.urgent .lv-countdown-num{ color:#d62828; animation:lvBeat .5s ease-in-out infinite alternate; }
+.lv-countdown.locked{ border-color:#2b8a3e; }
+.lv-countdown.locked .lv-countdown-num{ font-size:clamp(3rem, 9vw, 5rem); }
+@keyframes lvBeat{ from{ transform:scale(1); } to{ transform:scale(1.12); } }
+@media (prefers-reduced-motion:reduce){ .lv-countdown.urgent .lv-countdown-num{ animation:none; } }
+/* A student's team buttons */
+.lv-pick-join{ margin:0.875rem 0 0.375rem; text-align:left; }
+.lv-pick-join[hidden]{ display:none; }
+.lv-pick-title{ font-weight:800; font-size:1.25rem; margin:0.25rem 0 0.625rem; text-align:center; }
+.lv-pick-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(9.375rem, 1fr)); gap:0.625rem; }
+.lv-pick-team{ display:grid; gap:0.25rem; text-align:left; font:inherit; background:#fff; color:var(--ink); border:0.1875rem solid var(--team); border-radius:0.875rem; padding:0.625rem 0.75rem; cursor:pointer; box-shadow:var(--shadow-sm); }
+.lv-pick-team-top{ display:flex; align-items:center; gap:0.5rem; background:var(--team); color:#fff; margin:-0.625rem -0.75rem 0.25rem; padding:0.5rem 0.75rem; border-radius:0.625rem 0.625rem 0 0; }
+.lv-pick-team-top .lv-emoji{ font-size:1.4rem; }
+.lv-pick-team-who{ font-size:.85rem; color:var(--ink-soft); min-height:2.4em; }
+.lv-pick-team-count{ font-size:.85rem; font-weight:700; }
+.lv-pick-team:hover:not(:disabled){ transform:translateY(-2px); box-shadow:0 0.375rem 1rem rgba(0,0,0,.14); }
+.lv-pick-team.mine{ box-shadow:0 0 0 0.25rem var(--team), 0 0.5rem 1.25rem rgba(0,0,0,.18); }
+.lv-pick-team.mine .lv-pick-team-count{ color:var(--team); }
+.lv-pick-team.full{ opacity:.45; cursor:not-allowed; }
+.lv-pick-msg{ margin:0.5rem 0 0; font-weight:700; color:#b3212c; min-height:1.2em; text-align:center; }
+
+/* The 3, 2, 1, GO! before a game (live-celebrate.js). */
+.lv-go{ position:fixed; inset:0; z-index:1100; display:grid; place-items:center; background:rgba(12,20,45,.82); pointer-events:auto; }
+.lv-go-num{ font-size:min(62vw, 62vh); font-weight:800; line-height:1; color:#fff; text-shadow:0 0.625rem 2.5rem rgba(0,0,0,.45); font-variant-numeric:tabular-nums; animation:lvGoPop .9s cubic-bezier(.2,.9,.3,1.3) both; }
+.lv-go.n3 .lv-go-num{ color:#ff5a5f; } .lv-go.n2 .lv-go-num{ color:#ffb703; } .lv-go.n1 .lv-go-num{ color:#4ade80; }
+.lv-go.go{ background:rgba(29,78,216,.88); }
+.lv-go.go .lv-go-num{ font-size:min(34vw, 40vh); color:#fff; }
+@keyframes lvGoPop{ 0%{ transform:scale(.3); opacity:0; } 35%{ transform:scale(1.12); opacity:1; } 60%{ transform:scale(1); } 100%{ transform:scale(.96); opacity:.9; } }
+@media (prefers-reduced-motion:reduce){ .lv-go-num{ animation:none; } }
+
+/* A student's medal: a coin on a ribbon, turning round and round. */
+.lv-spin-medal{ display:block; position:relative; width:10.625rem; height:14.375rem; margin:0 auto; perspective:37.5rem; }
+.lv-spin-ribbon{ position:absolute; left:50%; top:0; width:4.375rem; height:5.625rem; transform:translateX(-50%); background:linear-gradient(90deg, #1d4ed8 0 33%, #fff 33% 66%, #e63946 66%); clip-path:polygon(0 0, 100% 0, 78% 100%, 22% 100%); }
+.lv-spin-coin{ position:absolute; left:50%; bottom:0; width:10rem; height:10rem; margin-left:-5rem; border-radius:50%; display:grid; place-items:center; transform-style:preserve-3d; animation:lvCoin 3s linear infinite;
+  background:radial-gradient(circle at 35% 30%, #fff6bf, #f2b705 50%, #a8770a); border:0.5rem solid #d9a514; box-shadow:0 0.75rem 1.875rem rgba(0,0,0,.3), inset 0 -0.5rem 0.875rem rgba(0,0,0,.2), inset 0 0.5rem 0.875rem rgba(255,255,255,.55); }
+.lv-spin-medal.m2 .lv-spin-coin{ background:radial-gradient(circle at 35% 30%, #fff, #c9ced6 50%, #7f8896); border-color:#b4bbc6; }
+.lv-spin-medal.m3 .lv-spin-coin{ background:radial-gradient(circle at 35% 30%, #ffe0c2, #d0894a 50%, #87501f); border-color:#c07a3c; }
+.lv-spin-face{ font-size:5rem; font-weight:800; color:rgba(90,61,0,.85); text-shadow:0 2px 0 rgba(255,255,255,.5); }
+.lv-spin-medal.m2 .lv-spin-face{ color:rgba(53,60,72,.85); } .lv-spin-medal.m3 .lv-spin-face{ color:rgba(67,37,10,.85); }
+.lv-spin-label{ display:block; margin-top:0.875rem; font-size:2rem; font-weight:800; letter-spacing:.04em; color:#a8770a; animation:lvWinPulse .8s ease-in-out infinite alternate; }
+.lv-spin-label.m2{ color:#6b7380; } .lv-spin-label.m3{ color:#9a5b24; }
+@keyframes lvCoin{ from{ transform:rotateY(0); } to{ transform:rotateY(360deg); } }
+@media (prefers-reduced-motion:reduce){ .lv-spin-coin, .lv-spin-label{ animation:none; } }
+
+/* Demo mode's split screen: the host screen on the left, a student's phone
+   on the right. */
+.lv-split{ position:fixed; top:0; right:0; bottom:0; width:410px; z-index:900; display:flex; flex-direction:column; gap:8px; padding:12px 14px; background:var(--paper-soft); border-left:1px solid var(--line); box-shadow:-8px 0 24px rgba(20,30,60,.12); }
+.lv-split[hidden]{ display:none; }
+.lv-split-bar{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.lv-phone{ flex:1; min-height:0; border:0.625rem solid #1b1f2a; border-radius:2.125rem; overflow:hidden; background:#fff; box-shadow:0 0.75rem 1.875rem rgba(0,0,0,.25); }
+.lv-phone iframe{ width:100%; height:100%; border:0; display:block; }
+.lv-split-note{ margin:0; text-align:center; }
+.lv-split-tab{ position:fixed; right:14px; bottom:14px; z-index:900; }
+body.lv-split-on{ padding-right:410px; }
+@media (max-width:1000px){ .lv-split{ width:340px; } body.lv-split-on{ padding-right:340px; } }
+@media (max-width:700px){ .lv-split{ position:static; width:auto; height:720px; border-left:0; border-top:1px solid var(--line); box-shadow:none; } body.lv-split-on{ padding-right:0; } }
+.lv-embed .topbar, .lv-embed footer, .lv-embed .skip{ display:none; }
+.lv-embed .lv-join{ padding-top:0.75rem; }
+/* The host screen's countdown, takeover and fireworks stay on its own side. */
+body.lv-split-on .lv-go, body.lv-split-on .lv-takeover, body.lv-split-on .lv-celebrate{ right:410px; width:calc(100% - 410px); }
+@media (max-width:1000px){ body.lv-split-on .lv-go, body.lv-split-on .lv-takeover, body.lv-split-on .lv-celebrate{ right:340px; width:calc(100% - 340px); } }
+@media (max-width:700px){ body.lv-split-on .lv-go, body.lv-split-on .lv-takeover, body.lv-split-on .lv-celebrate{ right:0; width:100%; } }
+
+/* The podium on a student's screen: the same blocks, side by side and small. */
+.lv-mini-podium{ flex-wrap:nowrap; gap:0 0.375rem; padding:2.875rem 0 0.625rem; margin:0.375rem auto 0.875rem; }
+.lv-mini-podium::before{ width:90%; height:13.75rem; }
+.lv-mini-podium .lv-step-block{ width:33%; min-width:0; margin:0; }
+.lv-mini-podium .lv-step-block.p1{ order:2; } .lv-mini-podium .lv-step-block.p2{ order:1; } .lv-mini-podium .lv-step-block.p3{ order:3; }
+.lv-mini-podium .lv-step-card{ width:calc(100% - 0.25rem); padding:0.5rem 0.25rem; margin-bottom:1.125rem; border-top-width:0.25rem; }
+.lv-mini-podium .lv-step-card .lv-emoji, .lv-mini-podium .lv-step-block.p1 .lv-step-card .lv-emoji{ font-size:2rem; }
+.lv-mini-podium .lv-step-name, .lv-mini-podium .lv-step-block.p1 .lv-step-name{ font-size:.92rem; }
+.lv-mini-podium .lv-step-score{ font-size:.8rem; margin-top:2px; }
+.lv-mini-podium .lv-crown{ font-size:1.9rem; top:-2.125rem; }
+.lv-mini-podium .lv-step-block.p1 .lv-step-base{ height:5.75rem; }
+.lv-mini-podium .lv-step-block.p2 .lv-step-base{ height:4.125rem; }
+.lv-mini-podium .lv-step-block.p3 .lv-step-base{ height:3rem; }
+.lv-mini-podium .lv-step-base{ padding-top:0.625rem; }
+.lv-mini-podium .lv-medal, .lv-mini-podium .lv-step-block.p3 .lv-medal{ width:2rem; height:2rem; font-size:1rem; border-width:2px; }
+.lv-mini-podium .lv-step-top{ height:0.75rem; }
+.lv-step-you{ display:inline-block; margin-top:0.25rem; padding:1px 0.5rem; border-radius:62.4375rem; background:var(--team); color:#fff; font-size:.75rem; font-weight:800; }
+.lv-mini-podium .mine .lv-step-card{ outline:0.1875rem solid var(--team); outline-offset:1px; }
+
+/* The split screen's Phone and Computer choice. */
+.lv-split-bar{ flex-wrap:wrap; }
+.lv-split-kinds{ display:inline-flex; border:1.5px solid var(--line); border-radius:999px; overflow:hidden; background:var(--paper); }
+.lv-split-kind{ font:inherit; font-size:13.6px; font-weight:700; border:0; background:none; color:var(--ink-soft); padding:6px 12px; cursor:pointer; }
+.lv-split-kind[aria-pressed="true"]{ background:var(--accent); color:#fff; }
+.lv-laptop{ flex:1; min-height:0; overflow:hidden; background:#fff; border:0.625rem solid #1b1f2a; border-bottom-width:1.125rem; border-radius:0.875rem; box-shadow:0 0.75rem 1.875rem rgba(0,0,0,.25); position:relative; }
+.lv-laptop iframe{ border:0; display:block; transform-origin:0 0; }
+.lv-split.wide{ width:48vw; }
+body.lv-split-on.lv-split-wide{ padding-right:48vw; }
+body.lv-split-on.lv-split-wide .lv-go, body.lv-split-on.lv-split-wide .lv-takeover, body.lv-split-on.lv-split-wide .lv-celebrate{ right:48vw; width:52vw; }
+@media (max-width:700px){ .lv-split.wide{ width:auto; } body.lv-split-on.lv-split-wide{ padding-right:0; } body.lv-split-on.lv-split-wide .lv-go, body.lv-split-on.lv-split-wide .lv-takeover, body.lv-split-on.lv-split-wide .lv-celebrate{ right:0; width:100%; } }
+/* The podium's three blocks stay side by side while there is room. */
+@media (min-width:641px){ .lv-podium .lv-step-block{ width:min(18.75rem, calc((100% - 1.25rem) / 3)); } }
+.lv-mini-podium .lv-step-name, .lv-mini-podium .lv-step-block.p1 .lv-step-name{ font-size:.8rem; overflow-wrap:normal; word-break:normal; hyphens:auto; }
+/* With the computer-sized student screen open, the host side is narrow. */
+body.lv-split-wide .topbar .inline-links{ display:none; }
+
+/* The end-of-game stats on a student's screen. */
+.lv-stats-mini{ text-align:left; margin:1.125rem 0 0; }
+.lv-stats-mini h3{ font-size:1.2rem; margin:1.125rem 0 0.625rem; }
+.lv-stats-mini .lv-stat-tiles{ grid-template-columns:repeat(auto-fit, minmax(8.125rem, 1fr)); gap:0.5rem; margin-bottom:0.625rem; }
+.lv-stats-mini .lv-stat-tile{ padding:0.625rem 0.5rem; }
+.lv-stats-mini .lv-stat-big{ font-size:1.5rem; }
+.lv-stats-mini .lv-missed{ padding:0.875rem 1rem; }
+.lv-stats-mini .lv-speed{ grid-template-columns:repeat(auto-fit, minmax(12.5rem, 1fr)); }
+.lv-missed-list{ margin:0; padding-left:1.3em; }
+.lv-missed-list li{ padding:0.4375rem 0; border-bottom:1px solid var(--line); }
+.lv-missed-list li:last-child{ border-bottom:0; }
+.lv-missed-n{ margin-left:0.375rem; font-size:.82rem; font-weight:700; color:#b42318; }
+.lv-missed-def{ display:block; font-size:.9rem; color:var(--ink-soft); }
+.lv-opt input[type="number"]{ width:5.5em; text-align:center; font-weight:700; }
+.lv-minutes{ display:inline-flex; align-items:center; gap:0.5rem; font-weight:600; }
+
+/* New asteroids fly in from far away; the old ones shrink and fade out. */
+.bl-rock{ animation:bl-in .5s cubic-bezier(.2,.8,.3,1.15) both; }
+.bl-rock.leaving{ animation:bl-out .4s ease-in forwards; pointer-events:none; }
+@keyframes bl-in{ from{ opacity:0; scale:.25; } to{ opacity:1; scale:1; } }
+@keyframes bl-out{ to{ opacity:0; scale:.5; } }
+@media (prefers-reduced-motion:reduce){ .bl-rock, .bl-rock.leaving{ animation-duration:.01s; animation-delay:0s !important; } }
+
+
+/* Smooth on slower computers (Gennaro, 2026-09-29): the moving parts of the
+   winners' screen each get their own layer, so the page is not repainted
+   every frame, and the title's shimmer has no filter to redo. */
+.lv-rays, .lv-step-block .lv-emoji, .lv-crown, .lv-fan, .lv-step-shine::after, .lv-takeover, .lv-spin-coin{ will-change:transform; }
+.lv-done-title{ filter:none; }
+
+/* Each beep of the countdown: a ring bursts out and the screen flashes. */
+.lv-go-num{ grid-area:1 / 1; position:relative; z-index:1; }
+.lv-go-ring{ grid-area:1 / 1; width:min(50vw, 50vh); height:min(50vw, 50vh); border-radius:50%; border:min(2.4vw, 2.4vh) solid currentColor; color:#fff; opacity:0; animation:lvGoRing .75s ease-out both; }
+.lv-go.n3 .lv-go-ring{ color:#ff5a5f; } .lv-go.n2 .lv-go-ring{ color:#ffb703; } .lv-go.n1 .lv-go-ring{ color:#4ade80; } .lv-go.go .lv-go-ring{ color:#ffe066; animation-duration:1s; }
+.lv-go{ animation:lvGoFlash .5s ease-out; }
+@keyframes lvGoRing{ 0%{ opacity:.9; transform:scale(.35); } 100%{ opacity:0; transform:scale(1.7); } }
+@keyframes lvGoFlash{ 0%{ box-shadow:inset 0 0 0 100vmax rgba(255,255,255,.18); } 100%{ box-shadow:inset 0 0 0 100vmax rgba(255,255,255,0); } }
+@media (prefers-reduced-motion:reduce){ .lv-go-ring{ display:none; } .lv-go{ animation:none; } }
+
+.lv-go.ready{ background:rgba(12,20,45,.82); }
+.lv-go.ready .lv-go-num{ font-size:min(12vw, 16vh); color:#fff; }
+.lv-go.ready .lv-go-ring{ display:none; }
+
+/* The stage lights over the winners' screen: under the takeover and the
+   fireworks, letting clicks through. */
+.lv-spot{ position:fixed; inset:0; width:100%; height:100%; pointer-events:none; z-index:990; }
+body.lv-split-on .lv-spot{ right:410px; width:calc(100% - 410px); }
+body.lv-split-on.lv-split-wide .lv-spot{ right:48vw; width:52vw; }
+@media (max-width:1000px){ body.lv-split-on .lv-spot{ right:340px; width:calc(100% - 340px); } }
+@media (max-width:700px){ body.lv-split-on .lv-spot, body.lv-split-on.lv-split-wide .lv-spot{ right:0; width:100%; } }
+
+/* ---------------- power-ups (Vocab Live) ----------------
+   Nothing here flashes or strobes: every effect moves slowly or holds still. */
+.lv-pu{ display:flex; flex-wrap:wrap; align-items:center; gap:0.5rem 0.625rem; margin:-0.25rem 0 0.75rem; }
+.lv-pu-icon{ font-size:1.5rem; line-height:1; font-weight:800; }
+.lv-pu-meter{ display:flex; align-items:center; gap:0.625rem; background:#fff; border:1.5px dashed var(--line); border-radius:62.4375rem; padding:0.375rem 0.875rem; font-weight:600; font-size:.9rem; color:var(--ink-soft); }
+.lv-pu-dots{ display:inline-flex; gap:0.3125rem; }
+.lv-pu-dots span{ width:0.75rem; height:0.75rem; border-radius:50%; background:var(--line); }
+.lv-pu-dots span.on{ background:var(--team, var(--accent)); }
+.lv-pu-item{ display:flex; align-items:center; gap:0.625rem; font:inherit; text-align:left; cursor:pointer; background:linear-gradient(135deg, #fff6d6, #ffe08a); color:#5b3b00; border:2px solid #e0a800; border-radius:62.4375rem; padding:0.375rem 1.125rem 0.375rem 0.625rem; box-shadow:0 0.25rem 0.875rem -0.375rem rgba(160,110,0,.6); animation:lv-pu-bob 2.4s ease-in-out infinite; }
+.lv-pu-item:disabled{ animation:none; opacity:.75; cursor:default; }
+.lv-pu-words{ display:grid; line-height:1.2; font-size:.85rem; }
+.lv-pu-words strong{ font-size:1rem; }
+@keyframes lv-pu-bob{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-0.1875rem); } }
+.lv-pu-chips{ display:flex; flex-wrap:wrap; gap:0.375rem; }
+.lv-pu-chip{ display:inline-flex; align-items:center; gap:0.25rem; background:var(--accent-tint); color:var(--ink); border-radius:62.4375rem; padding:0.1875rem 0.625rem; font-size:.82rem; font-weight:700; white-space:nowrap; }
+#jnPlay{ position:relative; }
+#jnPlay.shielded .lv-prompt{ box-shadow:0 0 0 0.25rem #74c0fc, 0 0 1.5rem 0.25rem rgba(116,192,252,.55); }
+
+.lv-pu-vote{ background:#fff8e1; border:2px solid #f2c94c; border-radius:var(--radius); padding:0.75rem 1rem; margin:0 0 0.75rem; display:grid; gap:0.5rem; text-align:center; font-weight:600; }
+.lv-pu-vote-q{ margin:0; display:flex; align-items:center; justify-content:center; gap:0.625rem; flex-wrap:wrap; }
+.lv-pu-vote-btns{ display:flex; justify-content:center; gap:0.625rem; }
+.lv-pu-vote-btns .btn{ min-width:6.875rem; }
+.lv-pu-vote-btns .picked{ outline:0.1875rem solid var(--ink); outline-offset:2px; }
+.lv-pu-vote-count{ font-size:.88rem; color:var(--ink-soft); }
+.lv-pu-vote .lv-wait-bar span{ background:#e0a800; }
+
+.lv-pu-sheet{ position:fixed; inset:0; z-index:40; background:rgba(10,16,40,.55); display:grid; place-items:center; padding:1rem; }
+.lv-pu-card{ background:#fff; color:var(--ink); border-radius:var(--radius); box-shadow:var(--shadow); padding:1.375rem 1.25rem; width:min(27.5rem, 100%); max-height:calc(100vh - 2rem); overflow:auto; display:grid; gap:0.625rem; text-align:center; }
+.lv-pu-card h3{ margin:0; font-size:1.4rem; }
+.lv-pu-card p{ margin:0; }
+.lv-pu-big{ font-size:3rem; line-height:1; font-weight:800; }
+.lv-pu-ask{ font-weight:700; }
+.lv-pu-note{ font-size:.88rem; color:var(--ink-soft); }
+.lv-pu-targets{ display:grid; gap:0.5rem; }
+.lv-pu-target{ display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:0.625rem; font:inherit; font-weight:700; text-align:left; background:#fff; color:var(--ink); border:2px solid var(--team); border-radius:var(--radius-sm); padding:0.5rem 0.75rem; cursor:pointer; }
+.lv-pu-target .lv-emoji{ width:2.25rem; height:2.25rem; border-radius:0.625rem; background:var(--team); display:grid; place-items:center; font-size:1.3rem; }
+.lv-pu-target:hover:not(:disabled){ background:var(--accent-tint); }
+.lv-pu-target:disabled{ opacity:.45; cursor:default; }
+.lv-pu-target-num{ font-variant-numeric:tabular-nums; }
+.lv-pu-go{ justify-self:center; min-width:12.5rem; }
+.lv-pu-cancel{ justify-self:center; }
+
+.lv-hold{ position:absolute; inset:-0.5rem; z-index:20; border-radius:var(--radius); display:grid; place-content:center; justify-items:center; gap:0.375rem; text-align:center; padding:1.25rem; font-weight:700; }
+.lv-hold.freeze{ background:linear-gradient(160deg, rgba(208,235,255,.96), rgba(165,216,255,.96)); color:#0b3d66; border:0.1875rem solid #74c0fc; box-shadow:inset 0 0 2.5rem rgba(255,255,255,.9); }
+.lv-hold.swap{ background:rgba(243,240,255,.96); color:#3b2a7a; border:0.1875rem solid #9775fa; }
+.lv-hold strong{ font-size:1.5rem; }
+.lv-hold-icon{ font-size:4rem; line-height:1; animation:lv-pu-bob 2.4s ease-in-out infinite; }
+.lv-hold-num{ font-size:3.2rem; font-weight:800; font-variant-numeric:tabular-nums; line-height:1; }
+.lv-hold-note{ font-weight:600; font-size:.95rem; }
+
+#jnPlay.glitched .lv-prompt, #jnPlay.glitched .lv-option{ filter:blur(1.3px) saturate(1.6) hue-rotate(35deg); }
+#jnPlay.glitched .lv-option{ animation:lv-wobble 1.3s ease-in-out infinite alternate; }
+#jnPlay.glitched .lv-option:nth-child(2n){ animation-duration:1.7s; animation-direction:alternate-reverse; }
+#jnPlay.glitched .lv-prompt{ animation:lv-wobble 2.1s ease-in-out infinite alternate; }
+#jnPlay.glitched::before{ content:attr(data-glitch); display:block; text-align:center; font-weight:800; color:#6741d9; margin:0 0 0.5rem; }
+#jnPlay.glitched .lv-prompt::after{ content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; background:repeating-linear-gradient(0deg, rgba(103,65,217,.08) 0 2px, transparent 2px 0.375rem); }
+@keyframes lv-wobble{ 0%{ transform:translate(-0.3125rem, 1px) skewX(-4deg); } 50%{ transform:translate(0.25rem, -2px) skewX(3deg); } 100%{ transform:translate(-2px, 2px) skewX(-2deg); } }
+.lv-playbar.struck{ animation:lv-shake .6s ease-in-out; }
+@keyframes lv-shake{ 0%,100%{ transform:translateX(0); } 20%{ transform:translateX(-0.5rem); } 40%{ transform:translateX(0.4375rem); } 60%{ transform:translateX(-0.3125rem); } 80%{ transform:translateX(0.1875rem); } }
+
+.lv-toast{ position:fixed; left:50%; bottom:1.375rem; z-index:50; transform:translate(-50%, 1.875rem); opacity:0; pointer-events:none; background:var(--ink); color:#fff; font-weight:700; border-radius:62.4375rem; padding:0.75rem 1.25rem; max-width:min(92vw, 32.5rem); text-align:center; box-shadow:var(--shadow); transition:transform .3s ease, opacity .3s ease; }
+.lv-toast.show{ transform:translate(-50%, 0); opacity:1; }
+
+/* The big screen */
+.lv-lane-pu{ display:flex; flex-wrap:nowrap; gap:0.25rem; margin-top:0.1875rem; overflow:hidden; height:1.5rem; align-items:center; }
+.lv-lane-pu:empty{ visibility:hidden; }
+.lv-lane-pu::before{ content:"\200b"; font-size:.8rem; padding:2px 0; }
+.lv-lane-pu .lv-pu-chip{ font-size:.8rem; padding:2px 0.5rem; }
+.lv-lane-pu .lv-pu-chip.held{ background:#fff3bf; color:#5b3b00; }
+.lv-lane.frozen{ background:linear-gradient(90deg, #e7f5ff, #d0ebff); border-color:#74c0fc; }
+.lv-lane.glitchy .lv-track{ filter:blur(1px) hue-rotate(40deg); }
+.lv-lane.hit .lv-track{ animation:lv-shake .6s ease-in-out; }
+@media (prefers-reduced-motion:reduce){
+  .lv-pu-item, .lv-hold-icon, #jnPlay.glitched .lv-option, #jnPlay.glitched .lv-prompt, .lv-lane.glitchy .lv-track, .lv-lane.hit .lv-track, .lv-playbar.struck, .lv-burst, .lv-lane.leader .lv-lane-name .lv-emoji::after{ animation:none !important; }
+}
+
+#lvPlay{ container-type:inline-size; }
+.lv-pu-chip.fire{ background:#fff0e6; color:#b0400a; }
+.lv-pu-chip.fire.hot{ background:#ffe3cc; color:#9a2c00; box-shadow:0 0 0 2px #ff922b; }
+.lv-fire{ font-weight:800; color:#b0400a; background:#fff0e6; border-radius:62.4375rem; padding:0.1875rem 0.625rem; white-space:nowrap; }
+/* The ladders are compact: each lane is one tidy row. */
+.lv-play-grid .lv-race{ gap:0.5rem; min-width:0; }
+.lv-play-grid .lv-lane{ grid-template-columns:minmax(10rem, 18.75rem) minmax(7.5rem, 1fr) auto; gap:1rem; padding:0.625rem 1rem; }
+.lv-play-grid .lv-lane-name .lv-emoji{ width:2.875rem; height:2.875rem; font-size:1.6rem; }
+.lv-play-grid .lv-lane-title{ font-size:1.15rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.lv-play-grid .lv-lane-members{ font-size:.84rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.lv-play-grid .lv-lane-num{ font-size:1.3rem; min-width:4em; }
+@container (max-width:560px){ .lv-play-grid .lv-lane{ grid-template-columns:1fr auto; } .lv-play-grid .lv-lane .lv-track{ grid-column:1 / -1; grid-row:2; } }
+
+/* ---------------- the drawing pad on the waiting screen (live-doodle.js) ---------------- */
+.lv-doodle{ max-width:62.5rem; margin:1.125rem auto 0; background:#fff; border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow-sm); padding:0.875rem; display:grid; gap:0.625rem; }
+.dd-head{ display:flex; flex-wrap:wrap; align-items:baseline; gap:0.25rem 0.75rem; }
+.dd-title{ margin:0; font-size:1.15rem; }
+.dd-note{ font-size:.85rem; color:var(--ink-soft); }
+.dd-bar{ display:flex; flex-wrap:wrap; align-items:center; gap:0.5rem 0.875rem; }
+.dd-tools, .dd-acts{ display:flex; flex-wrap:wrap; gap:0.25rem; }
+.dd-tool, .dd-act{ width:2.625rem; height:2.625rem; display:grid; place-items:center; border:1.5px solid var(--line); border-radius:0.625rem; background:#fff; color:var(--ink); cursor:pointer; padding:0; }
+.dd-tool:hover, .dd-act:hover:not(:disabled){ border-color:var(--accent); background:var(--accent-tint); }
+.dd-tool[aria-pressed="true"]{ background:var(--accent); border-color:var(--accent); color:#fff; }
+.dd-act:disabled{ opacity:.4; cursor:default; }
+.dd-act.sure{ background:var(--bad-tint); border-color:var(--bad); color:var(--bad-ink); }
+.dd-size{ display:flex; align-items:center; gap:0.5rem; }
+.dd-size input{ width:7.5rem; accent-color:var(--accent); }
+.dd-dot{ display:inline-block; border-radius:50%; border:1.5px solid var(--line); flex:none; }
+.dd-palette{ display:flex; flex-wrap:wrap; gap:0.3125rem; align-items:center; }
+.dd-swatch{ width:1.75rem; height:1.75rem; border-radius:50%; border:2px solid rgba(0,0,0,.18); cursor:pointer; padding:0; }
+.dd-swatch[aria-pressed="true"]{ outline:0.1875rem solid var(--ink); outline-offset:2px; }
+.dd-custom{ width:2.125rem; height:1.875rem; border:0; padding:0; background:none; cursor:pointer; }
+.dd-stage{ position:relative; width:min(100%, calc(64vh * 10 / 7)); margin:0 auto; aspect-ratio:10 / 7; border:1.5px solid var(--line); border-radius:0.625rem; overflow:hidden; background:#fff; }
+.dd-canvas, .dd-over{ position:absolute; inset:0; width:100%; height:100%; }
+.dd-over{ touch-action:none; cursor:crosshair; }
+.dd-stage[data-tool="fill"] .dd-over{ cursor:cell; }
+@media (max-width:520px){ .lv-doodle{ padding:0.625rem; } .dd-tool, .dd-act{ width:2.25rem; height:2.25rem; } .dd-swatch{ width:1.5rem; height:1.5rem; } .dd-size input{ width:5.625rem; } }
+
+/* The power-ups to play with, in setup: one card each with what it does. */
+.lv-pw-kinds{ padding:0.875rem 0 1rem; border-bottom:1px solid var(--line); }
+.lv-pw-head{ margin:0 0 0.625rem; font-weight:700; }
+.lv-pw-head span{ font-weight:400; color:var(--ink-soft); font-size:.9rem; margin-left:0.375rem; }
+.lv-pw-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(15.625rem, 1fr)); gap:0.5rem; }
+.lv-pw-card{ display:grid; grid-template-columns:auto auto 1fr; align-items:center; gap:0.75rem; border:1.5px solid var(--line); border-radius:var(--radius-sm); padding:0.625rem 0.75rem; cursor:pointer; background:#fff; }
+.lv-pw-card:has(input:checked){ border-color:var(--accent); background:var(--accent-tint); }
+.lv-pw-card input{ width:1.5rem; height:1.5rem; margin:0; accent-color:var(--accent); }
+.lv-pw-card .lv-pw-icon{ font-size:1.6rem; font-weight:800; line-height:1; min-width:1.4em; text-align:center; }
+.lv-pw-text{ display:grid; gap:2px; font-size:.86rem; color:var(--ink-soft); line-height:1.35; }
+.lv-pw-text strong{ font-size:1rem; color:var(--ink); }
+
+/* The race: a "top 5 only" switch, crowns, and power-ups as pictures. */
+.lv-race-tools{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:0.625rem; margin:0 0 0.75rem; }
+.lv-race-tools > :not(.lv-top5){ margin:0; }
+.lv-top5{ margin-left:auto; }
+.lv-top5{ display:flex; align-items:center; gap:0.625rem; cursor:pointer; background:#fff; border:1px solid var(--line); border-radius:62.4375rem; padding:0.5rem 1rem; box-shadow:var(--shadow-sm); }
+.lv-top5 input{ width:1.5rem; height:1.5rem; margin:0; accent-color:var(--accent); flex:none; }
+.lv-top5 .lv-opt-note{ margin-left:0.25rem; }
+.lv-lane{ position:relative; }
+.lv-lane-name .lv-emoji{ position:relative; }
+.lv-lane.leader{ border-color:#f2b705; box-shadow:0 0 0 2px #f2b705, var(--shadow-sm); }
+.lv-lane.leader .lv-lane-name .lv-emoji::after{ content:"\1F451"; position:absolute; top:-0.9375rem; left:50%; transform:translateX(-50%) rotate(-12deg); font-size:1.1rem; animation:lv-pu-pop .5s cubic-bezier(.2,1.6,.4,1); }
+.lv-burst{ position:absolute; z-index:3; left:50%; top:50%; font-size:3.2rem; line-height:1; font-weight:800; pointer-events:none; transform:translate(-50%, -50%); animation:lv-burst 1.6s cubic-bezier(.2,.9,.3,1) forwards; text-shadow:0 2px 0.5rem rgba(0,0,0,.25); }
+@keyframes lv-burst{ 0%{ opacity:0; transform:translate(-50%, -50%) scale(.3) rotate(-15deg); } 18%{ opacity:1; transform:translate(-50%, -50%) scale(1.25) rotate(6deg); } 35%{ transform:translate(-50%, -50%) scale(1) rotate(0); } 80%{ opacity:1; } 100%{ opacity:0; transform:translate(-50%, -110%) scale(1); } }
+.lv-lane.frozen .lv-track::after{ content:"\2744\FE0F  \2744\FE0F  \2744\FE0F"; position:absolute; inset:0; display:grid; place-items:center; font-size:.85rem; letter-spacing:.3em; }
+.lv-track{ position:relative; }
+.lv-lane.glitchy .lv-track::after{ content:""; position:absolute; inset:0; border-radius:inherit; background:repeating-linear-gradient(0deg, rgba(103,65,217,.25) 0 2px, transparent 2px 0.3125rem); }
+.lv-rest{ margin-top:0.75rem; }
+.lv-rest-note{ margin:0; text-align:center; font-weight:700; color:var(--ink-soft); background:#fff; border:1px dashed var(--line); border-radius:var(--radius-sm); padding:0.625rem; }
+
+/* ---------------- every screen size ----------------
+   (The demo split screen keeps its pixel size, since the student page inside
+   it sizes itself to its own small window.)
+   Laid out for a 1440 x 820 window (a student's Surface Pro). The teacher's
+   buttons, menus and settings stay this size on any screen, as on Blooket
+   and Wayground (Gennaro, 2026-10-01; an earlier version zoomed everything
+   and looked huge on his monitor). The host page fills the width, and only
+   what the class reads from across the room is zoomed up (below). Anyone
+   who wants it bigger uses the browser's own zoom (Gennaro removed A-/A+,
+   2026-10-01). */
+html:has(.lv-page){ font-size:16px; }
+.lv-page.container{ max-width:68.75rem; }
+.lv-host #lvLobby, .lv-host #lvTeamsStep, .lv-host #lvPlay, .lv-host #lvDone{ max-width:none; }
+.lv-host.container:has(#lvPlay:not([hidden])), .lv-host.container:has(#lvLobby:not([hidden])), .lv-host.container:has(#lvTeamsStep:not([hidden])), .lv-host.container:has(#lvDone:not([hidden])){ max-width:min(100%, 160rem); }
+/* What the class reads from across the room grows with the screen (--lv-show,
+   set in live-host.js, 1 to 1.9); the teacher's buttons and menus do not. */
+.lv-host .lv-joinbox, .lv-host #lvPlayers, .lv-host .lv-count, .lv-host #lvTeamList, .lv-host #lvPickTeamsBox, .lv-host .lv-countdown,
+.lv-host #lvRace, .lv-host #lvRest, .lv-host .lv-ph-mid, .lv-host .lv-ph-left, .lv-host .lv-late-join, .lv-host #lvDone{ zoom:var(--lv-show, 1); }
+/* Full screen for projecting: the site's top bar and footer step aside. */
+:root:fullscreen .topbar, :root:fullscreen footer, :root:fullscreen .skip{ display:none; }
+:root:fullscreen body{ background:var(--paper-soft); }
+.lv-fullscreen{ display:inline-flex; align-items:center; gap:0.4rem; }
+/* The on/off switches grow with the page too. */
+.lv-page .fc-switch input{ width:2.875rem; height:1.625rem; }
+.lv-page .fc-switch input::after{ top:0.1875rem; left:0.1875rem; width:1.25rem; height:1.25rem; }
+.lv-page .fc-switch input:checked::after{ left:1.4375rem; }
+:where(.lv-page) .btn{ padding:0.75rem 1.375rem; }
+:where(.lv-page) .btn.fc-small{ padding:0.5rem 1rem; }
+
+/* ---------------- power-ups in Blast ---------------- */
+#jnBlast{ position:relative; }
+#jnBlast .lv-pu{ margin:0 0 0.625rem; }
+#jnBlast.shielded .bl-field{ box-shadow:0 0 0 0.25rem #74c0fc, 0 0 1.5rem 0.25rem rgba(116,192,252,.55); }
+.lv-hold.bl-hold{ inset:0; border-radius:var(--radius); z-index:6; }
+#jnBlast.glitched .bl-rock-text{ filter:blur(1.6px); animation:lv-wobble 1.3s ease-in-out infinite alternate; }
+#jnBlast.glitched .bl-rock:nth-child(2n) .bl-rock-text{ animation-duration:1.7s; animation-direction:alternate-reverse; }
+#jnBlast.glitched .bl-field::after{ content:""; position:absolute; inset:0; pointer-events:none; background:repeating-linear-gradient(0deg, rgba(151,117,250,.12) 0 2px, transparent 2px 6px); z-index:4; }
+#jnBlast.glitched::before{ content:attr(data-glitch); display:block; text-align:center; font-weight:800; color:#6741d9; margin:0 0 0.5rem; }
+.bl-top.struck{ animation:lv-shake .6s ease-in-out; }
+@media (prefers-reduced-motion:reduce){ #jnBlast.glitched .bl-rock-text, .bl-top.struck{ animation:none !important; } }
+
+/* Mid-game controls on the host screen: time and fast mode. */
+.lv-play-ctl{ display:flex; flex-wrap:wrap; align-items:center; gap:0.625rem; }
+.lv-play-ctl[hidden], .lv-time-ctl[hidden]{ display:none !important; }
+.lv-time-ctl{ display:inline-flex; gap:0.375rem; }
+.lv-lane.gone{ opacity:.55; }
+.lv-clock{ margin-left:auto; }
+.lv-clock.urgent{ color:var(--bad-ink); border-color:var(--bad); }
+.lv-progress-num{ white-space:nowrap; }
+.lv-playbar .lv-clock{ font-size:1rem; padding:0.125rem 0.625rem; flex:none; }
+@media (max-width:420px){ .lv-playbar{ flex-wrap:wrap; } .lv-playbar .lv-progress{ order:5; flex-basis:100%; } }
+/* "Still there?" after 2 minutes without a tap during a game. */
+.lv-idle{ position:fixed; inset:0; z-index:60; background:rgba(10,16,40,.6); display:grid; place-items:center; padding:1rem; cursor:pointer; }
+.lv-idle-card{ background:#fff; color:var(--ink); border-radius:var(--radius); box-shadow:var(--shadow); padding:1.5rem 1.75rem; width:min(26rem, 100%); display:grid; gap:0.5rem; justify-items:center; text-align:center; }
+.lv-idle-icon{ font-size:3rem; line-height:1; }
+.lv-idle-card strong{ font-size:1.4rem; }
+
+/* ---------------- the player list during a game ---------------- */
+.lv-roster-back{ position:fixed; inset:0; z-index:950; background:rgba(10,16,40,.35); }
+.lv-roster{ position:fixed; top:0; right:0; bottom:0; z-index:960; width:min(34rem, 100%); background:var(--paper); box-shadow:-0.5rem 0 2rem rgba(10,16,40,.25); padding:1rem 1.125rem 1.5rem; overflow-y:auto; display:flex; flex-direction:column; gap:0.625rem; animation:lv-roster-in .25s ease-out; }
+@keyframes lv-roster-in{ from{ transform:translateX(2rem); opacity:0; } to{ transform:none; opacity:1; } }
+.lv-roster-head{ display:flex; align-items:center; justify-content:space-between; }
+.lv-roster-head h2{ margin:0; font-size:1.4rem; }
+.lv-roster-close{ font:inherit; font-size:1.2rem; width:2.5rem; height:2.5rem; border-radius:50%; border:1.5px solid var(--line); background:#fff; cursor:pointer; }
+.lv-roster-team{ border:1px solid var(--line); border-left:0.3125rem solid var(--team, var(--line)); border-radius:var(--radius-sm); background:#fff; padding:0.5rem 0.75rem; }
+.lv-roster-team-name{ display:flex; align-items:center; gap:0.5rem; margin:0.125rem 0 0.375rem; font-size:1rem; }
+.lv-roster-row{ display:grid; grid-template-columns:auto 1fr; align-items:center; gap:0.25rem 0.5rem; padding:0.5rem 0; border-top:1px solid var(--line); }
+.lv-roster-team-name + .lv-roster-row, .lv-roster-team > .lv-roster-row:first-child{ border-top:0; }
+.lv-roster-row.gone .lv-roster-name{ color:var(--ink-soft); }
+.lv-roster-name{ font-weight:700; overflow-wrap:anywhere; }
+.lv-roster-bot{ font-weight:400; font-size:.8rem; color:var(--ink-soft); }
+.lv-roster-tools{ grid-column:2; display:flex; flex-wrap:wrap; gap:0.25rem; }
+.lv-roster-tools .btn{ padding:0.3125rem 0.75rem; font-size:.82rem; }
+.lv-roster-kick.sure{ background:var(--bad) !important; color:#fff !important; border-color:var(--bad) !important; }
+.lv-roster-blocked{ border-left-color:var(--bad); }
+@media (prefers-reduced-motion:reduce){ .lv-roster{ animation:none; } }
+
+/* Team numbers in the corner of each team's banner. */
+.lv-team-num{ display:inline-grid; place-items:center; flex:none; min-width:2.1rem; height:2.1rem; padding:0 0.375rem; border-radius:999px; background:#fff; color:var(--team, var(--ink)); font-weight:800; font-size:1.15rem; line-height:1; font-variant-numeric:tabular-nums; box-shadow:0 1px 3px rgba(0,0,0,.2); }
+.lv-team-head .lv-team-num, .lv-pick-team-top .lv-team-num{ margin-left:auto; }
+.lv-team-head .lv-team-count + .lv-team-num{ margin-left:0.5rem; }
+.lv-myteam{ position:relative; padding-right:3.25rem; }
+.lv-myteam .lv-team-num{ position:absolute; top:0.625rem; right:0.625rem; }
+/* Team names on one line (smaller letters for a long one, set in live-host.js and live-join.js). */
+.lv-team-title{ flex:1 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.lv-teams{ grid-template-columns:repeat(auto-fill, minmax(15.5rem, 1fr)); }
+
+/* ---------------- the game screen's header ----------------
+   Like Blooket and Wayground: the set and goal on the left, a big clock in
+   the middle, the teacher's buttons on the right, switches below. */
+.lv-play-head{ display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:1rem; background:#fff; border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow-sm); padding:0.75rem 1rem; margin:0 0 0.75rem; }
+.lv-ph-left{ min-width:0; }
+.lv-ph-left h2{ margin:0; font-size:1.3rem; line-height:1.2; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow-wrap:anywhere; }
+.lv-ph-sub{ margin:0.25rem 0 0; display:flex; flex-wrap:wrap; gap:0.25rem 0.875rem; font-size:.92rem; color:var(--ink-soft); font-weight:600; }
+.lv-ph-code strong{ color:var(--ink); letter-spacing:.08em; }
+.lv-ph-mid{ display:flex; align-items:center; gap:0.5rem; justify-self:center; }
+.lv-ph-mid[hidden]{ display:none !important; }
+.lv-big-clock{ font-size:2.6rem; font-weight:800; font-variant-numeric:tabular-nums; line-height:1; min-width:5.2ch; text-align:center; padding:0.4rem 1.1rem; border-radius:999px; background:var(--ink); color:#fff; box-shadow:0 0.375rem 1rem rgba(20,25,50,.25); transition:background .3s ease; }
+.lv-big-clock.none{ display:none; }
+.lv-big-clock.soon{ background:#b35c00; }
+.lv-big-clock.urgent{ background:var(--bad); }
+.lv-clock-btn{ font:inherit; font-weight:800; font-size:.9rem; color:var(--ink); background:var(--paper-soft); border:1.5px solid var(--line); border-radius:999px; padding:0.4rem 0.75rem; cursor:pointer; white-space:nowrap; }
+.lv-clock-btn:hover{ border-color:var(--accent); background:var(--accent-tint); }
+.lv-clock-btn[hidden]{ display:none; }
+.lv-ph-right{ display:flex; flex-wrap:wrap; justify-content:flex-end; gap:0.5rem; }
+.lv-tool{ font:inherit; font-weight:700; font-size:.95rem; color:var(--ink); background:#fff; border:1.5px solid var(--line); border-radius:999px; padding:0.5rem 1rem; cursor:pointer; white-space:nowrap; }
+.lv-tool:hover{ border-color:var(--accent); background:var(--accent-tint); }
+.lv-tool[aria-expanded="true"]{ border-color:var(--accent); box-shadow:0 0 0 2px var(--accent); }
+.lv-tool[hidden]{ display:none; }
+.lv-tool-end{ color:var(--bad-ink); border-color:var(--bad); }
+.lv-tool-end:hover{ background:var(--bad-tint); border-color:var(--bad); }
+.lv-tool-end.sure{ background:var(--bad); color:#fff; }
+.lv-race-tools{ align-items:center; }
+.lv-race-tools .lv-music{ margin:0; }
+.lv-toggles{ display:flex; flex-wrap:wrap; gap:0.5rem; margin-left:auto; }
+.lv-toggle{ display:inline-flex; align-items:center; gap:0.5rem; background:#fff; border:1px solid var(--line); border-radius:999px; padding:0.375rem 0.875rem 0.375rem 0.5rem; font-weight:700; font-size:.92rem; box-shadow:var(--shadow-sm); cursor:pointer; }
+.lv-toggle[hidden]{ display:none; }
+@container (max-width:1100px){
+  .lv-play-head{ grid-template-columns:1fr auto; }
+  .lv-ph-mid{ grid-column:1 / -1; grid-row:2; }
+  .lv-ph-right{ grid-column:2; grid-row:1; }
+}
+@container (max-width:560px){
+  .lv-play-head{ grid-template-columns:1fr; }
+  .lv-ph-right{ grid-column:1; grid-row:3; justify-content:center; }
+  .lv-big-clock{ font-size:2rem; }
+}
+
+/* The streak flame and other chips on a lane never get their tops cut off. */
+.lv-lane-pu{ height:auto; min-height:1.75rem; padding:0.125rem 0; }
+.lv-pu-chip{ line-height:1.25; }
+.lv-pu-chip.fire.hot{ box-shadow:inset 0 0 0 2px #ff922b; }
+
+/* The lobby's settings panel (same panel as Players) and the text size buttons. */
+.lv-settings-panel .lv-lobby-opts-body{ grid-template-columns:1fr; }
+.lv-settings-panel .lv-lobby-opts-body .lv-opt{ grid-template-columns:1fr auto; align-items:center; border-bottom:1px solid var(--line); padding:0.5rem 0; }
+.lv-lobby-actions 

@@ -1,0 +1,25 @@
+# The live game server for Vocab Live, Blast and Match.
+# Cloudflare builds and deploys this folder as its own Worker, "vocab-live".
+# If you name the Worker something else, change `name` below to match.
+# It has no web address of its own: your Pages site
+# reaches it through a Durable Object binding called LIVE.
+# Setup steps are in the kit's README.md, steps 4 and 5.
+name = "vocab-live"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+workers_dev = false
+preview_urls = false
+
+[[durable_objects.bindings]]
+name = "LIVE"
+class_name = "LiveGame"
+
+# SQLite storage is the kind the free plan allows.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["LiveGame"]
+
+# Workers AI double checks typed nicknames (src/names.js). Free daily use is
+# plenty for a class; if it runs out, names are checked by the word lists only.
+[ai]
+binding = "AI"

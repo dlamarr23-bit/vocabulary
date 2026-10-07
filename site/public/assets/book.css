@@ -1,0 +1,435 @@
+/* ============================================================
+   Vocabulary site: flashcards and live games
+   Shared stylesheet
+   ============================================================ */
+
+/* Poppins is self hosted, so the book renders correctly on a school laptop
+   with no outside font access and cannot break when a CDN is blocked. */
+@font-face { font-family:'Poppins'; font-style:normal; font-weight:400; font-display:swap; src:url('fonts/poppins-400.woff2') format('woff2'); }
+@font-face { font-family:'Poppins'; font-style:italic; font-weight:400; font-display:swap; src:url('fonts/poppins-400-italic.woff2') format('woff2'); }
+@font-face { font-family:'Poppins'; font-style:normal; font-weight:500; font-display:swap; src:url('fonts/poppins-500.woff2') format('woff2'); }
+@font-face { font-family:'Poppins'; font-style:normal; font-weight:600; font-display:swap; src:url('fonts/poppins-600.woff2') format('woff2'); }
+@font-face { font-family:'Poppins'; font-style:italic; font-weight:600; font-display:swap; src:url('fonts/poppins-600-italic.woff2') format('woff2'); }
+@font-face { font-family:'Poppins'; font-style:normal; font-weight:700; font-display:swap; src:url('fonts/poppins-700.woff2') format('woff2'); }
+@font-face { font-family:'Poppins'; font-style:normal; font-weight:800; font-display:swap; src:url('fonts/poppins-800.woff2') format('woff2'); }
+
+:root{
+  --ink:#1b1f2a;
+  --ink-soft:#4a5063;
+  --paper:#ffffff;
+  --paper-soft:#f6f7fb;
+  --line:#e6e8f0;
+  --accent:#1d4ed8;
+  --accent-dark:#15379b;
+  --accent-tint:#eaf0fe;
+  --good:#2a9d6f;
+  --good-tint:#e8f8f0;
+  --good-ink:#1c6b4b;
+  --bad:#e0483f;
+  --bad-tint:#fdecec;
+  --bad-ink:#a3352d;
+  --brand-gold:#f2b705;
+  --brand-blue:#12376e;
+  --radius:18px;
+  --radius-sm:10px;
+  --shadow:0 10px 30px -12px rgba(20,25,50,.18);
+  --shadow-sm:0 4px 14px -6px rgba(20,25,50,.15);
+  --maxw:1100px;
+  color-scheme: light;
+}
+
+/* ---- per unit accent themes ---- */
+body[data-unit="u1"]{ --accent:#0f9d58; --accent-dark:#0a6d3c; --accent-tint:#e8f6ee; }
+body[data-unit="u2"]{ --accent:#c2620d; --accent-dark:#8d4708; --accent-tint:#fdf0e3; }
+body[data-unit="u3"]{ --accent:#6a4c93; --accent-dark:#4e3570; --accent-tint:#f1ecf7; }
+body[data-unit="u4"]{ --accent:#e63946; --accent-dark:#b3212c; --accent-tint:#fdeced; }
+body[data-unit="u5"]{ --accent:#1982c4; --accent-dark:#0f5f95; --accent-tint:#e9f4fb; }
+body[data-unit="u6"]{ --accent:#00a0c4; --accent-dark:#00748d; --accent-tint:#e6f7fb; }
+
+*,*::before,*::after{ box-sizing:border-box; }
+/* Phone browsers enlarge text they think is too small to read. Inside a drawing
+   that pushes labels into each other and off the edge, so it is switched off:
+   every size in the book is already chosen to be readable. */
+html{ scroll-behavior:smooth; -webkit-text-size-adjust:100%; text-size-adjust:100%; }
+@media (prefers-reduced-motion:reduce){ html{ scroll-behavior:auto; } }
+body{
+  margin:0;
+  font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  color:var(--ink);
+  background:var(--paper-soft);
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+img,svg{ max-width:100%; }
+a{ color:var(--accent-dark); text-decoration:none; }
+a:hover{ text-decoration:underline; }
+h1,h2,h3,h4{ font-weight:700; line-height:1.25; margin:0 0 .5em; color:var(--ink); }
+p{ margin:0 0 1em; }
+.container{ max-width:var(--maxw); margin:0 auto; padding:0 20px; }
+button{ font-family:inherit; }
+:focus-visible{ outline:3px solid var(--accent); outline-offset:2px; border-radius:6px; }
+.skip{ position:absolute; left:-9999px; top:0; z-index:200; background:var(--accent); color:#fff; padding:12px 18px; border-radius:0 0 12px 0; font-weight:700; }
+.skip:focus{ left:0; }
+
+/* ---------------- top bar ---------------- */
+.topbar{
+  position:sticky; top:0; z-index:50;
+  background:rgba(255,255,255,.92);
+  backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line);
+}
+.topbar-inner{
+  max-width:var(--maxw); margin:0 auto; padding:12px 20px;
+  display:flex; align-items:center; gap:14px;
+}
+.brand{ display:flex; align-items:center; gap:10px; font-weight:700; font-size:1.05rem; color:var(--ink); white-space:nowrap; min-width:0; flex:1 1 auto; }
+.brand .dot{ width:12px; height:12px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 4px var(--accent-tint); flex:none; }
+.brand .mascot{ height:38px; width:38px; border-radius:9px; flex:none; display:block; }
+.brand small{ display:block; font-weight:400; font-size:.72rem; color:var(--ink-soft); white-space:normal; }
+@media (max-width:640px){
+  .brand{ white-space:normal; font-size:.88rem; line-height:1.25; }
+  .brand .mascot{ height:30px; width:30px; }
+}
+.menu-btn{
+  border:1px solid var(--line); background:#fff; border-radius:999px;
+  padding:9px 16px; font-weight:600; cursor:pointer; display:flex; gap:8px; align-items:center;
+  color:var(--ink); margin-left:auto; white-space:nowrap;
+}
+.menu-btn:hover{ border-color:var(--accent); color:var(--accent-dark); }
+.topbar nav.inline-links{ display:flex; gap:4px; margin-left:auto; }
+.topbar nav.inline-links a{ padding:8px 14px; border-radius:999px; color:var(--ink-soft); font-weight:600; font-size:.92rem; }
+.topbar nav.inline-links a:hover, .topbar nav.inline-links a.active{ background:var(--accent-tint); color:var(--accent-dark); text-decoration:none; }
+@media (max-width:860px){ .topbar nav.inline-links{ display:none; } }
+
+/* ---------------- drawer, table of contents ---------------- */
+.drawer-backdrop{ position:fixed; inset:0; background:rgba(15,18,30,.45); z-index:80; opacity:0; pointer-events:none; transition:opacity .25s; }
+.drawer-backdrop.open{ opacity:1; pointer-events:auto; }
+.drawer{
+  position:fixed; top:0; right:-400px; width:350px; max-width:88vw; height:100%; background:#fff; z-index:90;
+  box-shadow:-15px 0 40px rgba(0,0,0,.25); overflow-y:auto; padding:22px 18px 60px;
+  /* Hidden, not just parked off the side, so a keyboard cannot tab into a
+     closed drawer. The delay keeps it visible while it slides back out. */
+  visibility:hidden; transition:right .28s ease, visibility 0s linear .28s;
+}
+.drawer.open{ right:0; visibility:visible; transition:right .28s ease; }
+.drawer h2.drawer-title{ font-size:1rem; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); margin:6px 0 14px; }
+.drawer-close{ float:right; border:none; background:var(--paper-soft); width:34px; height:34px; border-radius:50%; font-size:1.1rem; cursor:pointer; color:var(--ink); }
+.drawer .unit-block{ border-left:3px solid var(--line); padding-left:12px; margin-bottom:8px; }
+.drawer .unit-block.current{ border-left-color:var(--accent); }
+.drawer .unit-title{ display:block; font-weight:700; font-size:.88rem; padding:8px 0 4px; color:var(--ink); }
+.drawer ul{ list-style:none; margin:0 0 10px; padding:0; }
+.drawer li a{ display:flex; align-items:center; gap:8px; padding:7px 6px; border-radius:8px; color:var(--ink-soft); font-size:.9rem; font-weight:500; }
+.drawer li a:hover{ background:var(--paper-soft); text-decoration:none; }
+.drawer li a.active{ background:var(--accent-tint); color:var(--accent-dark); font-weight:700; }
+.check{ width:18px; height:18px; border-radius:50%; border:2px solid var(--line); flex:none; display:inline-block; position:relative; }
+.check.done{ background:var(--good); border-color:var(--good); }
+.check.done::after{ content:"\2713"; position:absolute; inset:0; color:#fff; font-size:12px; display:flex; align-items:center; justify-content:center; }
+.drawer-links{ display:flex; flex-wrap:wrap; gap:6px; margin:0 0 16px; }
+.drawer-links a{ padding:6px 12px; border-radius:999px; border:1px solid var(--line); font-weight:600; font-size:.86rem; color:var(--ink); }
+.drawer-links a:hover{ border-color:var(--accent); color:var(--accent-dark); text-decoration:none; }
+.vocab-actions{ margin:16px 0 0; }
+.vocab-actions .btn{ display:inline-block; text-decoration:none; }
+.drawer-tools{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:18px; padding-top:14px; border-top:1px solid var(--line); }
+.drawer-tools .progress-note{ font-size:.78rem; color:var(--ink-soft); font-weight:600; }
+.linkbtn{ border:none; background:none; padding:4px 2px; font-size:.78rem; font-weight:700; color:var(--ink-soft); cursor:pointer; text-decoration:underline; }
+.linkbtn:hover{ color:var(--bad); }
+
+/* ---------------- hero ---------------- */
+.hero{ background:linear-gradient(150deg,var(--accent-tint), #fff 65%); border-bottom:1px solid var(--line); }
+.hero-inner{ max-width:var(--maxw); margin:0 auto; padding:46px 20px 40px; display:grid; grid-template-columns:1fr 200px; gap:30px; align-items:center; }
+.hero.hero-page .hero-inner{ padding:28px 20px 26px; }
+.eyebrow{
+  display:inline-flex; align-items:center; gap:8px; font-weight:700; font-size:.78rem;
+  text-transform:uppercase; letter-spacing:.06em; color:var(--accent-dark); background:#fff;
+  border:1px solid var(--line); padding:6px 14px; border-radius:999px; margin-bottom:14px;
+}
+.hero h1{ font-size:clamp(1.7rem,4vw,2.5rem); margin-bottom:.35em; }
+.hero .lede{ font-size:1.08rem; color:var(--ink-soft); max-width:60ch; }
+.hero-icon{ justify-self:end; }
+.hero-icon svg{ width:180px; height:180px; color:var(--accent); }
+@media (max-width:700px){ .hero-inner{ grid-template-columns:1fr; } .hero-icon{ display:none; } }
+
+/* ---------------- callout ---------------- */
+.callout{
+  background:#fff; border:1px solid var(--line); border-left:6px solid var(--accent);
+  border-radius:var(--radius-sm); padding:18px 22px; margin:26px 0; box-shadow:var(--shadow-sm);
+}
+.callout .label{ font-weight:700; font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; color:var(--accent-dark); margin-bottom:6px; }
+.callout p{ margin:0; font-size:1.08rem; font-weight:500; }
+
+/* ---------------- chapter poster ---------------- */
+.chapter-figure{ margin:26px 0 30px; background:#fff; border:1px solid var(--line); border-radius:var(--radius-sm); overflow:hidden; box-shadow:var(--shadow-sm); }
+.chapter-figure .poster{ display:block; line-height:0; overflow-x:auto; }
+/* A poster is allowed to shrink to the column, but never below the width where
+   its smallest label would fall under 12px. Past that it scrolls sideways. */
+.chapter-figure svg{ display:block; width:100%; height:auto; background:#fff; }
+.chapter-figure .poster > svg, .poster-wide svg{ min-width:min(var(--fig-w,0px), 1040px); }
+/* Each poster also comes laid out two panels across and one panel across.
+   The figure shows the widest layout that keeps its labels at 12px or more,
+   so a poster never needs sideways scrolling on a tablet or a phone. */
+.chapter-figure{ container-type:inline-size; }
+.poster-mid, .poster-narrow{ display:none; }
+.poster-narrow svg{ max-width:480px; margin:0 auto; }
+@container (max-width:1027px){ .poster-wide{ display:none; } .poster-mid{ display:block; } }
+@container (max-width:599px){ .poster-mid{ display:none; } .poster-narrow{ display:block; } }
+.chapter-figure figcaption{ padding:9px 14px; border-top:1px solid var(--line); background:var(--paper-soft); font-size:.8rem; font-weight:500; color:var(--ink-soft); }
+
+/* ---------------- main layout ---------------- */
+main{ padding:36px 0 70px; }
+main > .container > h2{ font-size:1.4rem; margin-top:2.2em; }
+.prose{ max-width:74ch; }
+.prose h2{ font-size:1.4rem; margin-top:2.2em; padding-top:.2em; border-top:1px solid var(--line); scroll-margin-top:80px; }
+.prose h2:first-child{ border-top:none; margin-top:0; }
+.prose p{ color:var(--ink-soft); font-size:1.09rem; }
+.prose ul,.prose ol{ color:var(--ink-soft); font-size:1.06rem; padding-left:22px; margin:0 0 1.1em; }
+.prose li{ margin-bottom:.5em; }
+.prose li::marker{ color:var(--accent); font-weight:700; }
+
+.chapter-body{ display:grid; grid-template-columns:minmax(0,74ch) minmax(220px,260px); gap:40px; position:relative; }
+.chapter-body .prose{ max-width:none; }
+.margin-rail{ position:relative; }
+.rail-sticky{ position:sticky; top:80px; display:flex; flex-direction:column; gap:14px; max-height:calc(100vh - 100px); overflow-y:auto; }
+.rail-sticky .term-popout{ position:static; }
+.rail-nav{ background:#fff; border:1px solid var(--line); border-radius:var(--radius-sm); padding:14px 12px; box-shadow:var(--shadow-sm); }
+.rail-nav .rail-nav-title{ font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-soft); font-weight:700; margin:0 0 10px 12px; }
+.rail-nav ol{ list-style:none; margin:0; padding:0; counter-reset:railsec; }
+.rail-nav li{ counter-increment:railsec; }
+.rail-nav a{ display:block; padding:7px 10px 7px 12px; border-left:2px solid var(--line); color:var(--ink-soft); font-size:.82rem; line-height:1.4; text-decoration:none; transition:color .15s, border-color .15s, background .15s; }
+.rail-nav a::before{ content:counter(railsec) ". "; color:var(--ink-soft); opacity:.6; }
+.rail-nav a:hover{ color:var(--ink); background:var(--paper-soft); text-decoration:none; }
+.rail-nav a.active{ color:var(--accent-dark); border-left-color:var(--accent); background:var(--accent-tint); font-weight:600; }
+@media (max-width:980px){ .chapter-body{ display:block; } .margin-rail{ display:none; } }
+
+/* ---------------- glossary terms in the prose ---------------- */
+.gloss-term{ border-bottom:2px dotted var(--accent); color:var(--accent-dark); font-weight:600; cursor:pointer; border-radius:3px; padding:0 1px; background:none; border-left:none; border-right:none; border-top:none; font:inherit; }
+.gloss-term:hover,.gloss-term.active{ background:var(--accent-tint); }
+.term-popout{ position:absolute; left:0; right:0; background:#fff; border:1px solid var(--line); border-left:5px solid var(--accent); border-radius:12px; padding:16px 18px 18px; box-shadow:var(--shadow); font-size:.86rem; z-index:30; animation:popIn .16s ease; }
+.term-popout .pt-term{ font-weight:800; margin-bottom:6px; color:var(--ink); font-size:.95rem; padding-right:20px; }
+.term-popout .pt-def{ color:var(--ink-soft); line-height:1.55; margin:0; }
+.term-popout .pt-close{ position:absolute; top:10px; right:12px; border:none; background:none; font-size:1.15rem; line-height:1; cursor:pointer; color:var(--ink-soft); padding:2px 4px; }
+@keyframes popIn{ from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:translateY(0); } }
+.term-popout.mobile{ position:fixed; left:14px; right:14px; bottom:14px; z-index:200; box-shadow:0 -12px 34px rgba(0,0,0,.25); }
+.term-popout-backdrop{ position:fixed; inset:0; background:rgba(15,18,30,.35); z-index:190; opacity:0; pointer-events:none; transition:opacity .18s; }
+.term-popout-backdrop.show{ opacity:1; pointer-events:auto; }
+
+/* ---------------- figures inside the prose ---------------- */
+.section-figure{ margin:18px 0 26px; background:#fff; border:1px solid var(--line); border-radius:var(--radius-sm); padding:16px 18px; box-shadow:var(--shadow-sm); }
+.fig-scroll{ overflow-x:auto; }
+/* A drawing never shrinks below its own size, or its labels fall under 12px.
+   On a narrow screen it scrolls sideways instead, and book.js adds this hint
+   under any drawing or table that is wider than the screen. */
+.scroll-hint{ display:flex; align-items:center; justify-content:center; gap:8px; margin:8px 0 0; font-size:.82rem; font-weight:600; color:var(--accent-dark); }
+.scroll-hint::before, .scroll-hint::after{ content:""; width:18px; height:2px; background:currentColor; border-radius:2px; opacity:.6; }
+.data-table-wrap + .scroll-hint{ margin:-18px 0 22px; }
+.section-figure svg{ display:block; width:100%; height:auto; min-width:var(--fig-w,auto); }
+.section-figure figcaption{ font-size:.85rem; color:var(--ink-soft); margin-top:8px; text-align:center; }
+.data-table-wrap{ overflow-x:auto; margin:18px 0 26px; }
+table.data{ border-collapse:collapse; width:100%; min-width:340px; font-size:.92rem; background:#fff; border-radius:var(--radius-sm); overflow:hidden; box-shadow:var(--shadow-sm); }
+table.data th, table.data td{ border:1px solid var(--line); padding:9px 14px; text-align:left; vertical-align:top; }
+table.data th{ background:var(--paper-soft); font-weight:700; }
+table.data tbody tr:nth-child(even){ background:#fafafb; }
+
+/* ---------------- unit cards ---------------- */
+.unit-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:20px; margin:26px 0 10px; }
+.unit-card{
+  background:#fff; border:1px solid var(--line); border-radius:var(--radius); padding:22px; box-shadow:var(--shadow-sm);
+  display:flex; flex-direction:column; gap:10px; border-top:6px solid var(--card-accent,var(--accent));
+  transition:transform .15s, box-shadow .15s;
+}
+.unit-card:hover{ transform:translateY(-3px); box-shadow:var(--shadow); text-decoration:none; }
+.unit-card .num{ font-weight:800; font-size:.78rem; letter-spacing:.06em; text-transform:uppercase; color:var(--card-accent,var(--accent)); }
+.unit-card h3{ margin:0; font-size:1.15rem; color:var(--ink); }
+.unit-card p{ color:var(--ink-soft); font-size:.92rem; margin:0; flex:1; }
+.unit-card .icon{ width:68px; height:68px; }
+.unit-card .icon svg{ width:100%; height:100%; color:var(--card-accent,var(--accent)); }
+.unit-card .meta{ font-size:.82rem; color:var(--ink-soft); font-weight:600; }
+
+.topic-list{ list-style:none; margin:18px 0; padding:0; display:grid; gap:10px; }
+.topic-list li a{ display:flex; align-items:center; gap:14px; background:#fff; border:1px solid var(--line); border-radius:var(--radius-sm); padding:14px 16px; color:var(--ink); font-weight:600; box-shadow:var(--shadow-sm); }
+.topic-list li a:hover{ border-color:var(--accent); text-decoration:none; }
+.topic-list .tnum{ width:34px; height:34px; border-radius:50%; background:var(--accent-tint); color:var(--accent-dark); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:.85rem; flex:none; }
+.topic-list .ticon{ width:44px; height:44px; flex:none; }
+.topic-list .ticon svg{ width:100%; height:100%; color:var(--accent); }
+.topic-list .tq{ font-weight:400; color:var(--ink-soft); font-size:.85rem; display:block; margin-top:2px; }
+/* On a phone the icon goes, so the chapter question gets the whole width. */
+@media (max-width:600px){ .topic-list li a{ align-items:flex-start; gap:12px; } .topic-list .ticon{ display:none; } }
+
+/* ---------------- vocabulary flip cards ---------------- */
+.vocab-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:14px; margin:18px 0 10px; }
+.vcard{ perspective:1200px; height:176px; cursor:pointer; border:none; background:none; padding:0; font:inherit; text-align:inherit; }
+.vcard-inner{ display:block; position:relative; width:100%; height:100%; transition:transform .5s; transform-style:preserve-3d; }
+.vcard.flipped .vcard-inner{ transform:rotateY(180deg); }
+@media (prefers-reduced-motion:reduce){ .vcard-inner{ transition:none; } }
+.vface{ position:absolute; inset:0; backface-visibility:hidden; border-radius:var(--radius-sm); padding:14px 16px; display:flex; align-items:center; justify-content:center; text-align:center; box-shadow:var(--shadow-sm); border:1px solid var(--line); overflow:hidden; }
+.vface.front{ background:#fff; font-weight:700; font-size:1.02rem; color:var(--ink); }
+.vface.back{ background:var(--accent); color:#fff; transform:rotateY(180deg); font-size:.87rem; font-weight:500; line-height:1.5; }
+.vcard .hint{ position:absolute; bottom:6px; right:10px; font-size:.68rem; color:var(--ink-soft); font-weight:600; opacity:.7; }
+.vface.back .hint{ display:none; }
+
+/* ---------------- real world, scientist ---------------- */
+.examples-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; margin:18px 0 14px; }
+.example-card{ background:#fff; border:1px solid var(--line); border-radius:var(--radius-sm); padding:16px 18px; box-shadow:var(--shadow-sm); border-top:4px solid var(--accent); }
+.example-card h3{ margin:0 0 6px; font-size:1rem; }
+.example-card p{ margin:0; color:var(--ink-soft); font-size:.92rem; }
+.connection-note{ display:flex; gap:10px; align-items:flex-start; background:var(--accent-tint); border-radius:var(--radius-sm); padding:14px 18px; margin:4px 0 8px; font-size:.92rem; color:var(--ink); }
+.connection-note .tag{ flex:none; font-weight:800; font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--accent-dark); }
+@media (max-width:600px){ .connection-note{ flex-direction:column; gap:4px; } }
+.scientist-card{ display:flex; gap:18px; align-items:flex-start; background:#fff; border:1px solid var(--line); border-radius:var(--radius); padding:20px 22px; margin:18px 0 8px; box-shadow:var(--shadow-sm); }
+.scientist-card .savatar{ flex:none; width:56px; height:56px; border-radius:50%; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-size:1.3rem; font-weight:800; }
+.scientist-card h3{ margin:0 0 6px; font-size:1.08rem; }
+.scientist-card p{ margin:0; color:var(--ink-soft); font-size:.94rem; }
+
+/* ---------------- resources ---------------- */
+.resource-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px; margin:18px 0; }
+.rcard{ background:#fff; border:1px solid var(--line); border-radius:var(--radius-sm); overflow:hidden; box-shadow:var(--shadow-sm); display:flex; flex-direction:column; }
+.rcard .rtag{ font-size:.7rem; font-weight:800; text-transform:uppercase; letter-spacing:.06em; padding:8px 14px; background:var(--accent-tint); color:var(--accent-dark); }
+.rcard .rbody{ padding:14px 16px 16px; display:flex; flex-direction:column; gap:6px; flex:1; }
+.rcard h3{ margin:0; font-size:1rem; }
+.rcard .rsource{ font-size:.8rem; color:var(--ink-soft); }
+.rcard .rlink{ margin-top:auto; font-weight:700; font-size:.9rem; display:inline-flex; align-items:center; gap:6px; }
+/* Nothing loads from YouTube until the student presses play. */
+.video-embed{ position:relative; width:100%; padding-top:56.25%; background:#0b0f1a; }
+.video-embed iframe{ position:absolute; inset:0; width:100%; height:100%; border:0; }
+.video-embed .play-btn{
+  position:absolute; inset:0; width:100%; height:100%; border:none; cursor:pointer; padding:0;
+  background:linear-gradient(150deg,#16233f,#0b0f1a); display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:10px; color:#fff;
+}
+.video-embed .play-btn .tri{ width:62px; height:62px; border-radius:50%; background:rgba(255,255,255,.14); border:2px solid rgba(255,255,255,.7); display:flex; align-items:center; justify-content:center; }
+.video-embed .play-btn .tri::after{ content:""; border-left:19px solid #fff; border-top:12px solid transparent; border-bottom:12px solid transparent; margin-left:5px; }
+.video-embed .play-btn:hover .tri{ background:rgba(255,255,255,.26); }
+.video-embed .play-btn small{ font-size:.74rem; opacity:.85; font-weight:600; letter-spacing:.03em; }
+
+/* ---------------- quiz ---------------- */
+.quiz{ background:#fff; border:1px solid var(--line); border-radius:var(--radius); padding:24px 26px 26px; box-shadow:var(--shadow-sm); margin-top:14px; }
+.quiz-q{ margin-bottom:22px; padding-bottom:20px; border-bottom:1px dashed var(--line); }
+.quiz-q:last-of-type{ border-bottom:none; margin-bottom:6px; }
+.quiz-q p.qtext{ font-weight:600; margin-bottom:10px; color:var(--ink); }
+.quiz-choices{ display:grid; gap:8px; }
+.qchoice{ display:flex; align-items:center; gap:10px; border:1.5px solid var(--line); border-radius:var(--radius-sm); padding:10px 14px; cursor:pointer; font-size:.94rem; background:var(--paper-soft); transition:.15s; }
+.qchoice:hover{ border-color:var(--accent); }
+.qchoice input{ accent-color:var(--accent); width:16px; height:16px; flex:none; }
+.qchoice.correct{ background:var(--good-tint); border-color:var(--good); }
+.qchoice.incorrect{ background:var(--bad-tint); border-color:var(--bad); }
+.qfeedback{ font-size:.86rem; margin-top:8px; padding:8px 12px; border-radius:8px; display:none; }
+.qfeedback.show{ display:block; }
+.qfeedback.right{ background:var(--good-tint); color:var(--good-ink); }
+.qfeedback.wrong{ background:var(--bad-tint); color:var(--bad-ink); }
+.quiz-actions{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-top:6px; }
+.btn{ border:none; background:var(--accent); color:#fff; font-weight:700; padding:12px 22px; border-radius:999px; cursor:pointer; font-size:.95rem; box-shadow:var(--shadow-sm); }
+.btn:hover{ background:var(--accent-dark); }
+.hero-actions{ margin:22px 0 0; }
+.hero-actions .btn{ display:inline-block; text-decoration:none; }
+.hero-join{ margin:22px 0 0; max-width:420px; min-width:0; }
+.hero-join label{ display:block; font-weight:700; margin:0 0 8px; }
+.hero-join-row{ display:flex; gap:10px; min-width:0; }
+.hero-join input{ flex:1; min-width:0; font:inherit; font-size:1.15rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; padding:10px 14px; border:1.5px solid var(--line); border-radius:999px; background:#fff; color:var(--ink); }
+.hero-join input:focus{ outline:3px solid var(--accent); outline-offset:2px; border-color:var(--accent); }
+.hero-join .btn{ flex:none; }
+.btn.secondary{ background:#fff; color:var(--ink); border:1.5px solid var(--line); box-shadow:none; }
+.btn.secondary:hover{ border-color:var(--accent); color:var(--accent-dark); }
+.quiz-score{ font-weight:700; }
+.quiz-score.good{ color:var(--good); }
+.quiz-score.bad{ color:var(--bad); }
+
+/* ---------------- design the experiment ---------------- */
+.lab-item{ background:#f4faf7; border:1.5px solid #bfe3d2; border-radius:var(--radius); padding:24px 26px 26px; margin-top:14px; box-shadow:var(--shadow-sm); }
+.lab-badge{ display:inline-block; background:#1f7a55; color:#fff; font-weight:800; font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; padding:5px 12px; border-radius:999px; margin-bottom:14px; }
+.lab-scenario{ font-size:1rem; color:var(--ink); margin:0 0 14px; }
+.lab-toolkit{ background:#fff; border:1px solid #cfe7db; border-radius:var(--radius-sm); padding:12px 16px; margin:0 0 18px; font-size:.88rem; color:var(--ink-soft); }
+.lab-toolkit .lab-toolkit-title{ font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:#1f7a55; font-weight:800; margin:0 0 6px; }
+.lab-toolkit p{ margin:0; line-height:1.6; }
+.lab-q{ border-top:1px solid #d9ece3; padding-top:16px; margin-top:16px; }
+.lab-q:first-of-type{ border-top:none; padding-top:0; margin-top:0; }
+.lab-q p.qtext{ font-weight:600; color:var(--ink); margin:0 0 10px; }
+.lab-q .qtag{ display:block; font-size:.68rem; text-transform:uppercase; letter-spacing:.07em; color:#1f7a55; font-weight:800; margin-bottom:4px; }
+.lab-item .qchoice.correct{ border-color:var(--good); background:#eafaf2; }
+.lab-score{ font-weight:700; margin-left:12px; font-size:.92rem; }
+.lab-score.good{ color:var(--good); }
+.lab-score.bad{ color:var(--bad); }
+
+/* ---------------- CAST practice ---------------- */
+.cast-item{ background:#fffdf6; border:1.5px solid #f0dfa8; border-radius:var(--radius); padding:24px 26px 26px; margin-top:14px; box-shadow:var(--shadow-sm); }
+.cast-badge{ display:inline-block; background:#b8860b; color:#fff; font-weight:800; font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; padding:5px 12px; border-radius:999px; margin-bottom:14px; }
+.cast-stimulus{ font-size:1rem; color:var(--ink); margin:0 0 6px; }
+.cast-table-wrap{ overflow-x:auto; margin:16px 0; }
+table.cast-table{ border-collapse:collapse; width:100%; min-width:340px; font-size:.92rem; background:#fff; }
+table.cast-table th, table.cast-table td{ border:1px solid var(--line); padding:9px 14px; text-align:left; }
+table.cast-table th{ background:var(--paper-soft); font-weight:700; }
+table.cast-table tbody tr:nth-child(even){ background:#fafafb; }
+
+/* ---------------- prev / next, footer ---------------- */
+.chapter-nav{ display:flex; justify-content:space-between; gap:16px; margin-top:50px; flex-wrap:wrap; }
+.chapter-nav a{ flex:1; min-width:220px; background:#fff; border:1px solid var(--line); border-radius:var(--radius-sm); padding:16px 18px; box-shadow:var(--shadow-sm); color:var(--ink); }
+.chapter-nav a:hover{ border-color:var(--accent); text-decoration:none; }
+.chapter-nav .dir{ font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); font-weight:700; display:block; margin-bottom:4px; }
+.chapter-nav .next{ text-align:right; }
+footer{ border-top:1px solid var(--line); padding:30px 0; color:var(--ink-soft); font-size:.85rem; text-align:center; }
+
+/* ---------------- glossary ---------------- */
+.glossary-search{ width:100%; max-width:420px; padding:12px 16px; border-radius:999px; border:1.5px solid var(--line); font-size:1rem; margin:8px 0 24px; font-family:inherit; }
+.glossary-letter{ font-weight:800; font-size:1.3rem; margin:28px 0 10px; color:var(--accent-dark); }
+.gterm{ background:#fff; border:1px solid var(--line); border-radius:var(--radius-sm); padding:14px 18px; margin-bottom:10px; box-shadow:var(--shadow-sm); }
+.gterm b{ display:block; margin-bottom:2px; }
+.gterm .gunit{ font-size:.76rem; color:var(--accent-dark); font-weight:700; text-transform:uppercase; }
+.gterm .gunit a{ display:inline-block; padding:5px 0; }
+.badge{ display:inline-block; background:var(--accent-tint); color:var(--accent-dark); font-weight:700; font-size:.72rem; padding:4px 10px; border-radius:999px; text-transform:uppercase; letter-spacing:.04em; }
+
+/* ---------------- standards row ---------------- */
+.std-row{ display:flex; flex-wrap:wrap; gap:8px; margin:14px 0 0; }
+.std{ font-size:.72rem; font-weight:700; padding:5px 10px; border-radius:8px; background:#fff; border:1px solid var(--line); color:var(--ink-soft); }
+
+@media (max-width:700px){
+  .hero-inner{ padding-top:30px; }
+  .prose{ max-width:none; }
+  .quiz,.lab-item,.cast-item{ padding:18px 16px 20px; }
+}
+
+@media print{
+  .topbar,.drawer,.drawer-backdrop,.margin-rail,.quiz-actions,.chapter-nav,.skip{ display:none !important; }
+  body{ background:#fff; }
+  .qfeedback{ display:block !important; }
+}
+
+/* ---------------- asides carried over from the first edition ---------------- */
+.note{ margin:18px 0 24px; padding:14px 16px 4px; border-radius:var(--radius-sm); border:1px solid var(--line); border-left:4px solid var(--accent); background:#fff; }
+.note-head{ font-weight:700; font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; color:var(--accent-dark); margin-bottom:4px; }
+.note p{ margin:0 0 .9em; color:var(--ink-soft); font-size:1.02rem; }
+.note ul,.note ol{ color:var(--ink-soft); font-size:1.02rem; padding-left:20px; margin:0 0 .9em; }
+.note-mixup{ border-left-color:var(--bad); background:var(--bad-tint); }
+.note-mixup .note-head{ color:var(--bad-ink); }
+.note-try{ border-left-color:var(--good); background:var(--good-tint); }
+.note-try .note-head{ color:var(--good-ink); }
+table.data caption{ text-align:left; padding:10px 14px 0; font-weight:700; font-size:.92rem; }
+/* A key word the chapter does not define. It still reads as a key word. */
+.prose .term{ font-weight:600; color:var(--ink); }
+
+/* ---------------- artwork ----------------
+   Every drawing in the book is inline SVG written by hand, so these rules are
+   the whole artwork stylesheet. Nothing here goes below 12px: a label inside a
+   figure is already shrinking with the figure, and 12px is the floor a student
+   can read on a school laptop. */
+.chapter-figure, .section-figure, .poster{
+  /* Names the first edition's drawings use for their fills and strokes. They
+     have to be defined here, or every one of them silently draws black. */
+  --surface:#ffffff; --surface-2:var(--paper-soft);
+  --tx:var(--ink); --tx-2:var(--ink-soft); --tx-3:#5d6682;
+  --s1:#2f7de1; --s2:#e2973a; --s3:#2ea87e; --s4:#d4574e;
+  --s5:#8b5cf6; --s6:#0e9bb5; --s7:#c2477f; --s8:#6b7f2f;
+  /* Deep shades for a badge or chip with white type on it. Three of the
+     series colors are too light to carry white text; the rest already can. */
+  --d1:var(--s1); --d2:#b8660f; --d3:#1a7f55; --d4:var(--s4);
+  --d5:var(--s5); --d6:#0a7a90; --d7:var(--s7); --d8:var(--s8);
+  --sky:#cfe4fb; --ground:#e6dcc6; --rock:#cbbfa8; --water:#bfe0ef;
+}
+svg text{ font-family:'Poppins',system-ui,sans-serif; }
+svg .ink{ fill:var(--ink); }
+svg .ink2{ fill:var(--ink-soft); }
+svg .ink3{ fill:#5d6682; }
+svg .axis{ stroke:var(--ink-soft); stroke-width:1.5; fill:none; }
+svg .grid{ stroke:var(--line); stroke-width:1; }
+svg .panel{ fill:var(--paper-soft); }
+svg .panel-line{ stroke:var(--line); fill:none; }
+svg .lbl{ font-size:13px; font-weight:600; }
+svg .lbl-sm{ font-size:12px; font-weight:600; }
+svg .ttl{ font-size:15px; font-weight:700; }

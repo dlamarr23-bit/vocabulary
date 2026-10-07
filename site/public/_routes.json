@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "include": [
+    "/api/*",
+    "/flashcards",
+    "/flashcards/*",
+    "/live",
+    "/live/*"
+  ],
+  "exclude": []
+}

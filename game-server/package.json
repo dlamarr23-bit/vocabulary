@@ -1,0 +1,12 @@
+{
+  "name": "vocab-live",
+  "private": true,
+  "type": "module",
+  "description": "Live game server (Durable Object) for Vocab Live, Blast and Match.",
+  "scripts": {
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "obscenity": "0.4.6"
+  }
+}
