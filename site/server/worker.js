@@ -531,7 +531,7 @@ function same(a, b) {
   return diff === 0;
 }
 
-const cookie = (value, maxAge) => `${COOKIE}=${value}; Path=/api; HttpOnly; Secure; SameSite=Strict; Max-Age=${maxAge}`;
+const cookie = (value, maxAge) => `${COOKIE}=${value}; Path=/api; HttpOnly; Secure; SameSite=None; Partitioned; Max-Age=${maxAge}`;
 function signedCookies(res, value, maxAge) {
   res.headers.append('Set-Cookie', cookie(value, maxAge));
   return res;
