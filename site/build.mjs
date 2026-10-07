@@ -66,7 +66,7 @@ write('_routes.json', JSON.stringify({
 }, null, 2) + '\n');
 write('robots.txt', 'User-agent: *\nDisallow: /\n');
 write('_headers', `/*
-  X-Frame-Options: SAMEORIGIN
+  Content-Security-Policy: frame-ancestors 'self' https://physical-science-8.pages.dev
   X-Content-Type-Options: nosniff
   Referrer-Policy: no-referrer
   X-Robots-Tag: noindex, nofollow

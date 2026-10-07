@@ -35,9 +35,11 @@ const COOKIE = 'is8edit';
 const SAFE = {
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'no-referrer',
-  'X-Robots-Tag': 'noindex, nofollow',
-  'X-Frame-Options': 'SAMEORIGIN'
+  'X-Robots-Tag': 'noindex, nofollow'
 };
+// Only this site and the physical science site (which shows the flashcards under its own top bar) may frame
+// these pages. The same rule is in build.mjs, for _headers.
+const FRAMING = "frame-ancestors 'self' https://physical-science-8.pages.dev";
 
 export default {
   async fetch(request, env) {
@@ -62,6 +64,9 @@ export default {
 function finish(res) {
   const out = new Response(res.body, res);
   for (const [k, v] of Object.entries(SAFE)) out.headers.set(k, v);
+  // Added to a policy the response already has (an uploaded picture's), not in place of it.
+  const policy = out.headers.get('content-security-policy');
+  out.headers.set('content-security-policy', policy ? `${policy}; ${FRAMING}` : FRAMING);
   return out;
 }
 
