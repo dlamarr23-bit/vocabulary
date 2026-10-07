@@ -66,7 +66,7 @@ function finish(res) {
   for (const [k, v] of Object.entries(SAFE)) out.headers.set(k, v);
   // Added to a policy the response already has (an uploaded picture's), not in place of it.
   const policy = out.headers.get('content-security-policy');
-  out.headers.set('content-security-policy', policy ? `${policy}; ${FRAMING}` : FRAMING);
+  if (!(policy || '').includes('frame-ancestors')) out.headers.set('content-security-policy', policy ? `${policy}; ${FRAMING}` : FRAMING);
   return out;
 }
 
