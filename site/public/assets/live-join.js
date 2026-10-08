@@ -104,7 +104,10 @@
     code = c;
     leaving = false;
     status('Connecting...');
-    var sock = ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/api/live/' + c + '/ws');
+    // Signed in with Class Pass: the game is told who this is, so the result
+    // can count on the class leaderboard.
+    var pass = passToken();
+    var sock = ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/api/live/' + c + '/ws' + (pass ? '?pass=' + pass : ''));
     ws.onopen = function () {
       if (sock !== ws) return;
       retries = 0;
@@ -130,6 +133,45 @@
     };
   }
   function send(m) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(m)); }
+
+  /* ---------------- Class Pass (assets/pass.js) ---------------- */
+  function passToken() { return window.IS8Pass ? window.IS8Pass.token() : ''; }
+  function passMe() { return window.IS8Pass ? window.IS8Pass.me() : null; }
+  var counts = false;
+  // A line under the code box, and on the waiting screen: whether this
+  // student's results go on the leaderboard.
+  function passNote() {
+    var m = passMe();
+    [['jnCode', 'jnPassNote'], ['jnWait', 'jnPassWait']].forEach(function (x) {
+      var box = $(x[1]);
+      if (!box) {
+        box = mk('p', 'lv-small lv-pass-note');
+        box.id = x[1];
+        $(x[0]).appendChild(box);
+      }
+      box.textContent = '';
+      if (m) {
+        box.appendChild(mk('span', 'pass-badge', 'Class Pass'));
+        box.appendChild(document.createTextNode(x[0] === 'jnWait' && !counts ? ' This game does not count on the leaderboard (playing as ' + m.name + ').' : ' Your wins count on the class leaderboard (playing as ' + m.name + ').'));
+      } else if (x[0] === 'jnCode' || counts) {
+        box.appendChild(document.createTextNode('Want your wins on the class leaderboard? '));
+        var b = mk('button', 'linkbtn lv-pass-link', 'Sign in with Class Pass');
+        b.type = 'button';
+        b.addEventListener('click', function () {
+          if (!window.IS8Pass) return;
+          b.disabled = true;
+          window.IS8Pass.signIn().then(function () {
+            // Already in a game: back in as the same player, now signed in.
+            if (code && me && me.id) open(code);
+          }, function (err) { b.disabled = false; box.appendChild(document.createTextNode(' ' + err.message)); });
+        });
+        box.appendChild(b);
+        if (x[0] === 'jnWait') box.appendChild(document.createTextNode(' (do it before the game starts)'));
+      }
+    });
+  }
+  if (window.IS8Pass) window.IS8Pass.onChange(passNote);
+  else passNote();
   // Idle for 2 minutes during a game (Gennaro, 2026-09-30): the screen asks
   // "Still there?" and the student stops holding answers until they tap.
   var IDLE_MS = 2 * 60 * 1000, lastTouch = Date.now(), idle = false;
@@ -182,22 +224,22 @@
     if (m.t === 'hello') {
       lastHello = m;
       typedNames = m.typedNames;
+      counts = !!m.counts;
+      passNote();
       joinReady();
       if (me && me.id) { send({ t: 'rejoin', id: me.id, secret: me.secret }); return; }
       if (m.phase === 'done') { stop('That game is over. Wait for your teacher to start a new one.', true); return; }
-      // Random names: nothing to type, so join straight away.
-      if (!typedNames) { send({ t: 'join', name: '', dev: device() }); return; }
-      $('jnGameTitle').textContent = m.title;
-      $('jnTyped').hidden = !typedNames;
-      $('jnRandom').hidden = typedNames;
-      $('jnNameError').textContent = '';
-      show('jnName');
-      if (typedNames) $('jnNick').focus();
+      // Random names: nothing to type, so join straight away. Signed in with
+      // Class Pass: the game uses the name on the class list.
+      if (!typedNames || passToken()) { send({ t: 'join', name: '', dev: device() }); return; }
+      nameStep(m);
     } else if (m.t === 'me') {
+
       me = { id: m.id, secret: m.secret, name: m.name };
       savePlayer({ code: m.code, id: m.id, secret: m.secret, at: Date.now() });
     } else if (m.t === 'nameError') {
       joinReady();
+      if ($('jnName').hidden && lastHello) nameStep(lastHello);
       $('jnNameError').textContent = m.msg;
       $('jnNick').select();
     } else if (m.t === 'aim') {
@@ -228,6 +270,15 @@
       $('jnCodeError').textContent = m.msg;
       if (m.code === 'nogame') { forgetPlayer(); $('jnRejoin').hidden = true; }
     }
+  }
+
+  function nameStep(m) {
+    $('jnGameTitle').textContent = m.title;
+    $('jnTyped').hidden = !typedNames;
+    $('jnRandom').hidden = typedNames;
+    $('jnNameError').textContent = '';
+    show('jnName');
+    if (typedNames) $('jnNick').focus();
   }
 
   // Typed nicknames take a moment to check, so the button says so.

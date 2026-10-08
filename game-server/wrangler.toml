@@ -14,10 +14,22 @@ preview_urls = false
 name = "LIVE"
 class_name = "LiveGame"
 
+# The class leaderboard (src/board.js): the roster, Class Pass sign-ins and
+# results. One Durable Object for the whole site. The Pages site reaches it
+# through LIVE (a LiveGame passes its requests on), so nothing more needs
+# setting up on the Pages project.
+[[durable_objects.bindings]]
+name = "BOARD"
+class_name = "Leaderboard"
+
 # SQLite storage is the kind the free plan allows.
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["LiveGame"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["Leaderboard"]
 
 # Workers AI double checks typed nicknames (src/names.js). Free daily use is
 # plenty for a class; if it runs out, names are checked by the word lists only.

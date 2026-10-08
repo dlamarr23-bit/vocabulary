@@ -1,6 +1,11 @@
 // The frame every page shares: head, top bar, menu and footer.
 import { site, units } from '../content/site.mjs';
 import { mascotSVG } from './mascot.mjs';
+import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+
+// "assets/<file>?v=<first 8 of its hash>", so a changed file is never kept from an old visit.
+export const assetVersion = (file) => createHash('sha256').update(readFileSync(new URL('../public/assets/' + file, import.meta.url))).digest('hex').slice(0, 8);
 
 export const esc = (s) => String(s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -21,6 +26,7 @@ export function head({ title, description, unitId, depth, extraHead = '' }) {
 <link rel="stylesheet" href="${up}assets/book.css">
 <script src="${up}assets/icons.js" defer></script>
 <script src="${up}assets/book.js" defer></script>
+<script src="${up}assets/pass.js?v=${assetVersion('pass.js')}" defer></script>
 ${extraHead}</head>
 <body${unitId ? ` data-unit="${unitId}"` : ''}>
 <a class="skip" href="#main">Skip to the page</a>`;

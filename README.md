@@ -20,6 +20,11 @@ This kit is a complete vocabulary website you run yourself, for free, on GitHub 
   silent), and a **Demo mode** with 40 pretend students so you can try everything alone.
 - **Nickname check.** If students type their own names, rude names are refused by word lists and,
   as a second check, by Cloudflare's free AI.
+- **Class Pass and a class leaderboard.** Students sign in with their school Google account (Class
+  Pass) when they play in class or study at home. Wins in team and solo games, top 3 finishes,
+  correct answers, practice sessions, perfect tests and the fastest Match times go on a leaderboard,
+  shown as "First L.". It filters by class period (or all periods together), this school year or
+  all time, and topic. Signing in is never required to study or play.
 
 The kit starts empty: no sets, no folders. Everything you make is saved on your Cloudflare account,
 not in these files, so you never need to touch code to add or change sets.
@@ -171,6 +176,55 @@ Pixabay's free photos and illustrations as well:
 
 ---
 
+## Step 8 (optional). Class Pass sign-in and the class leaderboard
+
+Class Pass uses the same Google sign-in as the physical science site's Class Pass. Google only sends
+a sign-in back to addresses it has been told about, so add this site's address once:
+
+1. Open console.cloud.google.com, signed in with your school account, and pick the project
+   **Video Check sign-in** (the one Class Pass uses).
+2. Open **APIs & Services**, then **Credentials**, and click the OAuth client Class Pass uses (its ID
+   starts with `3149691222-`).
+3. Under **Authorized JavaScript origins**, click **Add URI** and type `https://<your site>`.
+4. Under **Authorized redirect URIs**, click **Add URI** and type `https://<your site>/signin/`
+   (with the slash at the end). Click **Save**. It can take a few minutes to start working.
+5. Open `https://<your site>/leaderboard/`, click **Teacher sign in** at the bottom, then open
+   **Class roster** and paste your class list. One student per line with their school email, first
+   name, last name and period, in any order (a Self-Check sheet's Roster tab, Period, Name, Email,
+   pastes straight in). Click **Save roster**. Only students on the roster can sign in.
+
+Nothing else needs setting up: the game server keeps the roster and results (it updates itself
+from GitHub, step 4).
+
+**How it counts**
+
+- Live games count when **you host them signed in with the teacher password**, and never in Demo
+  mode. A game hosted by a student, or at home, does not count. On the host screen, students signed
+  in with Class Pass show a ✓.
+- A **win** is first place with at least one right answer, in a game with two or more teams (or
+  players). Vocab Live and Blast with teams are **team wins**; Multiplayer Match and solo Vocab Live
+  are **solo wins**. **Top 3 finishes** never count last place.
+- **Practice** counts when a signed-in student finishes Match, a test, or every term in Learn. Each
+  set counts once per mode per day, so repeating the same thing all evening does not climb the
+  board. A **perfect test** needs 10 or more questions (or the whole set).
+- **Fastest times** show when one set is picked under Topic. Multiplayer Match is ranked by time per
+  pair, so 4 and 8 pair games compare fairly.
+- **This school year** starts August 1.
+- Only you see emails. Students see "First L." (more of the last name when two would match), and
+  they see the leaderboard only while signed in.
+- In the roster table you can **Remove** a student (results are kept in case you add them back) or
+  **Clear results** for one student.
+
+**If a student can't sign in**
+
+- "is not on the class list": add their email to the roster (check they picked their school account).
+- "Access blocked" from Google: the same district setting as the physical science site's Class Pass;
+  if Class Pass works there, it works here once steps 3 and 4 are done.
+- "Your browser blocked the sign-in window": the sign-in opens in a small window of its own. Allow
+  pop-ups for the site.
+- `PASS_CLIENT_ID` (a variable on the Pages project) replaces the built-in Class Pass client ID, if
+  Google ever deletes it.
+
 ## Using it
 
 ### Making sets (you)
@@ -230,6 +284,7 @@ Open `https://<your site>/api/session`. It shows what the site can see:
 | `"password":false` | No teacher password. | Step 3, items 5 and 6, then redeploy. |
 | `"live":false` | The game server is not connected. | Steps 4 and 5, then redeploy. |
 | `"draw":false` | Draw it is off. That is fine. | Step 6 if you want it. |
+| `"pass":false` | Class Pass and the leaderboard need the game server. | Steps 4 and 5, then redeploy. |
 
 **Other problems:**
 
@@ -249,7 +304,7 @@ Even a busy class is far inside the free plans.
 | --- | --- |
 | Cloudflare Pages (the site) | Unlimited visits. |
 | Workers KV (your saved sets) | 1,000 saves and 100,000 reads a day. |
-| Durable Objects (the games) | A class of 30 uses a tiny share of the daily free use. |
+| Durable Objects (the games and leaderboard) | A class of 30 uses a tiny share of the daily free use. |
 | Workers AI (nickname check, Draw it) | 10,000 neurons a day, as in Step 6. |
 
 ## What is in this kit
@@ -259,7 +314,7 @@ Even a busy class is far inside the free plans.
 | `site/` | The website. `build.mjs` makes the pages in `site/public/`; `content/site.mjs` holds the name and top bar. |
 | `site/server/worker.js` | The site's server: saving sets and pictures, teacher sign in, picture search, Draw it, and passing game connections to the game server. The build copies it to `site/public/_worker.js`. |
 | `site/public/assets/` | The page scripts, styles, font, music and QR code maker. |
-| `game-server/` | The live game server (one Cloudflare Durable Object per game) and the nickname check (`src/names.js`). |
+| `game-server/` | The live game server (one Cloudflare Durable Object per game), the nickname check (`src/names.js`) and the class leaderboard (`src/board.js`). |
 | `.github/workflows/` | **Check:** runs the build and the nickname test on every change. **Update the nickname filter:** once a month, installs the newest rude-word list if it still passes the test. |
 | `MUSIC-CREDITS.md` | Where the songs, font and QR code maker come from. |
 

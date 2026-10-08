@@ -57,6 +57,24 @@
     return list[Math.floor(Math.random() * list.length)];
   }
 
+  // Class Pass (assets/pass.js): a finished Match, test or Learn set goes on
+  // the class leaderboard for a signed in student. A line under the result
+  // says so, or offers the sign-in.
+  function passReport(api, result, box) {
+    var P = window.IS8Pass;
+    if (!P || !api || !api.setId) return;
+    result.setId = api.setId;
+    var line = el('p', 'md-note md-pass');
+    if (box) box.appendChild(line);
+    if (!P.me()) {
+      line.appendChild(document.createTextNode('Sign in with Class Pass (at the top of the page) to put results like this on the class leaderboard.'));
+      return;
+    }
+    P.report(result).then(function (r) {
+      line.textContent = r && r.counted ? 'Saved to the class leaderboard (' + P.me().name + ').' : '';
+    });
+  }
+
   function plural(n, one, many) {
     return n + ' ' + (n === 1 ? one : (many || one + 's'));
   }
@@ -470,7 +488,7 @@
     var s = learn.s;
     clearTimeout(learn.timer);
     learn.timer = null;
-    if (levelCounts()[2] === s.cards.length) { s.screen = 'done'; s.q = null; }
+    if (levelCounts()[2] === s.cards.length) { s.screen = 'done'; s.q = null; s.justDone = true; }
     else if (s.queue.length) { s.q = makeQuestion(s.queue.shift()); s.screen = 'question'; }
     else { s.screen = 'summary'; s.q = null; }
     showLearn(focus);
@@ -740,6 +758,7 @@
     row.appendChild(button('Study again', 'btn secondary', learnReset));
     box.appendChild(row);
     learn.stage.appendChild(box);
+    if (s.justDone) { s.justDone = false; passReport(learn.api, { kind: 'learn', total: s.cards.length }, box); }
     if (focus) focusQuietly(testBtn);
   }
 
@@ -1334,6 +1353,7 @@
     }
     gradeTest(s.test);
     s.screen = 'results';
+    s.test.report = true;
     showTest(true);
   }
 
@@ -1376,6 +1396,7 @@
       : pct >= 50 ? 'Good start. Look over the ones you missed, then try again.'
       : 'Keep practicing. Learn mode can help you build up to it.'));
     head.appendChild(resultButtons());
+    if (t.report) { t.report = false; passReport(test.api, { kind: 'test', score: t.right, total: t.total }, head); }
     root.appendChild(head);
     t.sections.forEach(function (sec) { root.appendChild(sectionBox(sec, t, true)); });
     var foot = resultButtons();
@@ -1545,7 +1566,7 @@
       return;
     }
     clear(match.root);
-    var g = { tiles: [], sel: null, bad: null, badToken: 0, plusToken: 0, left: cards.length, start: Date.now(), end: 0, penalty: 0, done: false, ui: {} };
+    var g = { pairs: cards.length, tiles: [], sel: null, bad: null, badToken: 0, plusToken: 0, left: cards.length, start: Date.now(), end: 0, penalty: 0, done: false, ui: {} };
     match.game = g;
 
     var bar = el('div', 'mt-bar');
@@ -1702,6 +1723,7 @@
     row.appendChild(again);
     row.appendChild(button('Back to flashcards', 'btn secondary', function () { match.api.goMode('flashcards'); }));
     box.appendChild(row);
+    passReport(match.api, { kind: 'match', ms: time, pairs: g.pairs }, box);
     match.root.appendChild(box);
     match.game = null;
     focusQuietly(again);

@@ -23,6 +23,7 @@
 //   "Hidden cards" turns it into a memory game.
 import { DurableObject } from 'cloudflare:workers';
 import { cleanName, rudeName, aiSaysRude } from './names.js';
+export { Leaderboard } from './board.js';
 
 const LIFETIME_MS = 3 * 60 * 60 * 1000;
 const IDLE_MS = 5 * 60 * 1000;
@@ -136,6 +137,14 @@ function powerKinds(list) {
   const k = POWERS.filter((x) => list.includes(x));
   return k.length ? k : POWERS.slice();
 }
+// Who a Class Pass student is, from the header the site adds after checking
+// the sign-in: { email, name }, or null.
+function passStudent(request) {
+  try {
+    const v = JSON.parse((request && request.headers.get('X-Pass-Student')) || 'null');
+    return v && typeof v.email === 'string' && v.email.includes('@') ? { email: v.email.toLowerCase().slice(0, 120), name: String(v.name || '').slice(0, 40) } : null;
+  } catch { return null; }
+}
 const token = () => [...crypto.getRandomValues(new Uint8Array(12))].map((x) => x.toString(16).padStart(2, '0')).join('');
 
 export class LiveGame extends DurableObject {
@@ -168,8 +177,12 @@ export class LiveGame extends DurableObject {
 
   async fetch(request) {
     const url = new URL(request.url);
+    // The class leaderboard (board.js) is reached through here, so the site
+    // needs no binding of its own for it: the site asks the LiveGame named
+    // "_board", which only ever passes these requests on.
+    if (url.pathname.startsWith('/board/')) return this.env.BOARD.get(this.env.BOARD.idFromName('main')).fetch(request);
     if (url.pathname === '/init' && request.method === 'POST') return this.init(await request.json());
-    if (request.headers.get('Upgrade') === 'websocket') return this.connect(url);
+    if (request.headers.get('Upgrade') === 'websocket') return this.connect(url, request);
     return new Response('Not found', { status: 404 });
   }
 
@@ -192,6 +205,9 @@ export class LiveGame extends DurableObject {
       hostKey: String(body.hostKey),
       title: String(body.title || 'Flashcards').slice(0, 120),
       setId: String(body.setId || ''),
+      // Results go to the class leaderboard only from a game the teacher
+      // hosts (signed in with the teacher password), and never in demo mode.
+      counts: body.counts === true,
       cards,
       opts: {
         // Blast is always teams, Match always one player each; Blast always
@@ -299,7 +315,7 @@ export class LiveGame extends DurableObject {
 
   /* ---------------- connections ---------------- */
 
-  async connect(url) {
+  async connect(url, request) {
     const g = await this.load();
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
@@ -323,8 +339,10 @@ export class LiveGame extends DurableObject {
       server.send(JSON.stringify(this.board()));
     } else {
       this.ctx.acceptWebSocket(server);
-      server.serializeAttachment({ role: 'guest' });
-      server.send(JSON.stringify({ t: 'hello', kind: g.kind, title: g.title, phase: g.phase, typedNames: g.opts.typedNames }));
+      // A student signed in with Class Pass: the site checked the sign-in and
+      // says who it is (students can never send this themselves).
+      server.serializeAttachment({ role: 'guest', stu: passStudent(request) });
+      server.send(JSON.stringify({ t: 'hello', kind: g.kind, title: g.title, phase: g.phase, typedNames: g.opts.typedNames, counts: !!g.counts && !g.opts.demo }));
     }
     return new Response(null, { status: 101, webSocket: client });
   }
@@ -497,8 +515,16 @@ export class LiveGame extends DurableObject {
       const dev = String(m.dev || '').replace(/[^0-9a-f]/g, '').slice(0, 32);
       if (this.isBlocked(dev, g.opts.typedNames ? cleanName(m.name) : '')) return this.send(ws, { t: 'error', code: 'blocked', msg: 'Your teacher removed you from this game.' });
       if (g.order.length >= MAX_PLAYERS) return this.send(ws, { t: 'error', msg: 'This game is full.' });
+      const stu = a.stu && a.stu.email ? a.stu : null;
+      // Signed in with Class Pass and already in this game (another tab or
+      // device): back in as the same player.
+      const again = stu && Object.values(g.players).find((p) => p.stu === stu.email);
+      if (again) return this.fromPlayer(ws, a, { t: 'rejoin', id: again.id, secret: again.secret });
       let name;
-      if (g.opts.typedNames) {
+      if (stu && g.opts.typedNames) {
+        // Their name from the class list, so there is nothing to type or check.
+        name = this.uniqueName(cleanName(stu.name) || 'Student');
+      } else if (g.opts.typedNames) {
         name = cleanName(m.name);
         if (name.length < 2) return this.send(ws, { t: 'nameError', msg: 'Type your first name and last initial.' });
         const taken = () => Object.values(this.game.players).some((p) => p.name.toLowerCase() === name.toLowerCase());
@@ -524,6 +550,7 @@ export class LiveGame extends DurableObject {
       }
       const pid = token().slice(0, 10);
       g.players[pid] = { id: pid, name, secret: token(), team: null, dev };
+      if (stu) g.players[pid].stu = stu.email;
       g.order.push(pid);
       if (g.phase !== 'lobby') this.placeLatecomer(pid);
       ws.serializeAttachment({ role: 'player', pid, at: Date.now() });
@@ -537,6 +564,8 @@ export class LiveGame extends DurableObject {
     if (m.t === 'rejoin') {
       const p = g.players[String(m.id || '')];
       if (!p || p.secret !== m.secret) return this.send(ws, { t: 'rejoinFailed', msg: 'You are not in this game anymore. Join again.' });
+      // Signed in with Class Pass since joining (before this round is over): from now on this player counts.
+      if (a.stu && a.stu.email && !p.stu && g.phase !== 'done' && !Object.values(g.players).some((x) => x.stu === a.stu.email)) { p.stu = a.stu.email; await this.save(); }
       ws.serializeAttachment({ role: 'player', pid: p.id, at: Date.now() });
       this.send(ws, { t: 'me', id: p.id, secret: p.secret, name: p.name, code: g.code });
       if (g.kind === 'volley' && g.phase === 'play' && p.team && g.teams[p.team] && g.teams[p.team].q) {
@@ -780,6 +809,46 @@ export class LiveGame extends DurableObject {
     all.forEach((t) => { t.q = null; t.vote = null; });
     g.places = all.length;
     g.phase = 'done';
+    this.reportResults();
+  }
+
+  // The class leaderboard (board.js): a result for every student who played
+  // signed in with Class Pass. Once per round, only in a game the teacher
+  // hosts, never in demo mode, and only when at least two teams (or players)
+  // took part. A team "wins" by coming first with at least one right answer.
+  reportResults() {
+    const g = this.game;
+    if (!g.counts || g.opts.demo || !this.env.BOARD || g.reported === g.startedAt) return;
+    g.reported = g.startedAt;
+    const teams = g.teamOrder.map((id) => g.teams[id]).filter((t) => t && t.members.some((pid) => g.players[pid] && !g.players[pid].bot));
+    if (teams.length < 2) return;
+    const team = g.kind !== 'match' && g.opts.teams;
+    const pairs = g.round ? g.round.cards.length : 0;
+    const rows = [];
+    teams.forEach((t) => {
+      t.members.forEach((pid) => {
+        const p = g.players[pid];
+        if (!p || !p.stu || p.bot) return;
+        const mine = (g.pstats || {})[pid];
+        rows.push({
+          email: p.stu,
+          team,
+          place: t.place || 0,
+          win: t.place === 1 && (t.progress || 0) > 0,
+          right: mine ? mine.r : 0,
+          // Match: the finish time, for fastest times (not a hidden-card game).
+          ms: g.kind === 'match' && t.finishMs && !g.opts.hidden ? t.finishMs : null,
+          pairs: g.kind === 'match' && !g.opts.hidden ? pairs : null
+        });
+      });
+    });
+    if (!rows.length) return;
+    const send = this.env.BOARD.get(this.env.BOARD.idFromName('main')).fetch('https://board/board/live', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ game: g.kind, setId: g.setId, teams: teams.length, rows })
+    }).catch(() => {});
+    try { this.ctx.waitUntil(send); } catch { /* the game stays awake for its players anyway */ }
   }
 
   /* ---------------- Match ---------------- */
@@ -1669,7 +1738,8 @@ export class LiveGame extends DurableObject {
       setId: g.setId,
       cardCount: g.cards.length,
       opts: g.opts,
-      players: g.order.map((pid) => ({ id: pid, name: g.players[pid].name, on: this.online(pid), team: g.players[pid].team, bot: !!g.players[pid].bot })),
+      players: g.order.map((pid) => ({ id: pid, name: g.players[pid].name, on: this.online(pid), team: g.players[pid].team, bot: !!g.players[pid].bot, pass: !!g.players[pid].stu })),
+      counts: !!g.counts && !g.opts.demo,
       teams: g.teamOrder.map((tid) => this.teamSummary(g.teams[tid])),
       pick: this.picking() ? { endsAt: g.pickEndsAt || 0, locked: !!g.pickLocked, cap: this.pickCap() } : null,
       missed,

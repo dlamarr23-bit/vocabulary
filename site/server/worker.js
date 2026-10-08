@@ -455,14 +455,27 @@ async function api(request, env, url) {
   if (a === 'session' && method === 'GET') {
     // storage and password say which of the two settings the site can see,
     // never what they hold, so a missing one is easy to spot.
-    return json({ cloud: cloudReady(env), editor: await isEditor(request, env), storage: Boolean(env.FLASHCARDS), password: Boolean(env.EDIT_PASSWORD), live: Boolean(env.LIVE), draw: Boolean(env.AI) });
+    return json({ cloud: cloudReady(env), editor: await isEditor(request, env), storage: Boolean(env.FLASHCARDS), password: Boolean(env.EDIT_PASSWORD), live: Boolean(env.LIVE), draw: Boolean(env.AI), pass: Boolean(env.LIVE) });
   }
-  // Joining a live game needs no sign in: the code is the way in.
+  // Joining a live game needs no sign in: the code is the way in. A student
+  // signed in with Class Pass sends their sign-in key too (?pass=), and the
+  // game is told who they are, so the result can go on the leaderboard.
   if (a === 'live' && b && c === 'ws' && method === 'GET') {
     if (!env.LIVE) return json({ error: 'Live games are not switched on yet.' }, 503);
     if (!/^[A-Z2-9]{6}$/.test(b.toUpperCase()) || request.headers.get('Upgrade') !== 'websocket') return json({ error: 'Not found.' }, 404);
-    return env.LIVE.get(env.LIVE.idFromName(b.toUpperCase())).fetch(request);
+    const headers = new Headers(request.headers);
+    headers.delete('X-Pass-Student');
+    const pass = url.searchParams.get('pass') || '';
+    if (/^[0-9a-f]{64}$/.test(pass)) {
+      const r = await board(env, 'check', { token: pass }).catch(() => null);
+      const me = r && r.data && r.data.me;
+      if (me) headers.set('X-Pass-Student', JSON.stringify({ email: me.email, name: me.name }));
+    }
+    return env.LIVE.get(env.LIVE.idFromName(b.toUpperCase())).fetch(new Request(request, { headers }));
   }
+  // Class Pass and the class leaderboard (no teacher password needed for these).
+  if (a === 'pass') return passApi(request, env, url, b);
+  if (a === 'board' && !b && method === 'GET') return boardsApi(request, env, url);
   if (a === 'images' && b && b !== 'search' && !c && method === 'GET') return getImage(env, b);
 
   if (!cloudReady(env)) return json({ error: 'Saving to the site is not switched on yet.' }, 503);
@@ -478,6 +491,7 @@ async function api(request, env, url) {
 
   if (!(await isEditor(request, env))) return json({ error: 'Sign in with the teacher password first.' }, 401);
 
+  if (a === 'roster') return rosterApi(request, env, url, b);
   if (a === 'suggest' && !b && method === 'GET') return suggest(env, url);
   if (a === 'images' && b === 'search' && !c && method === 'GET') return imageSearch(url, env);
   if (a === 'sets' && !b && method === 'GET') return listSets(env, url);
@@ -642,6 +656,8 @@ async function liveCreate(request, env, url) {
     const res = await env.ASSETS.fetch(new URL('/assets/flashcard-data/' + setId + '.json', url));
     if (res.ok) cards = (await res.json()).cards;
   }
+  // Results count on the class leaderboard only in a game the teacher hosts.
+  const counts = await isEditor(request, env);
   // Pictures saved with a set are written relative to the set's own page.
   const base = new URL(entry.path, url);
   cards = (cards || []).map((c) => ({
@@ -655,13 +671,144 @@ async function liveCreate(request, env, url) {
     const res = await env.LIVE.get(env.LIVE.idFromName(code)).fetch('https://live/init', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ code, hostKey, setId, title: entry.title, cards, kind: String((body && body.kind) || 'volley'), opts: (body && body.opts) || {} })
+      body: JSON.stringify({ code, hostKey, setId, title: entry.title, cards, kind: String((body && body.kind) || 'volley'), opts: (body && body.opts) || {}, counts })
     });
     if (res.status === 409) continue;
     if (!res.ok) return json({ error: (await res.text()) || 'The game could not be made.' }, 400);
     return json({ code, hostKey });
   }
   return json({ error: 'Every code tried was in use. Try again.' }, 503);
+}
+
+/* ---------------- Class Pass and the class leaderboard ---------------- */
+
+// Students sign in with Class Pass: Google's own sign-in, with the client the
+// physical science site's Class Pass uses (so it only takes school accounts),
+// and they must be on the roster the teacher pastes on the Leaderboard page.
+// The roster, the sign-ins and every result live in the game server's
+// Leaderboard (game-server/src/board.js), reached through LIVE.
+//
+// Google only sends a sign-in back to an address added to the client in
+// Google Cloud: https://<this site>/signin/ (README, step 8). PASS_CLIENT_ID
+// (a variable on this Pages project) replaces the built-in client if needed.
+const CLASS_PASS_CLIENT = '3149691222-tatln28vl1l2e57nprt4t4lco0d9q5p1.apps.googleusercontent.com';
+const passClient = (env) => String(env.PASS_CLIENT_ID || CLASS_PASS_CLIENT).trim();
+
+async function board(env, op, body) {
+  if (!env.LIVE) throw new Error('no LIVE');
+  const res = await env.LIVE.get(env.LIVE.idFromName('_board')).fetch('https://live/board/' + op, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body || {})
+  });
+  let data;
+  try { data = await res.json(); } catch { data = { error: 'The leaderboard did not answer. Try again.' }; }
+  return { status: res.status, data };
+}
+const boardJSON = (r) => json(r.data, r.status);
+const passToken = (request) => {
+  const t = String(request.headers.get('X-Pass') || '');
+  return /^[0-9a-f]{64}$/.test(t) ? t : '';
+};
+const needLive = () => json({ error: 'Class Pass needs the game server. The steps are in the README, steps 4 and 5.' }, 503);
+
+async function passApi(request, env, url, b) {
+  const method = request.method;
+  if (b === 'config' && method === 'GET') return json({ client: passClient(env), ready: Boolean(env.LIVE) });
+  if (!env.LIVE) return needLive();
+  // Only this site's own pages send this header; another site cannot.
+  if (method !== 'GET' && request.headers.get('X-Pass-Client') !== '1') return json({ error: 'Not allowed.' }, 403);
+  let body = {};
+  if (method === 'POST') { try { body = (await request.json()) || {}; } catch { body = {}; } }
+  if (b === 'me' && method === 'GET') return boardJSON(await board(env, 'check', { token: passToken(request) }));
+  if (b === 'google' && method === 'POST') return passGoogle(env, body);
+  if (b === 'claim' && method === 'POST') return boardJSON(await board(env, 'claim', { nonce: String(body.nonce || '') }));
+  if (b === 'signout' && method === 'POST') return boardJSON(await board(env, 'signout', { token: passToken(request) }));
+  if (b === 'report' && method === 'POST') {
+    const setId = String(body.setId || '');
+    const lib = await library(env, url);
+    const meta = lib.sets.find((s) => s.id === setId);
+    if (!meta) return json({ counted: false });
+    return boardJSON(await board(env, 'report', { ...body, setId, cards: meta.count || 0, token: passToken(request) }));
+  }
+  return json({ error: 'Not found.' }, 404);
+}
+
+// The ID token Google sent back to /signin/: Google checks it is real and
+// current; this checks it was made for this client, with a verified address.
+async function passGoogle(env, body) {
+  const idToken = String(body.idToken || '').trim();
+  if (idToken.length > 8000 || !/^[\w-]+\.[\w-]+\.[\w-]+$/.test(idToken)) return json({ error: 'Google’s sign-in did not come through. Try again.' }, 400);
+  let res;
+  try {
+    res = await fetch('https://oauth2.googleapis.com/tokeninfo', { method: 'POST', body: new URLSearchParams({ id_token: idToken }) });
+  } catch {
+    return json({ error: 'Could not reach Google to check the sign-in. Try again in a minute.' }, 502);
+  }
+  let c = null;
+  try { c = await res.json(); } catch { c = null; }
+  if (!res.ok || !c) return json({ error: 'That Google sign-in ran out or did not work. Press Sign in with Google again.' }, 401);
+  const email = String(c.email || '').toLowerCase();
+  const ok = c.aud === passClient(env) && (c.iss === 'accounts.google.com' || c.iss === 'https://accounts.google.com') &&
+    Number(c.exp) * 1000 > Date.now() && String(c.email_verified) === 'true' && /^[^@\s]+@[^@\s]+$/.test(email);
+  if (!ok) return json({ error: 'That Google sign-in cannot be used here. Sign in with your school account.' }, 401);
+  const nonce = String(c.nonce || '');
+  if (!/^[0-9a-f]{32,64}$/.test(nonce)) return json({ error: 'That Google sign-in did not start on this site. Try again.' }, 400);
+  return boardJSON(await board(env, 'signin', { email, nonce }));
+}
+
+// The start of this school year (August 1, in California), as a time.
+function schoolYear(now = Date.now()) {
+  const la = new Date(now - 7 * 3600 * 1000);
+  const y = la.getUTCMonth() >= 7 ? la.getUTCFullYear() : la.getUTCFullYear() - 1;
+  return { start: Date.UTC(y, 7, 1, 7), label: y + '–' + String(y + 1).slice(2) };
+}
+
+// The leaderboards. A signed in student or the teacher can look.
+//   ?period=3        one class ('' = all of them together)
+//   ?span=all        all time (otherwise this school year)
+//   ?topic=s:<id>    one set; f:<id> a folder (and the folders in it); '' every set
+async function boardsApi(request, env, url) {
+  if (!env.LIVE) return needLive();
+  const teacher = await isEditor(request, env);
+  const lib = await library(env, url);
+  const topic = String(url.searchParams.get('topic') || '');
+  let sets = null;
+  if (topic.startsWith('s:')) sets = [topic.slice(2)];
+  else if (topic.startsWith('f:')) {
+    const f = topic.slice(2);
+    const inside = new Set([f, ...lib.folders.filter((x) => x.parent === f).map((x) => x.id)]);
+    sets = lib.sets.filter((x) => inside.has(x.folder)).map((x) => x.id);
+  }
+  const year = schoolYear();
+  const span = url.searchParams.get('span') === 'all' ? 'all' : 'year';
+  const r = await board(env, 'boards', {
+    teacher,
+    token: passToken(request),
+    period: String(url.searchParams.get('period') || ''),
+    since: span === 'all' ? 0 : year.start,
+    sets,
+    single: !!(sets && sets.length === 1)
+  });
+  if (r.status !== 200) return boardJSON(r);
+  const topics = {
+    folders: lib.folders.map((f) => ({ id: f.id, name: f.name, parent: f.parent || null })),
+    sets: lib.sets.filter((x) => x.count).map((x) => ({ id: x.id, title: x.title, folder: x.folder || null }))
+  };
+  return json({ ...r.data, teacher, year: year.label, span, topics });
+}
+
+// The roster (teacher only): GET it, PUT a pasted list, POST /remove or /reset one student.
+async function rosterApi(request, env, url, b) {
+  if (!env.LIVE) return needLive();
+  const method = request.method;
+  let body = {};
+  if (method !== 'GET') { try { body = (await request.json()) || {}; } catch { body = {}; } }
+  if (!b && method === 'GET') return boardJSON(await board(env, 'roster'));
+  if (!b && method === 'PUT') return boardJSON(await board(env, 'roster-put', { students: body.students, mode: body.mode === 'add' ? 'add' : 'replace' }));
+  if (b === 'remove' && method === 'POST') return boardJSON(await board(env, 'roster-remove', { email: body.email }));
+  if (b === 'reset' && method === 'POST') return boardJSON(await board(env, 'student-reset', { email: body.email }));
+  return json({ error: 'Not found.' }, 404);
 }
 
 /* ---------------- suggested definitions ---------------- */

@@ -853,3 +853,8 @@ html:has(.lv-page){ font-size:16px; }
 .lv-settings-panel .lv-lobby-opts-body{ grid-template-columns:1fr; }
 .lv-settings-panel .lv-lobby-opts-body .lv-opt{ grid-template-columns:1fr auto; align-items:center; border-bottom:1px solid var(--line); padding:0.5rem 0; }
 .lv-lobby-actions 
+/* Class Pass (leaderboard) notes on the join and host screens */
+.lv-pass-note{ margin-top:14px; line-height:1.6; }
+.lv-pass-note .pass-badge{ vertical-align:1px; }
+.lv-pass-link{ font-size:inherit; color:var(--accent-dark); }
+.lv-pass-tick{ color:var(--good); font-weight:800; margin-left:4px; }

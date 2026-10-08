@@ -10,7 +10,8 @@ export const site = {
   links: [
     { label: 'Flashcards', href: 'flashcards/', key: 'flashcards' },
     { label: 'Host a game', href: 'live/', key: 'live' },
-    { label: 'Join a game', href: 'join/', key: 'join' }
+    { label: 'Join a game', href: 'join/', key: 'join' },
+    { label: 'Leaderboard', href: 'leaderboard/', key: 'leaderboard' }
   ]
 };
 

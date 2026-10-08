@@ -433,3 +433,21 @@ svg .panel-line{ stroke:var(--line); fill:none; }
 svg .lbl{ font-size:13px; font-weight:600; }
 svg .lbl-sm{ font-size:12px; font-weight:600; }
 svg .ttl{ font-size:15px; font-weight:700; }
+
+/* ---------------- Class Pass button in the top bar (pass.js) ---------------- */
+.pass-pill{ position:relative; flex:none; }
+.pass-btn{ display:flex; align-items:center; gap:8px; border:1.5px solid var(--line); background:#fff; border-radius:999px; padding:5px 12px 5px 6px; font:inherit; font-weight:600; font-size:.88rem; color:var(--ink); cursor:pointer; white-space:nowrap; }
+.pass-btn:hover{ border-color:var(--accent); color:var(--accent-dark); }
+.pass-btn.in{ border-color:var(--good); }
+.pass-btn:disabled{ opacity:.7; cursor:wait; }
+.pass-badge{ display:inline-block; font-size:.66rem; font-weight:800; letter-spacing:.07em; text-transform:uppercase; color:#fff; background:var(--brand-blue); border-radius:999px; padding:3px 8px; }
+.pass-btn.in .pass-badge{ background:var(--good); }
+.pass-menu{ position:absolute; right:0; top:calc(100% + 8px); width:250px; background:#fff; border:1px solid var(--line); border-radius:var(--radius-sm); box-shadow:var(--shadow); padding:10px; display:grid; gap:4px; z-index:60; }
+.pass-menu[hidden]{ display:none; }
+.pass-who{ margin:2px 4px 6px; font-size:.82rem; color:var(--ink-soft); line-height:1.4; }
+.pass-item{ display:block; text-align:left; border:none; background:none; font:inherit; font-weight:600; font-size:.9rem; color:var(--ink); padding:8px 10px; border-radius:8px; cursor:pointer; }
+.pass-item:hover{ background:var(--accent-tint); color:var(--accent-dark); text-decoration:none; }
+.pass-msg{ position:absolute; right:0; top:calc(100% + 8px); width:260px; margin:0; font-size:.8rem; line-height:1.4; color:var(--bad-ink); background:#fff; border-radius:8px; }
+.pass-msg:empty{ display:none; }
+.pass-msg:not(:empty){ padding:8px 10px; border:1px solid var(--bad-tint); box-shadow:var(--shadow-sm); }
+@media (max-width:640px){ .pass-btn .pass-badge{ display:none; } .pass-btn{ padding:6px 12px; font-size:.82rem; } }

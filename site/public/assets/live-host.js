@@ -825,6 +825,13 @@
     }
     var n = b.players.length;
     $('lvCount').textContent = n ? n + (n === 1 ? ' student has joined.' : ' students have joined.') : 'Waiting for students to join...';
+    // Class Pass: who will count on the class leaderboard.
+    var passed = b.players.filter(function (p) { return p.pass; }).length;
+    var pn = $('lvPassNote');
+    if (!pn) { pn = mk('p', 'lv-small lv-pass-note'); pn.id = 'lvPassNote'; $('lvCount').parentNode.insertBefore(pn, $('lvCount').nextSibling); }
+    pn.textContent = b.counts
+      ? (passed ? passed + ' signed in with Class Pass (✓): their results go on the class leaderboard.' : 'Students signed in with Class Pass get their results on the class leaderboard.')
+      : (b.opts && b.opts.demo ? 'Demo games do not count on the class leaderboard.' : 'This game does not count on the class leaderboard (only games the teacher hosts while signed in count).');
     var picking = !!b.pick;
     $('lvMakeTeams').hidden = !b.opts.teams || picking;
     $('lvStartSolo').hidden = b.opts.teams && !picking;
@@ -846,6 +853,7 @@
     chipSeen[p.id] = true;
     li.appendChild(mk('span', 'lv-dot'));
     li.appendChild(mk('span', '', p.name));
+    if (p.pass) { var ok = mk('span', 'lv-pass-tick', '\u2713'); ok.title = 'Signed in with Class Pass'; li.appendChild(ok); }
     li.appendChild(controls(p));
     return li;
   }

@@ -1991,6 +1991,8 @@
 
   // What Learn, Test and Match see (assets/flashcard-modes.js).
   var API = window.IS8Flash = {
+    // The set's id, for Class Pass results on the class leaderboard.
+    setId: book.id || '',
     title: book.title,
     canSpeak: canSpeak,
     speak: speak,

@@ -4,16 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<meta name="description" content="Every flashcard set, sorted into folders.">
-<title>Flashcards | Vocabulary</title>
+<meta name="description" content="The class leaderboard: game wins, fastest times and practice.">
+<title>Leaderboard | Vocabulary</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect x=%2720%27 y=%2710%27 width=%2736%27 height=%2728%27 rx=%276%27 fill=%27%239db8f2%27/%3E%3Crect x=%278%27 y=%2724%27 width=%2738%27 height=%2730%27 rx=%276%27 fill=%27%231d4ed8%27/%3E%3C/svg%3E">
 <link rel="stylesheet" href="../assets/book.css">
 <script src="../assets/icons.js" defer></script>
 <script src="../assets/book.js" defer></script>
 <script src="../assets/pass.js?v=ee02a8ca" defer></script>
 <link rel="stylesheet" href="../assets/flashcards.css?v=3d33d304">
+<link rel="stylesheet" href="../assets/leaderboard.css?v=2d31d6dd">
 <script src="../assets/editor.js?v=aeea0144" defer></script>
-<script src="../assets/flashcards.js?v=14b6dccd" defer></script>
+<script src="../assets/leaderboard.js?v=b78dd6a7" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to the page</a><div class="topbar"><div class="topbar-inner">
@@ -27,7 +28,7 @@
 </svg></span>
 <span>Vocabulary</span>
 </a>
-<nav class="inline-links" aria-label="Site"><a href="../flashcards/" class="active">Flashcards</a><a href="../live/">Host a game</a><a href="../join/">Join a game</a><a href="../leaderboard/">Leaderboard</a></nav>
+<nav class="inline-links" aria-label="Site"><a href="../flashcards/">Flashcards</a><a href="../live/">Host a game</a><a href="../join/">Join a game</a><a href="../leaderboard/" class="active">Leaderboard</a></nav>
 <button class="menu-btn" id="openDrawer" aria-expanded="false" aria-controls="drawer">&#9776; Menu</button>
 </div></div><div class="drawer-backdrop" id="drawerBackdrop"></div>
 <div class="drawer" id="drawer" aria-label="Menu">
@@ -37,27 +38,27 @@
 
 </div><div class="hero hero-page"><div class="hero-inner">
 <div>
-<span class="eyebrow">Study tools</span>
-<h1>Flashcards</h1>
-<p class="lede">Every flashcard set, sorted into folders. Open a set to study it with flashcards, Learn, Test or Match.</p>
-<form class="hero-join" action="../join/" method="get">
-<label for="volleyCode">Playing a game? Enter the code</label>
-<span class="hero-join-row"><input id="volleyCode" name="code" type="text" size="6" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" required><button type="submit" class="btn">Join game</button></span>
-</form>
+<span class="eyebrow">Class Pass</span>
+<h1>Leaderboard</h1>
+<p class="lede">Game wins, fastest times and practice for every class. Sign in with Class Pass when you play or study, and your results count here.</p>
 </div>
-<div class="hero-icon" data-icon="flashcards"></div>
+<div class="hero-icon lb-hero-icon" aria-hidden="true"><svg viewBox="0 0 64 64"><rect x="6" y="30" width="16" height="26" rx="3" fill="var(--accent-tint)"/><rect x="24" y="18" width="16" height="38" rx="3" fill="var(--accent)"/><rect x="42" y="38" width="16" height="18" rx="3" fill="var(--accent-tint)"/><path d="M32 4l2.6 5.3 5.8.8-4.2 4.1 1 5.8L32 17.3 26.8 20l1-5.8-4.2-4.1 5.8-.8z" fill="var(--brand-gold)"/></svg></div>
 </div></div>
-<main id="main" class="container fc-page fx-page">
-<div class="fx-teacher" id="fxTeacher" hidden></div>
-<div class="fx-find">
-<label for="fxFind">Find a word</label>
-<input type="search" id="fxFind" placeholder="Type a word" autocomplete="off" spellcheck="false">
-<p class="fx-find-note" id="fxFindNote" aria-live="polite"></p>
-</div>
-<div id="fxTree"></div>
-<noscript><p>The flashcards need JavaScript turned on.</p></noscript>
-<div class="fx-signin"><button type="button" class="linkbtn" id="fxSignInBtn">Teacher sign in</button><div id="fxSignIn" hidden></div></div>
-<script type="application/json" id="fxData">{"v":3,"folders":[],"sets":[],"removed":[]}</script>
+<main id="main" class="container lb-page">
+<form class="lb-filters" id="lbFilters" hidden>
+<label class="lb-field"><span>Class</span><select id="lbPeriod"><option value="">All my classes</option></select></label>
+<fieldset class="lb-field lb-span"><legend>Time</legend>
+<label><input type="radio" name="lbSpan" value="year" checked> <span id="lbYearLabel">This school year</span></label>
+<label><input type="radio" name="lbSpan" value="all"> <span>All time</span></label>
+</fieldset>
+<label class="lb-field lb-topic"><span>Topic</span><select id="lbTopic"><option value="">All topics</option></select></label>
+</form>
+<p class="lb-status" id="lbStatus" role="status">Loading the leaderboard...</p>
+<div id="lbGate" hidden></div>
+<div id="lbBoards"></div>
+<section class="lb-roster" id="lbRoster" hidden></section>
+<div class="fx-signin"><button type="button" class="linkbtn" id="lbTeacherBtn">Teacher sign in</button><div id="lbTeacherSignIn" hidden></div></div>
+<noscript><p>The leaderboard needs JavaScript turned on.</p></noscript>
 </main><footer><div class="container">Vocabulary &middot; Flashcards and live vocabulary games </div></footer>
 </body>
 </html>
