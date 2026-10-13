@@ -56,6 +56,13 @@
 .lb-table th{ font-size:.74rem; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); }
 .lb-email{ color:var(--ink-soft); }
 .lb-tools{ display:flex; gap:10px; }
+.lb-table input{ font:inherit; border:1.5px solid var(--line); border-radius:8px; padding:4px 7px; background:#fff; }
+.lb-edit-name input + input{ margin-left:6px; }
+.lb-editing td{ background:var(--accent-tint); }
+.lb-saved td{ background:#e8f6ee; }
+.lb-tools .lb-btn-sm{ padding:5px 14px; font-size:.82rem; }
+.lb-edit-msg{ align-self:center; color:var(--ink-soft); font-weight:600; }
+.lb-edit-msg.bad{ color:var(--bad-ink); }
 
 /* The sign-in window */
 .ps-body{ background:var(--paper-soft); min-height:100vh; display:grid; place-items:center; margin:0; padding:16px; }

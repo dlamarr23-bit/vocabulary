@@ -798,7 +798,7 @@ async function boardsApi(request, env, url) {
   return json({ ...r.data, teacher, year: year.label, span, topics });
 }
 
-// The roster (teacher only): GET it, PUT a pasted list, POST /remove or /reset one student.
+// The roster (teacher only): GET it, PUT a pasted list, POST /edit, /remove or /reset one student.
 async function rosterApi(request, env, url, b) {
   if (!env.LIVE) return needLive();
   const method = request.method;
@@ -806,6 +806,7 @@ async function rosterApi(request, env, url, b) {
   if (method !== 'GET') { try { body = (await request.json()) || {}; } catch { body = {}; } }
   if (!b && method === 'GET') return boardJSON(await board(env, 'roster'));
   if (!b && method === 'PUT') return boardJSON(await board(env, 'roster-put', { students: body.students, mode: body.mode === 'add' ? 'add' : 'replace' }));
+  if (b === 'edit' && method === 'POST') return boardJSON(await board(env, 'roster-edit', { email: body.email, student: body.student }));
   if (b === 'remove' && method === 'POST') return boardJSON(await board(env, 'roster-remove', { email: body.email }));
   if (b === 'reset' && method === 'POST') return boardJSON(await board(env, 'student-reset', { email: body.email }));
   return json({ error: 'Not found.' }, 404);

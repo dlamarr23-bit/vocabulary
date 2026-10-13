@@ -96,6 +96,7 @@ export class Leaderboard extends DurableObject {
     switch (op) {
       case 'roster': return this.roster();
       case 'roster-put': return this.rosterPut(b);
+      case 'roster-edit': return this.rosterEdit(b);
       case 'roster-remove': return this.rosterRemove(b);
       case 'student-reset': return this.studentReset(b);
       case 'signin': return this.signIn(b);
@@ -147,6 +148,29 @@ export class Leaderboard extends DurableObject {
       this.sql.exec('DELETE FROM sessions WHERE email NOT IN (SELECT email FROM roster)');
     });
     return { saved: rows.length, ...this.roster() };
+  }
+
+  // The teacher fixes one student's row (Donny, 2026-10-12): a mistyped email,
+  // a name or a period. A new email takes the student's results with it, and
+  // their sign-ins end, so Class Pass signs them in again with the right account.
+  rosterEdit(b) {
+    const old = clean(b.email, 120).toLowerCase();
+    const s = b.student || {};
+    const row = { email: clean(s.email, 120).toLowerCase(), first: clean(s.first, 40), last: clean(s.last, 60), period: clean(s.period, 20) };
+    if (!this.all('SELECT email FROM roster WHERE email = ?', old).length) throw Object.assign(new Error('That student is no longer on the roster. Reload the page.'), { status: 404 });
+    if (!EMAIL.test(row.email)) throw Object.assign(new Error('"' + row.email + '" is not a full email address.'), { status: 400 });
+    if (!row.first) throw Object.assign(new Error('Type a first name.'), { status: 400 });
+    if (row.email !== old && this.all('SELECT email FROM roster WHERE email = ?', row.email).length) {
+      throw Object.assign(new Error(row.email + ' is already on the roster.'), { status: 409 });
+    }
+    this.ctx.storage.transactionSync(() => {
+      this.sql.exec('UPDATE roster SET email = ?, first = ?, last = ?, period = ? WHERE email = ?', row.email, row.first, row.last, row.period, old);
+      if (row.email !== old) {
+        this.sql.exec('UPDATE events SET email = ? WHERE email = ?', row.email, old);
+        this.sql.exec('DELETE FROM sessions WHERE email = ?', old);
+      }
+    });
+    return this.roster();
   }
 
   rosterRemove(b) {
@@ -331,7 +355,7 @@ export class Leaderboard extends DurableObject {
     const boards = [
       { id: 'teamWins', group: 'Class champions', title: 'Team game wins', blurb: 'Vocab Live and Blast games won by your team.', unit: 'win', data: tally((e) => live(e) && e.team && e.win, one) },
       { id: 'soloWins', group: 'Class champions', title: 'Solo game wins', blurb: 'Multiplayer Match and solo Vocab Live games won on your own.', unit: 'win', data: tally((e) => live(e) && !e.team && e.win, one) },
-      { id: 'podiums', group: 'Class champions', title: 'Top 3 finishes', blurb: 'Live games where you or your team came 1st, 2nd or 3rd (last place never counts).', unit: 'finish', data: tally((e) => live(e) && e.place >= 1 && e.place <= 3 && e.place < (e.total || 2), one) },
+      { id: 'podiums', group: 'Class champions', title: 'Top 3 finishes', blurb: 'Live games where you or your team came 1st, 2nd or 3rd.', unit: 'finish', data: tally((e) => live(e) && e.place >= 1 && e.place <= 3 && e.place < (e.total || 2), one) },
       { id: 'right', group: 'Class champions', title: 'Correct answers in games', blurb: 'Right answers you gave in live games.', unit: 'answer', data: tally(live, (e) => e.correct || 0) },
       { id: 'volley', group: 'Wins by game', title: 'Vocab Live wins', blurb: 'Team and solo.', unit: 'win', data: tally((e) => live(e) && e.game === 'volley' && e.win, one) },
       { id: 'blast', group: 'Wins by game', title: 'Blast wins', blurb: 'Games your team won.', unit: 'win', data: tally((e) => live(e) && e.game === 'blast' && e.win, one) },

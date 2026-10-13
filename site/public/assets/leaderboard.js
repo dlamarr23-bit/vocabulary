@@ -314,7 +314,8 @@
     });
   }
 
-  function drawRoster(list) {
+  // fresh: the email of a row just edited, which is highlighted.
+  function drawRoster(list, fresh) {
     var sec = $('lbRoster');
     sec.hidden = false;
     sec.textContent = '';
@@ -388,8 +389,11 @@
       thead.appendChild(hr);
       table.appendChild(thead);
       var tb = mk('tbody');
-      list.students.forEach(function (s) {
-        var tr = mk('tr');
+      // The row being edited goes back to normal when another one is opened.
+      var editing = null;
+      var showRow = function (tr, s) {
+        tr.textContent = '';
+        tr.className = s.email === fresh ? 'lb-saved' : '';
         tr.appendChild(mk('td', null, s.period));
         tr.appendChild(mk('td', null, s.name));
         tr.appendChild(mk('td', null, s.first + ' ' + s.last));
@@ -397,6 +401,7 @@
         tr.appendChild(mk('td', null, s.signedIn ? 'Yes' : ''));
         tr.appendChild(mk('td', null, String(s.results)));
         var tools = mk('td', 'lb-tools');
+        tools.appendChild(btn('Edit', 'linkbtn', function () { editRow(tr, s); }));
         tools.appendChild(btn('Clear results', 'linkbtn', function () {
           if (!window.confirm('Clear every result for ' + s.first + ' ' + s.last + '? This cannot be undone.')) return;
           rosterCall('POST', 'reset', { email: s.email }).then(function (d) { drawRoster(d); $('lbRoster').querySelector('details').open = true; load(); }, function (err) { msg.textContent = err.message; });
@@ -406,6 +411,71 @@
           rosterCall('POST', 'remove', { email: s.email }).then(function (d) { drawRoster(d); $('lbRoster').querySelector('details').open = true; load(); }, function (err) { msg.textContent = err.message; });
         }));
         tr.appendChild(tools);
+      };
+      // The same row as boxes, to fix a mistyped email, a name or a period.
+      // Enter saves, Escape puts the row back.
+      var editRow = function (tr, s) {
+        if (editing) editing();
+        editing = function () { editing = null; showRow(tr, s); };
+        tr.textContent = '';
+        tr.className = 'lb-editing';
+        var box = function (value, label, size) {
+          var i = mk('input');
+          i.type = 'text';
+          i.value = value || '';
+          i.size = size;
+          i.setAttribute('aria-label', label + ' for ' + s.first + ' ' + s.last);
+          i.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') { e.preventDefault(); save(); }
+            if (e.key === 'Escape') editing();
+          });
+          return i;
+        };
+        var cell = function (kids, cls) {
+          var td = mk('td', cls);
+          kids.forEach(function (k) { td.appendChild(k); });
+          return td;
+        };
+        var ePer = box(s.period, 'Period', 3);
+        var eFirst = box(s.first, 'First name', 10);
+        var eLast = box(s.last, 'Last name', 12);
+        var eEmail = box(s.email, 'Email', 30);
+        eEmail.spellcheck = false;
+        var note = mk('span', 'lb-edit-msg');
+        note.setAttribute('role', 'status');
+        var say = function (text, bad) { note.textContent = text; note.classList.toggle('bad', !!bad); };
+        var saveRow = btn('Save', 'btn lb-btn-sm', function () { save(); });
+        var save = function () {
+          var p = ePer.value.trim();
+          var student = { email: eEmail.value.trim().toLowerCase(), first: eFirst.value.trim(), last: eLast.value.trim(), period: PERIOD.test(p) ? PERIOD.exec(p)[1] : p };
+          if (!EMAIL.test(student.email)) { say('That is not a full email address.', true); eEmail.focus(); return; }
+          if (!student.first) { say('Type a first name.', true); eFirst.focus(); return; }
+          saveRow.disabled = true;
+          say('Saving...');
+          rosterCall('POST', 'edit', { email: s.email, student: student }).then(function (d) {
+            drawRoster(d, student.email);
+            $('lbRoster').querySelector('details').open = true;
+            var moved = student.email !== s.email;
+            $('lbRosterMsg').textContent = 'Saved ' + student.first + ' ' + student.last + '.' +
+              (moved && s.results ? ' Their results moved to the new email.' : '') +
+              (moved && s.signedIn ? ' They need to sign in with Class Pass again.' : '');
+            // A new period changes the class list in the filters.
+            data = null;
+            load();
+          }, function (err) { saveRow.disabled = false; say(err.message, true); });
+        };
+        tr.appendChild(cell([ePer]));
+        tr.appendChild(cell([document.createTextNode(s.name)]));
+        tr.appendChild(cell([eFirst, eLast], 'lb-edit-name'));
+        tr.appendChild(cell([eEmail]));
+        tr.appendChild(cell([document.createTextNode(s.signedIn ? 'Yes' : '')]));
+        tr.appendChild(cell([document.createTextNode(String(s.results))]));
+        tr.appendChild(cell([saveRow, btn('Cancel', 'linkbtn', function () { editing(); }), note], 'lb-tools'));
+        eEmail.focus();
+      };
+      list.students.forEach(function (s) {
+        var tr = mk('tr');
+        showRow(tr, s);
         tb.appendChild(tr);
       });
       table.appendChild(tb);

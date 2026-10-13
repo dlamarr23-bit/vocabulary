@@ -212,8 +212,9 @@ from GitHub, step 4).
 - **This school year** starts August 1.
 - Only you see emails. Students see "First L." (more of the last name when two would match), and
   they see the leaderboard only while signed in.
-- In the roster table you can **Remove** a student (results are kept in case you add them back) or
-  **Clear results** for one student.
+- In the roster table you can **Edit** a student to fix a mistyped email, a name or a period (their
+  results move to the new email, and they sign in again with Class Pass), **Remove** a student
+  (results are kept in case you add them back) or **Clear results** for one student.
 
 **If a student can't sign in**
 
