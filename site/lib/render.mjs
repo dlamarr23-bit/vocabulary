@@ -38,7 +38,7 @@ export function topbar(depth, activeKey) {
     const href = l.external ? l.href : up + l.href;
     const cls = l.key === activeKey ? ' class="active"' : '';
     const rel = l.external ? ' target="_blank" rel="noopener noreferrer"' : '';
-    return `<a href="${esc(href)}"${cls}${rel}>${esc(l.label)}</a>`;
+    return `<a href="${esc(href)}"${cls}${rel}${l.teacher ? ' data-teacher-only' : ''}>${esc(l.label)}</a>`;
   }).join('');
   return `<div class="topbar"><div class="topbar-inner">
 <a class="brand" href="${up}index.html">
@@ -65,7 +65,7 @@ export function drawer(depth, chapters, currentUnitId, currentChapterId) {
 <div class="drawer" id="drawer" aria-label="Menu">
 <button class="drawer-close" id="closeDrawer" aria-label="Close the menu">&times;</button>
 <h2 class="drawer-title">Menu</h2>
-<nav class="drawer-links" aria-label="Site">${site.links.map((l) => `<a href="${esc(l.external ? l.href : up + l.href)}"${l.external ? ' target="_blank" rel="noopener noreferrer"' : ''}>${esc(l.label)}</a>`).join('')}</nav>
+<nav class="drawer-links" aria-label="Site">${site.links.map((l) => `<a href="${esc(l.external ? l.href : up + l.href)}"${l.external ? ' target="_blank" rel="noopener noreferrer"' : ''}${l.teacher ? ' data-teacher-only' : ''}>${esc(l.label)}</a>`).join('')}</nav>
 ${blocks}
 </div>`;
 }

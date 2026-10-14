@@ -6,6 +6,14 @@
 (function () {
   'use strict';
 
+  /* ---------- the teacher's links ---------- */
+  // "Host a game" shows only where the teacher has signed in with the teacher
+  // password: editor.js keeps a note of that in this browser (_teacher in the
+  // flashcard key). The host page and the server still check the password.
+  try {
+    if ((JSON.parse(localStorage.getItem('is8-flashcards-v1')) || {})._teacher === 1) document.documentElement.classList.add('is-teacher');
+  } catch (e) { /* storage blocked: the links stay hidden */ }
+
   /* ---------- icons ---------- */
   function injectIcons() {
     document.querySelectorAll('[data-icon]').forEach(function (el) {

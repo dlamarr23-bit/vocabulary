@@ -7,9 +7,11 @@ export const site = {
   // The name in the top bar, and an optional second line under it ('' for none).
   brandLine: 'Vocabulary',
   brandSub: '',
+  // A link with teacher: true shows only in a browser where the teacher has
+  // signed in with the teacher password.
   links: [
     { label: 'Flashcards', href: 'flashcards/', key: 'flashcards' },
-    { label: 'Host a game', href: 'live/', key: 'live' },
+    { label: 'Host a game', href: 'live/', key: 'live', teacher: true },
     { label: 'Join a game', href: 'join/', key: 'join' },
     { label: 'Leaderboard', href: 'leaderboard/', key: 'leaderboard' }
   ]

@@ -194,7 +194,7 @@
       hi.textContent = 'Signed in as ' + data.me.name + (data.me.period ? ', period ' + data.me.period : '') + '. Your row is highlighted.';
       box.appendChild(hi);
     } else if (teacher) {
-      box.appendChild(mk('p', 'lb-hello', 'You are signed in as the teacher: every student is listed, and hovering a name shows the email.'));
+      box.appendChild(mk('p', 'lb-hello', 'You are signed in as the teacher: each leaderboard shows its top 10, and hovering a name shows the email.'));
     }
     groups.forEach(function (name) {
       var sec = mk('section', 'lb-group');

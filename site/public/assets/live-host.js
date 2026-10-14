@@ -1,9 +1,9 @@
 /* ============================================================
    Live games: the teacher's host screen (live/).
 
-   Anyone (teacher or student) picks a game (Vocab Live, Blast or Match),
-   a set and the options, and the site makes a game with a join code
-   (IS8Editor.liveCreate).
+   The teacher, signed in with the teacher password, picks a game (Vocab
+   Live, Blast or Match), a set and the options, and the site makes a game
+   with a join code (IS8Editor.liveCreate).
    This screen then holds a connection to the game server
    (textbook/live-worker) and draws whatever step the game is at: the lobby
    with the code and a QR code, the teams, the race, and the winners.
@@ -47,7 +47,13 @@
         $('lvGateText').textContent = 'Saving to the site is not switched on, so games cannot run yet.';
       } else if (!s.live) {
         $('lvGateText').textContent = 'Games need one more Cloudflare setting. The steps are in the README, steps 4 and 5.';
+      } else if (!s.editor) {
+        // Only the teacher hosts (Donny, 2026-10-14).
+        ED.forgetHint();
+        $('lvGateText').textContent = 'Only your teacher can host a game. Teacher: sign in with the teacher password.';
+        ED.signInForm($('lvSignIn'), function () { $('lvSignIn').textContent = ''; setup(); });
       } else {
+        ED.rememberHint();
         setup();
       }
     });

@@ -526,11 +526,10 @@ async function api(request, env, url) {
 
   if (a === 'login' && method === 'POST') return login(request, env);
   if (a === 'logout' && method === 'POST') return signedCookies(json({ ok: true }), '', 0);
-  // Anyone may host a game, students included (Gennaro, 2026-09-25): a game
-  // only reads a set's cards and deletes itself after 5 quiet minutes.
-  if (a === 'live' && b === 'create' && method === 'POST') return liveCreate(request, env, url);
-
   if (!(await isEditor(request, env))) return json({ error: 'Sign in with the teacher password first.' }, 401);
+
+  // Only the teacher hosts a game (Donny, 2026-10-14; students could before).
+  if (a === 'live' && b === 'create' && method === 'POST') return liveCreate(request, env, url);
 
   if (a === 'roster') return rosterApi(request, env, url, b);
   if (a === 'suggest' && !b && method === 'GET') return suggest(env, url);
@@ -701,8 +700,8 @@ async function liveCreate(request, env, url) {
     const res = await env.ASSETS.fetch(new URL('/assets/flashcard-data/' + setId + '.json', url));
     if (res.ok) cards = (await res.json()).cards;
   }
-  // Results count on the class leaderboard only in a game the teacher hosts.
-  const counts = await isEditor(request, env);
+  // Only the teacher gets here (see api), so the results count on the class leaderboard.
+  const counts = true;
   // Pictures saved with a set are written relative to the set's own page.
   const base = new URL(entry.path, url);
   cards = (cards || []).map((c) => ({

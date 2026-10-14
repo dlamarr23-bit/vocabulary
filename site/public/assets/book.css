@@ -100,6 +100,8 @@ button{ font-family:inherit; }
 .topbar nav.inline-links a{ padding:8px 14px; border-radius:999px; color:var(--ink-soft); font-weight:600; font-size:.92rem; }
 .topbar nav.inline-links a:hover, .topbar nav.inline-links a.active{ background:var(--accent-tint); color:var(--accent-dark); text-decoration:none; }
 @media (max-width:860px){ .topbar nav.inline-links{ display:none; } }
+/* Host a game: only in a browser where the teacher signed in (book.js). */
+html:not(.is-teacher) [data-teacher-only]{ display:none !important; }
 
 /* ---------------- drawer, table of contents ---------------- */
 .drawer-backdrop{ position:fixed; inset:0; background:rgba(15,18,30,.45); z-index:80; opacity:0; pointer-events:none; transition:opacity .25s; }

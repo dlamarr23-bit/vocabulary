@@ -41,6 +41,15 @@ const BLAST_ROCKS = 6;
 // A wrong asteroid stops that player's ship for a moment.
 const BLAST_STUN_MS = 2000;
 const MATCH_PAIRS = [4, 6, 8];
+// Match (Donny, 2026-10-14): a wrong pair holds the player for a second only
+// until they have cleared MATCH_FREE_AFTER pairs. After that a wrong pair
+// deals them one more pair instead, up to MATCH_MOST_LEFT pairs on the board.
+const MATCH_FREE_AFTER = 2;
+const MATCH_MOST_LEFT = 12;
+// Each pair on a player's board has its own number: the card's own number
+// the first time it is dealt to them, plus 1000 each time it comes back
+// after being matched (sets hold at most 400 cards).
+const matchCard = (e) => e % 1000;
 // Students pick their teams (Gennaro, 2026-09-29): the host picks how many
 // teams, students tap one in the lobby and can switch until the host's
 // countdown runs out, then everyone is locked in.
@@ -553,9 +562,12 @@ export class LiveGame extends DurableObject {
       if (stu) g.players[pid].stu = stu.email;
       g.order.push(pid);
       if (g.phase !== 'lobby') this.placeLatecomer(pid);
+      else if (this.picking()) this.pickPlace(pid);
       ws.serializeAttachment({ role: 'player', pid, at: Date.now() });
       await this.save();
       this.send(ws, { t: 'me', id: pid, secret: g.players[pid].secret, name, code: g.code });
+      // Picking teams: everyone's team list shows the newcomer.
+      if (this.picking()) { this.toEveryone(); return; }
       this.toPlayer(pid);
       if (g.players[pid].team) this.toTeam(g.players[pid].team);
       this.toHost();
@@ -679,6 +691,8 @@ export class LiveGame extends DurableObject {
     t.pos = 0;
     t.seq = 0;
     if (this.game.kind === 'match') {
+      // The pairs on this player's board (see matchCard): the round's, then any a wrong pair added.
+      t.board = (this.game.round ? this.game.round.cards : []).slice();
       t.found = [];
       t.foundAt = 0;
       t.finishMs = 0;
@@ -853,19 +867,30 @@ export class LiveGame extends DurableObject {
 
   /* ---------------- Match ---------------- */
 
+  // The board as it was, for a game saved before boards could grow.
+  matchBoard(t) {
+    if (!Array.isArray(t.board)) t.board = (this.game.round ? this.game.round.cards : []).slice();
+    return t.board;
+  }
+  // Progress out of the round's pairs: each pair a wrong match added is one more to clear.
+  matchProgress(t) {
+    const left = this.matchBoard(t).length - t.found.length;
+    t.progress = Math.max(0, this.game.round.cards.length - left);
+  }
+
   async matched(pid, m) {
     const g = this.game;
     const p = g.players[pid];
     if (g.phase !== 'play' || !p || !p.team) return;
     if (Date.now() < (g.goAt || 0)) return;
     const t = g.teams[p.team];
-    const k = Number(m.k);
-    if (!t || t.place || !g.round || !g.round.cards.includes(k) || t.found.includes(k)) return;
-    t.found.push(k);
-    t.progress = t.found.length;
-    this.tally(k, true, t.foundAt || t.startedAt || g.round.startedAt, p.name, pid);
+    const e = Number(m.k);
+    if (!t || t.place || !g.round || !this.matchBoard(t).includes(e) || t.found.includes(e)) return;
+    t.found.push(e);
+    this.matchProgress(t);
+    this.tally(matchCard(e), true, t.foundAt || t.startedAt || g.round.startedAt, p.name, pid);
     t.foundAt = Date.now();
-    if (t.found.length >= g.round.cards.length) {
+    if (t.found.length >= t.board.length) {
       t.finishMs = Date.now() - (t.startedAt || g.round.startedAt);
       g.places += 1;
       t.place = g.places;
@@ -877,20 +902,52 @@ export class LiveGame extends DurableObject {
     else { this.toTeam(t.id); this.toHost(); }
   }
 
-  // A wrong pair in Match: both cards count as missed. A player's screen
-  // waits a second after a wrong pair, so more often than that is ignored.
+  // A wrong pair in Match: both cards count as missed. Once the player has
+  // cleared MATCH_FREE_AFTER pairs, it also deals them one more pair (their
+  // screen works out the same thing, so it knows whether to wait a second).
+  // The shake on screen takes a moment, so faster than that is ignored.
   async mismatched(pid, m) {
     const g = this.game;
     const p = g.players[pid];
     if (g.phase !== 'play' || !p || !p.team || !g.round) return;
     if (Date.now() < (g.goAt || 0)) return;
+    const t = g.teams[p.team];
+    if (!t || t.place) return;
     this.missAt = this.missAt || {};
-    if (Date.now() - (this.missAt[pid] || 0) < 700) return;
+    if (Date.now() - (this.missAt[pid] || 0) < 250) return;
     this.missAt[pid] = Date.now();
-    const ks = [...new Set((Array.isArray(m.k) ? m.k : []).slice(0, 2).map(Number))].filter((k) => g.round.cards.includes(k));
-    if (!ks.length) return;
-    ks.forEach((k, i) => this.tally(k, false, 0, '', i ? '' : pid));
+    const board = this.matchBoard(t);
+    const es = [...new Set((Array.isArray(m.k) ? m.k : []).slice(0, 2).map(Number))].filter((e) => board.includes(e));
+    if (!es.length) return;
+    es.forEach((e, i) => this.tally(matchCard(e), false, 0, '', i ? '' : pid));
+    const added = this.matchAddPair(t);
     await this.save();
+    if (added) { this.toTeam(t.id); this.toHost(); }
+  }
+
+  // One more pair on a player's board after a wrong match: a card from the
+  // set they have not had yet, or, when they have had them all, one they
+  // already matched. False when it is still too early (a second's wait
+  // instead) or the board is full.
+  matchAddPair(t) {
+    const g = this.game;
+    const board = this.matchBoard(t);
+    if (t.found.length < MATCH_FREE_AFTER || board.length - t.found.length >= MATCH_MOST_LEFT) return false;
+    const had = new Set(board.map(matchCard));
+    const fresh = g.cards.map((_, k) => k).filter((k) => !had.has(k));
+    let e;
+    if (fresh.length) {
+      e = pick(fresh);
+    } else {
+      const showing = new Set(board.filter((x) => !t.found.includes(x)).map(matchCard));
+      const again = [...had].filter((k) => !showing.has(k));
+      if (!again.length) return false;
+      const k = pick(again);
+      e = Math.max(...board.filter((x) => matchCard(x) === k)) + 1000;
+    }
+    board.push(e);
+    this.matchProgress(t);
+    return true;
   }
 
   // Answer statistics for the end of the game (Gennaro, 2026-09-29): for each
@@ -1313,6 +1370,19 @@ export class LiveGame extends DurableObject {
     g.teams = teams;
     g.teamOrder = order;
     g.order.forEach((pid) => { const p = g.players[pid]; if (p.team && !teams[p.team]) p.team = null; });
+    this.pickFillIn();
+  }
+  // A player with no team goes onto the smallest one (Donny, 2026-10-14):
+  // straight away on joining, and they can still switch until the countdown
+  // locks everyone in.
+  pickPlace(pid) {
+    const g = this.game;
+    const p = g.players[pid];
+    if (!p || (p.team && g.teams[p.team])) return;
+    const t = g.teamOrder.map((id) => g.teams[id]).filter(Boolean).sort((x, y) => x.members.length - y.members.length)[0];
+    if (!t) return;
+    t.members.push(pid);
+    p.team = t.id;
   }
   async pickTeam(pid, tid) {
     const g = this.game;
@@ -1328,18 +1398,8 @@ export class LiveGame extends DurableObject {
     await this.save();
     this.toEveryone();
   }
-  // Anyone who has not picked goes to the smallest team.
-  pickFillIn() {
-    const g = this.game;
-    g.order.forEach((pid) => {
-      const p = g.players[pid];
-      if (p.team && g.teams[p.team]) return;
-      const t = g.teamOrder.map((id) => g.teams[id]).sort((x, y) => x.members.length - y.members.length)[0];
-      if (!t) return;
-      t.members.push(pid);
-      p.team = t.id;
-    });
-  }
+  // Anyone without a team goes to the smallest one.
+  pickFillIn() { this.game.order.forEach((pid) => this.pickPlace(pid)); }
   pickDue() {
     const g = this.game;
     return !!(g && this.picking() && g.pickEndsAt && !g.pickLocked && Date.now() >= g.pickEndsAt - 150);
@@ -1384,6 +1444,7 @@ export class LiveGame extends DurableObject {
       g.players[pid] = { id: pid, name, secret: token(), team: null, bot: true, skill: 0.7 + rand(26) / 100 };
       g.order.push(pid);
       if (g.phase !== 'lobby') this.placeLatecomer(pid);
+      else if (this.picking()) this.pickPlace(pid);
       added += 1;
     }
     return added;
@@ -1395,7 +1456,7 @@ export class LiveGame extends DurableObject {
     // Still arriving: in the lobby, or onto the smallest team once teams are made.
     if (g.phase === 'lobby' || g.phase === 'teams') {
       let changed = this.demoJoin(1 + rand(DEMO_JOIN_PER_TICK)) > 0;
-      // Picking teams: pretend students pick one, and now and then switch.
+      // Picking teams: pretend students start on the smallest team, and now and then switch.
       if (this.picking() && !g.pickLocked) {
         const cap = this.pickCap();
         for (const pid of g.order) {
@@ -1475,13 +1536,15 @@ export class LiveGame extends DurableObject {
         await this.shoot(pick(ready), { seq: t.q.seq, k });
       } else if (g.kind === 'match') {
         // A wrong pair costs a Match player a moment, so a miss is a slower turn.
-        if (!g.round || Math.random() > (right ? 0.4 : 0.1)) continue;
-        const left = g.round.cards.filter((k) => !(t.found || []).includes(k));
+        // After their first pairs, a miss deals them one more pair, as it does a real player.
+        if (!g.round || t.place || Math.random() > (right ? 0.4 : 0.1)) continue;
+        const left = this.matchBoard(t).filter((k) => !(t.found || []).includes(k));
         if (!right && left.length > 1) {
           const a = pick(left);
           const b = pick(left.filter((k) => k !== a));
-          this.tally(a, false);
-          this.tally(b, false);
+          this.tally(matchCard(a), false);
+          this.tally(matchCard(b), false);
+          if (this.matchAddPair(t)) { await this.save(); this.toHost(); }
           continue;
         }
         if (left.length) await this.matched(mine[0], { k: left[0] });
@@ -1504,8 +1567,8 @@ export class LiveGame extends DurableObject {
       t.place = g.places;
       if (g.kind === 'volley') { t.progress = g.opts.target; t.q = null; }
       if (g.kind === 'match' && i === 0 && g.round) {
-        t.found = g.round.cards.slice();
-        t.progress = t.found.length;
+        t.found = this.matchBoard(t).slice();
+        this.matchProgress(t);
         t.finishMs = Date.now() - (t.startedAt || g.round.startedAt);
       }
     });
@@ -1786,7 +1849,11 @@ export class LiveGame extends DurableObject {
     }
     if (g.kind === 'match' && g.phase === 'play' && t && g.round) {
       out.match = {
-        cards: g.round.cards.map((k) => ({ k, term: g.cards[k].term, def: g.cards[k].def, img: g.cards[k].img })),
+        // k is the pair's number on this board (matchCard gives the card).
+        cards: this.matchBoard(t).map((k) => { const c = g.cards[matchCard(k)]; return { k, term: c.term, def: c.def, img: c.img }; }),
+        pairs: g.round.cards.length,
+        freeAfter: MATCH_FREE_AFTER,
+        mostLeft: MATCH_MOST_LEFT,
         found: t.found || [],
         hidden: g.opts.hidden,
         startedAt: t.startedAt || g.round.startedAt,

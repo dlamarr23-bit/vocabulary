@@ -199,7 +199,7 @@ from GitHub, step 4).
 **How it counts**
 
 - Live games count when **you host them signed in with the teacher password**, and never in Demo
-  mode. A game hosted by a student, or at home, does not count. On the host screen, students signed
+  mode. A game hosted at home does not count. On the host screen, students signed
   in with Class Pass show a ✓.
 - A **win** is first place with at least one right answer, in a game with two or more teams (or
   players). Vocab Live and Blast with teams are **team wins**; Multiplayer Match and solo Vocab Live
@@ -209,6 +209,7 @@ from GitHub, step 4).
   board. A **perfect test** needs 10 or more questions (or the whole set).
 - **Fastest times** show when one set is picked under Topic. Multiplayer Match is ranked by time per
   pair, so 4 and 8 pair games compare fairly.
+- Each leaderboard shows its **top 10**. A student further down still sees their own place.
 - **This school year** starts August 1.
 - Only you see emails. Students see "First L." (more of the last name when two would match), and
   they see the leaderboard only while signed in.
@@ -250,7 +251,10 @@ Give students the address `https://<your site>/flashcards/`. They open a set and
 Learn, Test or Match. Their stars and progress stay in their own browser. Nothing about a student is
 sent anywhere.
 
-### Hosting a game (you, or anyone)
+### Hosting a game (you only)
+
+Only you can host: **Host a game** shows in the top bar only in a browser where you have signed in
+with the teacher password, and the host page asks for that password first. Students only join.
 
 1. Open `https://<your site>/live/`, or **Host a game** in the top bar or on a set.
 2. Pick a game (Vocab Live, Blast or Match), a set, and the options. **Demo mode** fills the game
@@ -260,6 +264,14 @@ sent anywhere.
    **Post to Google Classroom**.
 4. Start the game when everyone is in. From the **Players** button you can rename or remove a
    student.
+
+**Teams:** with **Students pick teams**, each student starts on the smallest team as they join and
+can switch until your countdown locks the teams. Anyone who joins after teams are made goes to the
+smallest team.
+
+**Match:** the cards fill the student's screen, all the same size, with smaller letters on a card
+whose words do not fit. Until a student has cleared 2 pairs, a wrong match makes them wait a
+second; after that, a wrong match adds one more random pair from the set instead.
 
 **Names:** in setup you choose between random fun names ("Speedy Otter") and names students type.
 Typed names are checked for rude words. Games delete themselves 5 minutes after nothing happens,

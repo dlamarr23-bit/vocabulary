@@ -90,7 +90,7 @@ ${choiceCard('lvGame', 'match', 'Match', 'Everyone races to match every term to 
 <fieldset class="lv-group" data-for="volley"><legend class="lv-q">How would you like your teams arranged?</legend>
 <div class="lv-choices lv-choices-3">
 ${choiceCard('lvTeams', 'teams', 'Random teams', 'Students are put into teams at random. Each teammate holds some of the answers, so they have to talk.', ART.teams, true)}
-${choiceCard('lvTeams', 'pick', 'Students pick teams', 'You choose how many teams. Students tap one and can switch until your countdown locks them in.', ART.pick, false)}
+${choiceCard('lvTeams', 'pick', 'Students pick teams', 'You choose how many teams. Each student starts on the smallest team and can switch until your countdown locks them in.', ART.pick, false)}
 ${choiceCard('lvTeams', 'solo', 'Individuals', 'Every student plays on their own.', ART.solo, false)}
 </div></fieldset>
 
@@ -109,7 +109,7 @@ ${choiceCard('lvWho', 'typed', 'Students type their name', 'First name and last 
 <div class="lv-more">
 <label class="lv-opt" data-for="blast"><span><strong>Time</strong><span class="lv-opt-note">The team with the most right answers when time runs out wins.</span></span>
 <span class="lv-minutes"><input type="number" id="lvMinutes" min="1" max="30" step="1" value="5" inputmode="numeric"> minutes</span></label>
-<label class="lv-opt" data-for="match"><span><strong>Pairs to match</strong><span class="lv-opt-note">Everyone gets the same cards.</span></span>
+<label class="lv-opt" data-for="match"><span><strong>Pairs to match</strong><span class="lv-opt-note">Everyone gets the same cards. A wrong match means a 1 second wait until a player has cleared 2 pairs; after that it adds one more pair to clear.</span></span>
 <select id="lvPairs"><option value="4">4 pairs</option><option value="6" selected>6 pairs</option><option value="8">8 pairs</option></select></label>
 <label class="lv-opt fc-switch" data-for="match"><span><strong>Hidden cards</strong><span class="lv-opt-note">Memory mode: cards start face down, so players remember where each one is.</span></span><input type="checkbox" id="lvHidden"></label>
 <label class="lv-opt fc-switch"><span><strong>Drawing pad while waiting</strong><span class="lv-opt-note">Students can draw on their screen while the class joins. Drawings stay on their device.</span></span><input type="checkbox" id="lvDoodle" checked></label>
@@ -124,7 +124,7 @@ ${choiceCard('lvWho', 'typed', 'Students type their name', 'First name and last 
 <select id="lvTarget"><option>6</option><option>8</option><option>10</option><option selected>12</option><option>15</option><option>20</option></select></label>
 <label class="lv-opt" data-for="volley"><span><strong>Number of winners</strong><span class="lv-opt-note">The game ends when this many teams finish.</span></span>
 <select id="lvWinners"><option selected>1</option><option>2</option><option>3</option></select></label>
-<label class="lv-opt" id="lvPickRow" hidden><span><strong>Number of teams</strong><span class="lv-opt-note">Students pick from these. A team is full at one more than an even share.</span></span>
+<label class="lv-opt" id="lvPickRow" hidden><span><strong>Number of teams</strong><span class="lv-opt-note">Each student starts on the smallest one and can switch. A team is full at one more than an even share.</span></span>
 <select id="lvPickTeams">${[2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => `<option${n === 4 ? ' selected' : ''}>${n}</option>`).join('')}</select></label>
 <label class="lv-opt" id="lvSizeRow"><span><strong>Players per team</strong><span class="lv-opt-note">Up to six in Vocab Live, four in Blast.</span></span>
 <select id="lvSize"><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option></select></label>

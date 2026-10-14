@@ -203,6 +203,7 @@
     } catch (e) { /* private window: the tools show after signing in again */ }
   }
   E.signedInHint = function () { return drafts()._teacher === 1; };
-  E.rememberHint = function () { var all = drafts(); all._teacher = 1; keepDrafts(all); };
-  E.forgetHint = function () { var all = drafts(); delete all._teacher; keepDrafts(all); };
+  // The top bar's teacher-only links (book.js) follow the note.
+  E.rememberHint = function () { var all = drafts(); all._teacher = 1; keepDrafts(all); document.documentElement.classList.add('is-teacher'); };
+  E.forgetHint = function () { var all = drafts(); delete all._teacher; keepDrafts(all); document.documentElement.classList.remove('is-teacher'); };
 })();

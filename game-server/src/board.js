@@ -23,8 +23,9 @@ const SESSION_DAYS = 120;
 const HANDOFF_MS = 10 * 60 * 1000;
 // A student can send at most this many practice results an hour.
 const REPORTS_PER_HOUR = 120;
+// Each leaderboard shows its top 10, to the teacher too (Donny, 2026-10-14).
+// Ties past the 10th are left off; a student below them still sees their own row.
 const TOP = 10;
-const TEACHER_TOP = 200;
 
 const hex = (buf) => [...new Uint8Array(buf)].map((x) => x.toString(16).padStart(2, '0')).join('');
 const randomKey = () => hex(crypto.getRandomValues(new Uint8Array(32)));
@@ -381,7 +382,6 @@ export class Leaderboard extends DurableObject {
       fastest.push({ id: 'fastMatch', group: 'Fastest times', title: 'Fastest Match (practice)', blurb: 'Best time in Match mode on this set, wrong-match seconds included.', unit: 'ms', low: true, data: best((e) => e.kind === 'match') });
       fastest.push({ id: 'fastLive', group: 'Fastest times', title: 'Fastest Multiplayer Match', blurb: 'Best finish in a live Match game on this set, ranked by time per pair (hidden-card games not counted).', unit: 'ms', low: true, data: best((e) => live(e) && e.game === 'match') });
     }
-    const limit = b.teacher ? TEACHER_TOP : TOP;
     const out = boards.concat(fastest).map((bd) => {
       const list = [...bd.data].map(([email, v]) => (typeof v === 'object' ? { email, value: v.ms, pairs: v.pairs, rank: v.rate } : { email, value: v, rank: v }))
         .filter((r) => r.value > 0)
@@ -396,7 +396,7 @@ export class Leaderboard extends DurableObject {
         if (b.teacher) x.email = r.email;
         return x;
       };
-      const top = list.filter((r) => r.place <= limit).slice(0, limit + 20).map(row);
+      const top = list.slice(0, TOP).map(row);
       const mine = me && list.find((r) => r.email === me.email);
       return { id: bd.id, group: bd.group, title: bd.title, blurb: bd.blurb, unit: bd.unit, low: !!bd.low, rows: top, mine: mine && !top.some((x) => x.me) ? row(mine) : null, players: list.length };
     });

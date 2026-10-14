@@ -337,24 +337,37 @@
 @media (prefers-reduced-motion:reduce){ .bl-laser, .bl-burst{ animation-duration:.01s; } .bl-barrel{ transition:none; } }
 
 /* ---------------- Match (live-match.js) ---------------- */
-.lv-match{ max-width:61.25rem; margin:0 auto; }
-.mt-help{ margin:0 0 0.25rem; }
-.mt-msg{ min-height:1.3em; font-weight:700; color:var(--bad-ink); margin:0 0 0.5rem; }
-.mt-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(9.375rem, 1fr)); gap:0.625rem; }
-.mt-tile{ position:relative; min-height:6.875rem; font:inherit; font-size:.92rem; font-weight:600; line-height:1.35; color:var(--ink); background:#fff; border:2px solid var(--line); border-radius:var(--radius-sm); padding:0.625rem; cursor:pointer; box-shadow:var(--shadow-sm); display:grid; place-items:center; text-align:center; overflow-wrap:anywhere; transition:opacity .25s, transform .15s; }
+/* The cards fill the screen, so nothing needs scrolling (Donny, 2026-10-14):
+   live-match.js picks how many go across and sets --mt-cols, --mt-row (the
+   card height), --mt-gap, --mt-pad and --mt-img. Every card is the same size, and its
+   words get smaller until they fit. */
+.lv-join .lv-step.lv-match{ max-width:none; }
+.lv-join.container:has(#jnMatch:not([hidden])){ max-width:none; padding-top:0.75rem; padding-bottom:0.75rem; }
+body:has(#jnMatch:not([hidden])) footer{ display:none; }
+.mt-top{ margin-bottom:0.375rem; }
+.mt-help{ margin:0 0 0.125rem; }
+.mt-msg{ min-height:1.3em; font-weight:700; color:var(--bad-ink); margin:0 0 0.375rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.mt-msg.more{ color:var(--accent-dark); }
+.mt-grid{ display:grid; grid-template-columns:repeat(var(--mt-cols, 4), minmax(0, 1fr)); grid-auto-rows:var(--mt-row, 7rem); gap:var(--mt-gap, 0.625rem); }
+.mt-tile{ position:relative; min-width:0; min-height:0; font:inherit; font-weight:600; line-height:1.2; color:var(--ink); background:#fff; border:2px solid var(--line); border-radius:var(--radius-sm); padding:var(--mt-pad, 0.5rem); cursor:pointer; box-shadow:var(--shadow-sm); display:flex; text-align:center; overflow:hidden; transition:opacity .25s, transform .15s; }
 .mt-tile:hover{ border-color:var(--accent); }
 .mt-tile.up{ border-color:var(--accent); background:var(--accent-tint); }
 .mt-tile.right{ border-color:var(--good); background:var(--good-tint); }
+.mt-tile.new{ animation:mt-pop .4s ease-out; }
 .mt-tile.wrong{ border-color:var(--bad); background:var(--bad-tint); animation:mt-shake .35s; }
 .mt-tile.gone{ opacity:0; pointer-events:none; }
-.mt-face{ display:grid; gap:0.375rem; justify-items:center; }
-.mt-face img{ max-width:100%; max-height:4.375rem; object-fit:contain; }
-.mt-back{ display:none; font-size:1.8rem; font-weight:800; color:#fff; }
+.mt-face{ flex:1; min-width:0; min-height:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0.375rem; }
+.mt-face img{ flex:none; height:var(--mt-img, 4.375rem); max-width:100%; object-fit:contain; }
+/* A word is never split across lines unless even the smallest letters cannot fit it (.squeeze). */
+.mt-text{ flex:none; display:block; width:100%; overflow-wrap:normal; word-break:normal; }
+.mt-text.squeeze{ overflow-wrap:anywhere; }
+.mt-back{ display:none; font-size:clamp(1.6rem, calc(var(--mt-row, 7rem) * .3), 3.5rem); font-weight:800; color:#fff; }
 .hidden-cards .mt-tile:not(.up):not(.gone){ background:linear-gradient(135deg, var(--accent), var(--accent-dark)); border-color:var(--accent-dark); }
 .hidden-cards .mt-tile:not(.up):not(.gone) .mt-face{ visibility:hidden; }
-.hidden-cards .mt-tile:not(.up):not(.gone) .mt-back{ display:block; position:absolute; }
-.mt-done{ text-align:center; margin-top:1rem; }
+.hidden-cards .mt-tile:not(.up):not(.gone) .mt-back{ display:grid; place-items:center; position:absolute; inset:0; }
+.mt-done{ text-align:center; margin:1rem auto 0; max-width:40rem; }
 @keyframes mt-shake{ 25%{ transform:translateX(-0.3125rem); } 75%{ transform:translateX(0.3125rem); } }
+@keyframes mt-pop{ from{ transform:scale(.6); opacity:0; } to{ transform:none; opacity:1; } }
 @media (prefers-reduced-motion:reduce){ .mt-tile{ transition:none; animation:none !important; } }
 
 /* ---------------- lobby music and settings (host screen) ---------------- */
