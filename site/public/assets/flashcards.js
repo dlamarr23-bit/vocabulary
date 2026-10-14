@@ -1525,8 +1525,9 @@
   // Share: copy the set's link, or post it to Google Classroom (Classroom's
   // own share page, where the teacher picks the class).
   var quickBtn = $('fcQuickBtn'), quickMenu = $('fcQuickMenu');
-  // Inside the physical science site's Flashcards page (book.js), the link opens the set there, under its top bar.
-  var setLink = (window.VOCAB_IN_BOOK || location.origin) + location.pathname;
+  // The link is the set's address by name (book.js). Inside the physical science site's Flashcards page,
+  // it opens the set there, under its top bar.
+  var setLink = (window.VOCAB_IN_BOOK || location.origin) + (window.vocabAddress ? window.vocabAddress() : location.pathname);
   function quickOpen(open) {
     quickMenu.hidden = !open;
     quickBtn.setAttribute('aria-expanded', String(open));

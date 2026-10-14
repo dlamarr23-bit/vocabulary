@@ -111,6 +111,36 @@ const ICON_KEY = /^(?:[a-z0-9-]{1,40}|\/api\/images\/[0-9a-f]{64})$/;
 const isPicture = (icon) => /^\/api\/images\/[0-9a-f]{64}$/.test(icon || '');
 const FOLDER_ID = /^f-[a-z0-9-]{2,24}$/;
 const ownPath = (id) => '/flashcards/my/' + id + '/';
+
+// A set's address is its name (2026-10-13): "👓Frame of Reference👓" is /flashcards/frame-of-reference/,
+// which sends the browser on to the set's own page. Two sets with the same name are -2, -3, in library
+// order. A renamed set keeps answering to its old addresses (oldNames), and /flashcards/my/<id>/ still
+// works, so links already given out keep working.
+const slugOf = (title) => String(title || '').normalize('NFKD').toLowerCase().replace(/&/g, ' and ')
+  .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60).replace(/-+$/, '');
+const NOT_NAMES = ['my', 'draw-test']; // folders of the flashcard pages themselves
+function setNames(lib) {
+  const used = new Set(NOT_NAMES), names = new Map();
+  for (const s of lib.sets) {
+    const base = slugOf(s.title) || s.id;
+    let name = base;
+    for (let n = 2; used.has(name); n++) name = base + '-' + n;
+    used.add(name);
+    names.set(s.id, name);
+  }
+  return names;
+}
+function setByName(lib, name) {
+  const names = setNames(lib);
+  return lib.sets.find((s) => names.get(s.id) === name) || lib.sets.find((s) => (s.oldNames || []).includes(name)) || null;
+}
+// Called before a set's title changes, with the names from before the change.
+function keepOldName(set, names, title) {
+  const was = names.get(set.id);
+  if (!was || title === set.title) return;
+  set.oldNames = [was].concat((set.oldNames || []).filter((x) => x !== was)).slice(0, 20);
+}
+const nameMeta = (lib, set) => `<meta name="set-address" content="/flashcards/${escHTML(setNames(lib).get(set.id) || '')}/">`;
 const rid = (n) => [...crypto.getRandomValues(new Uint8Array(n))].map((x) => 'abcdefghijklmnopqrstuvwxyz0123456789'[x % 36]).join('');
 const cleanText = (v, max) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, max);
 const termsOf = (cards) => cards.map((c) => String(c.term || '').slice(0, 80)).filter(Boolean).slice(0, 400);
@@ -269,11 +299,13 @@ async function putLibrary(request, env, url) {
     const p = folders.find((x) => x.id === f.parent);
     if (!p || p.id === f.id || p.parent) return bad('A folder can go inside a top folder only, not inside a folder that is already inside another.');
   }
-  const sets = [];
+  const sets = [], names = setNames(lib);
   for (const s of body.sets) {
     const cur = lib.sets.find((x) => x.id === String((s && s.id) || ''));
     if (!cur || sets.includes(cur)) continue;
-    cur.title = cleanText(s.title, 80) || cur.title;
+    const title = cleanText(s.title, 80) || cur.title;
+    keepOldName(cur, names, title);
+    cur.title = title;
     if (typeof s.icon === 'string' && (s.icon === '' || ICON_KEY.test(s.icon))) cur.icon = s.icon;
     cur.folder = folders.some((f) => f.id === s.folder) ? s.folder : null;
     sets.push(cur);
@@ -335,6 +367,13 @@ async function page(request, env, url) {
   headers.delete('if-modified-since');
   const own = /^\/flashcards\/my\/([^/]+)(\/(?:index\.html)?)?$/.exec(url.pathname);
   if (own) return ownPage(request, env, url, own);
+  // A set's name (/flashcards/frame-of-reference/) goes on to the set; the #learn or #folder part comes along.
+  const named = /^\/flashcards\/([a-z0-9-]+)\/?$/.exec(url.pathname);
+  if (named && env.FLASHCARDS && !NOT_NAMES.includes(named[1])) {
+    const s = setByName(await library(env, url), named[1]);
+    if (!s || !s.path) return gone();
+    return Response.redirect(new URL(s.path + url.search, url).toString(), 302);
+  }
   const res = await env.ASSETS.fetch(new Request(request, { headers }));
   if (!env.FLASHCARDS || request.method !== 'GET' || res.status !== 200) return res;
   if (!(res.headers.get('content-type') || '').includes('text/html')) return res;
@@ -352,8 +391,9 @@ async function page(request, env, url) {
     rw = rw.on('script#fcData', { element(el) { el.after(block, { html: true }); } });
   }
   if (mine) {
-    // The set's name and folders as the teacher has them now.
-    rw = rw.on('nav.fc-crumbs', { element(el) { el.setInnerContent(crumbs(lib, mine), { html: true }); } })
+    // The set's name and folders as the teacher has them now, and its address by name.
+    rw = rw.on('head', { element(el) { el.append(nameMeta(lib, mine), { html: true }); } })
+      .on('nav.fc-crumbs', { element(el) { el.setInnerContent(crumbs(lib, mine), { html: true }); } })
       .on('h1#fcTitle', { element(el) { el.setInnerContent(mine.title); } })
       .on('body', { element(el) { const c = folderColor(lib, mine); if (c) el.setAttribute('style', colorStyle(c)); } })
       .on('div.hero-icon', {
@@ -394,6 +434,7 @@ async function ownPage(request, env, url, m) {
   const data = { id, title, where: '', subject: '', own: true, file: slug + '-flashcards', cards };
   const color = folderColor(lib, meta);
   const html = (await shell.text())
+    .replace('</head>', nameMeta(lib, meta) + '</head>')
     .replace('<body>', color ? `<body style="${colorStyle(color)}">` : '<body>')
     .split('"__SET_DATA__"').join(safeJSON(data))
     .split('__SET_CRUMBS__').join(crumbs(lib, meta))
@@ -621,7 +662,11 @@ async function putSet(request, env, id) {
   const lib = await library(env, new URL(request.url));
   const meta = lib.sets.find((s) => s.id === id);
   if (meta) {
-    if (OWN_ID.test(id)) meta.title = set.title = cleanText(body.title, 80) || meta.title;
+    if (OWN_ID.test(id)) {
+      const title = cleanText(body.title, 80) || meta.title;
+      keepOldName(meta, setNames(lib), title);
+      meta.title = set.title = title;
+    }
     Object.assign(meta, { count: cards.length, terms: termsOf(cards), saved });
     lib.v = 3;
     await saveLibrary(env, lib);

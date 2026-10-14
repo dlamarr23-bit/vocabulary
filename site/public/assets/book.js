@@ -515,16 +515,22 @@
   /* ---------- shown inside the physical science site ---------- */
   // physical-science-8.pages.dev/flashcards shows these pages in a frame (only this site and that one may,
   // see _headers). Each page tells it which page is open, so its address follows along
-  // (/flashcards/my/<id>/#learn) and opening that address opens the same set. This runs before the other
-  // scripts, so it also hears the study mode tabs changing the address.
+  // (/flashcards/frame-of-reference/#learn) and opening that address opens the same set. This runs before
+  // the other scripts, so it also hears the study mode tabs changing the address.
   var BOOK_SITE = 'https://physical-science-8.pages.dev';
   var inBook = false;
   // A page of this site in the frame can read the page around it; the physical science site cannot be read.
   try { inBook = window.parent !== window && !window.parent.location.href; } catch (e) { inBook = true; }
   window.VOCAB_IN_BOOK = inBook ? BOOK_SITE : '';
+  // A set's page carries its address by name (the server adds it); other pages use their own address.
+  window.vocabAddress = function () {
+    var named = document.querySelector('meta[name="set-address"]');
+    var path = named && named.getAttribute('content');
+    return path && /^\/flashcards\/[a-z0-9-]+\/$/.test(path) ? path : location.pathname;
+  };
   if (inBook) {
     var tellBook = function () {
-      try { window.parent.postMessage({ vocabSite: { path: location.pathname, hash: location.hash, title: document.title } }, BOOK_SITE); } catch (e) { /* nothing to tell */ }
+      try { window.parent.postMessage({ vocabSite: { path: window.vocabAddress(), hash: location.hash, title: document.title } }, BOOK_SITE); } catch (e) { /* nothing to tell */ }
     };
     ['pushState', 'replaceState'].forEach(function (k) {
       var was = history[k];
