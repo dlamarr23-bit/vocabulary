@@ -11,7 +11,7 @@ import { iconsScript } from './lib/icons.mjs';
 import { esc } from './lib/render.mjs';
 import { renderEditMoved, renderFlashcardIndex, renderOwnSetShell, defaultLibrary, renderDrawTest } from './lib/flashcards.mjs';
 import { renderLiveHost, renderLiveJoin } from './lib/live.mjs';
-import { renderLeaderboard, renderSignIn } from './lib/leaderboard.mjs';
+import { renderLeaderboard, renderSignIn, renderBridge } from './lib/leaderboard.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const OUT = join(here, 'public');
@@ -57,6 +57,7 @@ write('live/index.html', renderLiveHost([], [], {}));
 write('join/index.html', renderLiveJoin([]));
 write('leaderboard/index.html', renderLeaderboard());
 write('signin/index.html', renderSignIn());
+write('bridge/index.html', renderBridge());
 
 // The server (Cloudflare Pages runs public/_worker.js), with this site's name.
 const server = readFileSync(join(here, 'server/worker.js'), 'utf8')

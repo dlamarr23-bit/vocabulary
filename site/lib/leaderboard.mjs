@@ -70,3 +70,21 @@ export function renderSignIn() {
 </html>
 `;
 }
+
+// The Class Pass bridge (bridge/): the physical science site keeps it in a hidden frame on every page, so
+// its top bar's Class Pass button knows who is signed in here (assets/book-bridge.js says how).
+export function renderBridge() {
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Class Pass | ${esc(site.title)}</title>
+<script src="../assets/pass.js?v=${assetVersion('pass.js')}" defer></script>
+<script src="../assets/book-bridge.js?v=${assetVersion('book-bridge.js')}" defer></script>
+</head>
+<body></body>
+</html>
+`;
+}

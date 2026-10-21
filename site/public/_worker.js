@@ -14,6 +14,8 @@
 //     /flashcards/my/<id>/, and the folders he sorts sets into, which the
 //     Flashcards page shows at the top
 //   - checks the teacher password before anything can be changed
+//   - keeps the words the teacher changed on the physical science site's
+//     pages (/api/book-text/<page>), which those pages ask for as they open
 //
 // It needs two settings on the integrated-science-8 Pages project, described
 // in textbook/README.md: a KV namespace bound as FLASHCARDS, and a secret
@@ -352,7 +354,7 @@ function crumbs(lib, set) {
   const trail = [];
   let f = lib.folders.find((x) => x.id === set.folder);
   while (f && trail.length < 3) { trail.unshift(f); f = lib.folders.find((x) => x.id === f.parent); }
-  return '<a href="/flashcards/">Flashcards</a>' + trail.map((x) => `<span aria-hidden="true">&rsaquo;</span><a href="/flashcards/#folder-${escHTML(x.id)}">${escHTML(x.name)}</a>`).join('');
+  return '<a href="/flashcards/">Review</a>' + trail.map((x) => `<span aria-hidden="true">&rsaquo;</span><a href="/flashcards/#folder-${escHTML(x.id)}">${escHTML(x.name)}</a>`).join('');
 }
 
 /* ---------------- flashcard pages ---------------- */
@@ -518,6 +520,8 @@ async function api(request, env, url) {
   if (a === 'pass') return passApi(request, env, url, b);
   if (a === 'board' && !b && method === 'GET') return boardsApi(request, env, url);
   if (a === 'images' && b && b !== 'search' && !c && method === 'GET') return getImage(env, b);
+  // The words changed on a page of the physical science site: anyone may read them (that site asks).
+  if (a === 'book-text' && b && !c && method === 'GET') return getBookText(env, b);
 
   if (!cloudReady(env)) return json({ error: 'Saving to the site is not switched on yet.' }, 503);
   // A page on another site can post a form here but cannot add this header,
@@ -531,6 +535,7 @@ async function api(request, env, url) {
   // Only the teacher hosts a game (Donny, 2026-10-14; students could before).
   if (a === 'live' && b === 'create' && method === 'POST') return liveCreate(request, env, url);
 
+  if (a === 'book-text' && b && !c && method === 'PUT') return putBookText(request, env, b);
   if (a === 'roster') return rosterApi(request, env, url, b);
   if (a === 'suggest' && !b && method === 'GET') return suggest(env, url);
   if (a === 'images' && b === 'search' && !c && method === 'GET') return imageSearch(url, env);
@@ -565,6 +570,49 @@ async function api(request, env, url) {
   if (a === 'images' && b === 'scene' && method === 'POST') return drawScene(request, env);
   if (a === 'images' && b === 'try' && method === 'POST') return drawTry(request, env);
   return json({ error: 'Not found.' }, 404);
+}
+
+/* ---------------- the physical science site's own words ---------------- */
+
+// The teacher can change the words on the physical science site's pages from that site (Donny,
+// 2026-10-20). That site is plain files, so the changes are kept here, one KV entry per page
+// (book-text:<page>, the page's address without .html), and each page asks for its own as it opens.
+// A change is kept under the words it replaces (the kind of box and a short code made from its words,
+// see page-text.js on that site), so it comes off by itself if that box's words change in the files.
+// Its page puts the words in with only plain formatting (bold, italic, links, glossary terms).
+const BOOK_SITE = 'https://physical-science-8.pages.dev';
+const BOOK_PAGE = /^[a-z0-9][a-z0-9-]{0,79}$/;
+const BOOK_BOX = /^[a-z][a-z0-9]{0,11}-[a-z0-9]{1,16}(?:-\d{1,4})?$/;
+const MAX_BOOK_TEXT = 512 * 1024;
+
+async function getBookText(env, page) {
+  const headers = { 'Access-Control-Allow-Origin': BOOK_SITE, Vary: 'Origin', 'cache-control': 'public, max-age=20' };
+  if (!BOOK_PAGE.test(page)) return json({ error: 'There is no page with that name.' }, 404, headers);
+  const saved = env.FLASHCARDS ? await env.FLASHCARDS.get('book-text:' + page, 'json') : null;
+  return json({ edits: (saved && saved.edits) || {}, saved: (saved && saved.saved) || 0 }, 200, headers);
+}
+
+// The teacher sends every change on the page at once; the page's entry is replaced (or removed when
+// nothing is changed any more).
+async function putBookText(request, env, page) {
+  if (!BOOK_PAGE.test(page)) return json({ error: 'There is no page with that name.' }, 404);
+  const buf = await readLimited(request, MAX_BOOK_TEXT);
+  if (!buf) return json({ error: 'That is too many changes for one page.' }, 413);
+  let body;
+  try { body = JSON.parse(new TextDecoder().decode(buf)); } catch { body = null; }
+  const given = body && body.edits;
+  if (!given || typeof given !== 'object' || Array.isArray(given)) return json({ error: 'Nothing to save.' }, 400);
+  const edits = {};
+  let count = 0;
+  for (const [box, words] of Object.entries(given)) {
+    if (!BOOK_BOX.test(box) || typeof words !== 'string' || words.length > 40000) return json({ error: 'One of the changes could not be saved.' }, 400);
+    if (++count > 2000) return json({ error: 'That is too many changes for one page.' }, 413);
+    edits[box] = words;
+  }
+  const saved = Date.now();
+  if (count) await env.FLASHCARDS.put('book-text:' + page, JSON.stringify({ edits, saved }));
+  else await env.FLASHCARDS.delete('book-text:' + page);
+  return json({ ok: true, count, saved });
 }
 
 /* ---------------- signing in ---------------- */

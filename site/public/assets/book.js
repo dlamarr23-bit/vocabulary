@@ -530,6 +530,8 @@
   // A page of this site in the frame can read the page around it; the physical science site cannot be read.
   try { inBook = window.parent !== window && !window.parent.location.href; } catch (e) { inBook = true; }
   window.VOCAB_IN_BOOK = inBook ? BOOK_SITE : '';
+  // That site's top bar stands in for this one (book.css hides .in-book .topbar), Donny 2026-10-20.
+  if (inBook) document.documentElement.classList.add('in-book');
   // A set's page carries its address by name (the server adds it); other pages use their own address.
   window.vocabAddress = function () {
     var named = document.querySelector('meta[name="set-address"]');

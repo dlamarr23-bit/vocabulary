@@ -18,6 +18,10 @@
      me()          { name, first, period } or null
      token()       the sign-in key, or ''
      signIn()      opens the sign-in window; resolves when signed in
+     claimFor(n)   the physical science site opened the sign-in window itself
+                   with the number n (bridge/, its top bar's Class Pass
+                   button); resolves when signed in
+     stopWaiting() that window was closed before the student finished
      signOut()
      report(r)     a practice result: { kind: 'match'|'test'|'learn', setId, ... }
      onChange(fn)  fn(me) now and whenever someone signs in or out
@@ -84,6 +88,21 @@
       }
       return Promise.reject(new Error('Your browser blocked the sign-in window. Allow pop-ups for this page, then press Sign in again.'));
     }
+    return wait(n, win);
+  }
+
+  // The physical science site's top bar opens the sign-in window itself (a page in a frame may not open
+  // one from a button on the page around it), with a number it made, and asks bridge/ to pick it up.
+  function claimFor(n) {
+    if (!/^[0-9a-f]{32}$/.test(n)) return Promise.reject(new Error('Sign-in did not start. Press Sign in again.'));
+    if (waiting) waiting.stop();
+    return wait(n, null);
+  }
+  function stopWaiting() { if (waiting) waiting.stop(); }
+
+  // Asks the server for the sign-in the window keeps under n until it is there. win: the window, when
+  // this page opened it (a closed window means the student gave up); stop() ends the wait.
+  function wait(n, win) {
     var w = { win: win };
     waiting = w;
     w.promise = new Promise(function (resolve, reject) {
@@ -91,9 +110,10 @@
       function done(err, d) {
         clearInterval(timer);
         window.removeEventListener('message', onMsg);
-        waiting = null;
+        if (waiting === w) waiting = null;
         if (err) reject(err); else resolve(d);
       }
+      w.stop = function () { done(new Error('Sign-in did not finish. Press Sign in to try again.')); };
       function claim() {
         if (busy) return;
         busy = true;
@@ -109,10 +129,8 @@
       timer = setInterval(function () {
         claim();
         // Closed without finishing: one more look a few seconds later, then stop.
-        if (win.closed && !closedAt) closedAt = Date.now();
-        if ((closedAt && Date.now() - closedAt > 6000) || Date.now() - started > 10 * 60 * 1000) {
-          done(new Error('Sign-in did not finish. Press Sign in to try again.'));
-        }
+        if (win && win.closed && !closedAt) closedAt = Date.now();
+        if ((closedAt && Date.now() - closedAt > 6000) || Date.now() - started > 10 * 60 * 1000) w.stop();
       }, 1500);
     });
     return w.promise;
@@ -134,7 +152,7 @@
 
   function onChange(fn) { listeners.push(fn); fn(me()); }
 
-  window.IS8Pass = { me: me, token: token, signIn: signIn, signOut: signOut, report: report, onChange: onChange };
+  window.IS8Pass = { me: me, token: token, signIn: signIn, claimFor: claimFor, stopWaiting: stopWaiting, signOut: signOut, report: report, onChange: onChange };
 
   // Signed in or out in another tab of this site.
   window.addEventListener('storage', function (e) {

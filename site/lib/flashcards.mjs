@@ -126,7 +126,7 @@ export function renderFlashcards(ch, set, chapters, unit) {
     chapters,
     drawerUnit: unit.id,
     drawerCh: ch.id,
-    crumbs: `<a href="${up}flashcards/">Flashcards</a><span aria-hidden="true">&rsaquo;</span><a href="${up}flashcards/#folder-f-${unit.id}">Unit ${unit.number}: ${esc(unit.title)}</a><span aria-hidden="true">&rsaquo;</span><a href="${up}flashcards/#folder-f-${ch.id}">Chapter ${ch.number}: ${esc(ch.title)}</a>`,
+    crumbs: `<a href="${up}flashcards/">Review</a><span aria-hidden="true">&rsaquo;</span><a href="${up}flashcards/#folder-f-${unit.id}">Unit ${unit.number}: ${esc(unit.title)}</a><span aria-hidden="true">&rsaquo;</span><a href="${up}flashcards/#folder-f-${ch.id}">Chapter ${ch.number}: ${esc(ch.title)}</a>`,
     h1: esc(ch.title),
     count: `${n} terms`,
     more: ` &middot; <a href="../">Read the chapter</a>`,
@@ -409,8 +409,8 @@ export function renderFlashcardIndex(chapters, lib) {
     `<div class="hero hero-page"><div class="hero-inner">
 <div>
 <span class="eyebrow">Study tools</span>
-<h1>Flashcards</h1>
-<p class="lede">Every flashcard set, sorted into folders. Open a set to study it with flashcards, Learn, Test or Match.</p>
+<h1>Review</h1>
+<p class="lede">Study a set on your own, or play it as a class.</p>
 ${joinBox('../')}
 </div>
 <div class="hero-icon" data-icon="flashcards"></div>
