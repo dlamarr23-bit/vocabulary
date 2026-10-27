@@ -224,7 +224,7 @@
     if (!topic.startsWith('s:')) {
       box.appendChild(mk('p', 'lb-note', 'Fastest Match times show when you pick one set under Topic.'));
     }
-    box.appendChild(mk('p', 'lb-note', 'How it counts: live games count when your teacher hosts them and you joined signed in with Class Pass. A win is first place. Practice counts when you finish Match, a test, or every term in Learn while signed in.'));
+    box.appendChild(mk('p', 'lb-note', 'How it counts: live games count when your teacher hosts them and you joined signed in with Class Pass. A win is first place. Practice counts when you finish Match, a test, or every term in Learn while signed in. Review games count your best try on each of your teacher’s review games.'));
   }
 
   ['lbPeriod', 'lbTopic'].forEach(function (id) { $(id).addEventListener('change', function () { keep(); load(); }); });
@@ -483,6 +483,45 @@
       details.appendChild(wrap);
     }
     sec.appendChild(details);
+    sec.appendChild(reviewKeyBox());
+  }
+
+  // The key a review game's Google Sheet needs to put its points on these
+  // leaderboards (Settings tab, "Website leaderboard key"). It is made from the
+  // teacher password, so only the teacher sees it.
+  function reviewKeyBox() {
+    var details = mk('details', 'lb-roster-box');
+    details.appendChild(mk('summary', null, 'Review game key'));
+    details.appendChild(mk('p', 'lb-small', 'A review game (a Google Sheet) puts its game points on the Review games leaderboards when its Settings tab has this key. Copy it, then paste it into the sheet’s Settings tab, in Website leaderboard key. Keep it to yourself: it lets a sheet add points. Changing the teacher password changes the key.'));
+    var out = mk('input', 'lb-paste');
+    out.readOnly = true;
+    out.value = 'Loading…';
+    out.setAttribute('aria-label', 'Review game key');
+    out.style.cssText = 'font-family:monospace;font-size:13px;width:100%;max-width:640px';
+    var msg = mk('span', 'lb-small');
+    var copy = btn('Copy the key', 'btn', function () {
+      out.select();
+      var done = function () { msg.textContent = ' Copied.'; };
+      if (navigator.clipboard) navigator.clipboard.writeText(out.value).then(done, function () { document.execCommand('copy'); done(); });
+      else { document.execCommand('copy'); done(); }
+    });
+    copy.disabled = true;
+    var row = mk('p');
+    row.appendChild(copy);
+    row.appendChild(msg);
+    details.appendChild(out);
+    details.appendChild(row);
+    details.addEventListener('toggle', function () {
+      if (!details.open || !copy.disabled) return;
+      fetch('/api/review/key', { headers: { 'X-IS8-Editor': '1' }, cache: 'no-store' }).then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (d) {
+          if (!r.ok || !d.key) throw new Error(d.error || 'The key did not load. Try again.');
+          out.value = d.key;
+          copy.disabled = false;
+        });
+      }).catch(function (err) { out.value = ''; msg.textContent = ' ' + err.message; });
+    });
+    return details;
   }
 
   function loadRoster() {

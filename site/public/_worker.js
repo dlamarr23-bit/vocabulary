@@ -522,6 +522,8 @@ async function api(request, env, url) {
   if (a === 'images' && b && b !== 'search' && !c && method === 'GET') return getImage(env, b);
   // The words changed on a page of the physical science site: anyone may read them (that site asks).
   if (a === 'book-text' && b && !c && method === 'GET') return getBookText(env, b);
+  // A review game's Google Sheet sends its students' points (with the key from the teacher's Leaderboard page).
+  if (a === 'review' && b === 'results' && !c && method === 'POST') return reviewResults(request, env);
 
   if (!cloudReady(env)) return json({ error: 'Saving to the site is not switched on yet.' }, 503);
   // A page on another site can post a form here but cannot add this header,
@@ -537,6 +539,7 @@ async function api(request, env, url) {
 
   if (a === 'book-text' && b && !c && method === 'PUT') return putBookText(request, env, b);
   if (a === 'roster') return rosterApi(request, env, url, b);
+  if (a === 'review' && b === 'key' && !c && method === 'GET') return json({ key: await reviewKey(env) });
   if (a === 'suggest' && !b && method === 'GET') return suggest(env, url);
   if (a === 'images' && b === 'search' && !c && method === 'GET') return imageSearch(url, env);
   if (a === 'sets' && !b && method === 'GET') return listSets(env, url);
@@ -902,6 +905,34 @@ async function rosterApi(request, env, url, b) {
   if (b === 'remove' && method === 'POST') return boardJSON(await board(env, 'roster-remove', { email: body.email }));
   if (b === 'reset' && method === 'POST') return boardJSON(await board(env, 'student-reset', { email: body.email }));
   return json({ error: 'Not found.' }, 404);
+}
+
+/* ---------------- review games (Donny, 2026-10-26) ---------------- */
+
+// A review game is a Google Sheet (the physical science site's Self-Check
+// "review-game"). Its script sends each student's top points and best try
+// here, and they go on the class leaderboard (game-server/src/board.js,
+// "Review games"). The sheet proves it is the teacher's with a key made from
+// the teacher password, which the teacher copies from the Leaderboard page
+// into the sheet's Settings tab. Changing EDIT_PASSWORD changes the key.
+async function reviewKey(env) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(String(env.EDIT_PASSWORD).trim()), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return hex(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode('is8-review-game-v1')));
+}
+
+async function reviewResults(request, env) {
+  if (!env.LIVE) return needLive();
+  if (!env.EDIT_PASSWORD) return json({ error: 'This site has no teacher password yet (README, step 3).' }, 503);
+  let body = null;
+  try { body = await request.json(); } catch { body = null; }
+  const given = String((body && body.key) || '').trim().toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(given) || !same(given, await reviewKey(env))) {
+    await new Promise((r) => setTimeout(r, 700));
+    return json({ error: 'That review game key is not right. Copy it again from the Leaderboard page (Review game key).' }, 401);
+  }
+  const game = String((body.game && body.game.id) || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 60);
+  if (!game) return json({ error: 'The sheet did not say which game this is.' }, 400);
+  return boardJSON(await board(env, 'review', { game, rows: Array.isArray(body.rows) ? body.rows.slice(0, 500) : [] }));
 }
 
 /* ---------------- suggested definitions ---------------- */

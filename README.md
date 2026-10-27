@@ -207,6 +207,13 @@ from GitHub, step 4).
 - **Practice** counts when a signed-in student finishes Match, a test, or every term in Learn. Each
   set counts once per mode per day, so repeating the same thing all evening does not climb the
   board. A **perfect test** needs 10 or more questions (or the whole set).
+- **Review games** (a review game Google Sheet from the physical science site) count each student's
+  best try on each game: **Review game points** adds up their top points from every game, and
+  **Review games at full credit** counts the games where their best try earned full credit. The
+  sheet sends them when a student finishes a game, and every hour for games in progress. To turn
+  it on, open **Review game key** at the bottom of this page (signed in as the teacher), copy the
+  key, and paste it into the sheet's Settings tab in **Website leaderboard key**. Changing the
+  teacher password changes the key, so paste the new one into each review game sheet.
 - **Fastest times** show when one set is picked under Topic. Multiplayer Match is ranked by time per
   pair, so 4 and 8 pair games compare fairly.
 - Each leaderboard shows its **top 10**. A student further down still sees their own place.

@@ -16,7 +16,11 @@
 //   sessions  a Class Pass sign-in on one device (only a hash of its key)
 //   handoff   a sign-in waiting to be picked up by the page that asked for it
 //   events    one row per result: a live game a student played, a practice
-//             Match finished, a practice test, a Learn set mastered
+//             Match finished, a practice test, a Learn set mastered, and one
+//             row per student per review game (kind 'review', set_id = the
+//             game's Google Sheet id, score = their top points, correct and
+//             total = right answers and questions in their best try, full =
+//             full credit), kept up to date by that sheet (Donny, 2026-10-26)
 import { DurableObject } from 'cloudflare:workers';
 
 const SESSION_DAYS = 120;
@@ -39,6 +43,7 @@ const int = (v, lo, hi) => {
 };
 const EMAIL = /^[^@\s,;<>"]+@[^@\s,;<>"]+\.[a-z]{2,}$/i;
 const SET_ID = /^[A-Za-z0-9_-]{1,60}$/;
+const PRACTICE = ['match', 'test', 'learn'];
 const GAMES = ['volley', 'blast', 'match'];
 // The day in California, for "once a day" counting.
 const dayOf = (ms) => new Date(ms - 7 * 3600 * 1000).toISOString().slice(0, 10);
@@ -106,6 +111,7 @@ export class Leaderboard extends DurableObject {
       case 'signout': return this.signOut(b);
       case 'report': return this.report(b);
       case 'live': return this.live(b);
+      case 'review': return this.review(b);
       case 'boards': return this.boards(b);
       default: throw Object.assign(new Error('Not found.'), { status: 404 });
     }
@@ -312,6 +318,35 @@ export class Leaderboard extends DurableObject {
     return { saved };
   }
 
+  // A review game's Google Sheet sends its students' results (the site has
+  // already checked the sheet's key). Each student keeps one row per game,
+  // replaced each time, so a game counts once however often it is sent.
+  review(b) {
+    const game = clean(b.game, 60);
+    const rows = Array.isArray(b.rows) ? b.rows.slice(0, 500) : [];
+    if (!SET_ID.test(game) || !rows.length) return { saved: 0 };
+    const onRoster = new Set(this.rosterRows().map((r) => r.email));
+    const now = Date.now();
+    let saved = 0;
+    const seen = new Set();
+    this.ctx.storage.transactionSync(() => {
+      for (const r of rows) {
+        const email = clean(r && r.email, 120).toLowerCase();
+        if (!onRoster.has(email) || seen.has(email)) continue;
+        seen.add(email);
+        const total = int(r.total, 1, 1000);
+        const right = int(r.right, 0, 1000);
+        const points = int(r.points, 0, 10000000);
+        if (!total || right == null || right > total || points == null) continue;
+        this.sql.exec("DELETE FROM events WHERE email = ? AND kind = 'review' AND set_id = ?", email, game);
+        this.sql.exec(`INSERT INTO events (email, at, day, kind, game, set_id, team, place, win, correct, ms, pairs, score, total, full)
+          VALUES (?, ?, ?, 'review', 'review', ?, 0, 0, 0, ?, NULL, NULL, ?, ?, ?)`, email, now, dayOf(now), game, right, points, total, r.passed ? 1 : 0);
+        saved += 1;
+      }
+    });
+    return { saved };
+  }
+
   /* ---------------- the leaderboards ---------------- */
 
   // b: { since (ms, 0 = all time), period ('' = every class), sets (null =
@@ -361,9 +396,11 @@ export class Leaderboard extends DurableObject {
       { id: 'volley', group: 'Wins by game', title: 'Vocab Live wins', blurb: 'Team and solo.', unit: 'win', data: tally((e) => live(e) && e.game === 'volley' && e.win, one) },
       { id: 'blast', group: 'Wins by game', title: 'Blast wins', blurb: 'Games your team won.', unit: 'win', data: tally((e) => live(e) && e.game === 'blast' && e.win, one) },
       { id: 'mmatch', group: 'Wins by game', title: 'Multiplayer Match wins', blurb: 'First to match every card.', unit: 'win', data: tally((e) => live(e) && e.game === 'match' && e.win, one) },
-      { id: 'practice', group: 'Studying', title: 'Practice sessions', blurb: 'Match, Test or Learn finished on your own. Each set counts once per mode, per day.', unit: 'session', data: distinct((e) => e.kind !== 'live', (e) => e.set_id + '|' + e.kind + '|' + e.day) },
+      { id: 'practice', group: 'Studying', title: 'Practice sessions', blurb: 'Match, Test or Learn finished on your own. Each set counts once per mode, per day.', unit: 'session', data: distinct((e) => PRACTICE.includes(e.kind), (e) => e.set_id + '|' + e.kind + '|' + e.day) },
       { id: 'perfect', group: 'Studying', title: 'Perfect tests', blurb: '100% on a practice test of 10 or more questions (or the whole set). Each set counts once a day.', unit: 'test', data: distinct((e) => e.kind === 'test' && e.full && e.score === e.total, (e) => e.set_id + '|' + e.day) },
-      { id: 'mastered', group: 'Studying', title: 'Sets mastered in Learn', blurb: 'Every term mastered in Learn mode. Each set counts once.', unit: 'set', data: distinct((e) => e.kind === 'learn', (e) => e.set_id) }
+      { id: 'mastered', group: 'Studying', title: 'Sets mastered in Learn', blurb: 'Every term mastered in Learn mode. Each set counts once.', unit: 'set', data: distinct((e) => e.kind === 'learn', (e) => e.set_id) },
+      { id: 'reviewPoints', group: 'Review games', title: 'Review game points', blurb: 'Points from your teacher’s review games (your best try on each game), added up. Right answers in a row and power-ups earn more.', unit: 'point', data: tally((e) => e.kind === 'review', (e) => e.score || 0) },
+      { id: 'reviewPassed', group: 'Review games', title: 'Review games at full credit', blurb: 'Review games where your best try earned full credit (like 70% or better).', unit: 'game', data: tally((e) => e.kind === 'review' && e.full, one) }
     ];
     // Fastest times only mean something for one set at a time.
     const fastest = [];
