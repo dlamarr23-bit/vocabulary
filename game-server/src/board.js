@@ -79,6 +79,8 @@ export class Leaderboard extends DurableObject {
     this.sql.exec(`CREATE TABLE IF NOT EXISTS handoff (nonce TEXT PRIMARY KEY, token TEXT, created INTEGER)`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT, at INTEGER, day TEXT, kind TEXT,
       game TEXT, set_id TEXT, team INTEGER, place INTEGER, win INTEGER, correct INTEGER, ms INTEGER, pairs INTEGER, score INTEGER, total INTEGER, full INTEGER)`);
+    // Each review game's title, which says which topic it belongs to (Donny, 2026-10-27).
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS review_games (id TEXT PRIMARY KEY, title TEXT, updated INTEGER)`);
     this.sql.exec(`CREATE INDEX IF NOT EXISTS events_email ON events (email)`);
     this.sql.exec(`CREATE INDEX IF NOT EXISTS events_at ON events (at)`);
     this.sql.exec(`CREATE INDEX IF NOT EXISTS sessions_email ON sessions (email)`);
@@ -324,7 +326,10 @@ export class Leaderboard extends DurableObject {
   review(b) {
     const game = clean(b.game, 60);
     const rows = Array.isArray(b.rows) ? b.rows.slice(0, 500) : [];
-    if (!SET_ID.test(game) || !rows.length) return { saved: 0 };
+    if (!SET_ID.test(game)) return { saved: 0 };
+    const title = clean(b.title, 200);
+    if (title) this.sql.exec('INSERT INTO review_games (id, title, updated) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET title = excluded.title, updated = excluded.updated', game, title, Date.now());
+    if (!rows.length) return { saved: 0 };
     const onRoster = new Set(this.rosterRows().map((r) => r.email));
     const now = Date.now();
     let saved = 0;
@@ -349,6 +354,20 @@ export class Leaderboard extends DurableObject {
 
   /* ---------------- the leaderboards ---------------- */
 
+  // The review games that belong to the picked topic. A game belongs to the
+  // longest topic name (a folder or a set) found, as whole words, in its title.
+  reviewGamesFor(topicNames, picked) {
+    if (!Array.isArray(topicNames) || !Array.isArray(picked) || !picked.length) return [];
+    const names = [...new Set(topicNames.slice(0, 1000).map(topicKey).filter(Boolean))];
+    const want = new Set(picked.slice(0, 1000).map(topicKey).filter(Boolean));
+    return this.all('SELECT id, title FROM review_games').filter((g) => {
+      const t = topicKey(g.title);
+      let best = '';
+      names.forEach((n) => { if (n.length > best.length && t.includes(n)) best = n; });
+      return best && want.has(best);
+    }).map((g) => g.id);
+  }
+
   // b: { since (ms, 0 = all time), period ('' = every class), sets (null =
   //      every set, or a list), single (one set: the fastest times show),
   //      token (the student looking), teacher (true: longer lists, emails) }
@@ -361,7 +380,10 @@ export class Leaderboard extends DurableObject {
     const students = roster.filter((r) => !period || r.period === period);
     const allowed = new Map(students.map((r) => [r.email, r]));
     const since = Number(b.since) || 0;
-    const sets = Array.isArray(b.sets) ? b.sets.filter((x) => SET_ID.test(String(x))).slice(0, 500) : null;
+    let sets = Array.isArray(b.sets) ? b.sets.filter((x) => SET_ID.test(String(x))).slice(0, 500) : null;
+    // One topic picked: its review games count too (the games whose title names it).
+    const reviewGames = sets ? this.reviewGamesFor(b.topicNames, b.picked) : [];
+    if (sets) sets = sets.concat(reviewGames);
     // Every event that counts for this view, read once and counted here: a
     // class's results are thousands of rows at most.
     let q = 'SELECT email, at, day, kind, game, set_id, team, place, win, correct, ms, pairs, score, total, full FROM events WHERE at >= ?';
@@ -419,7 +441,9 @@ export class Leaderboard extends DurableObject {
       fastest.push({ id: 'fastMatch', group: 'Fastest times', title: 'Fastest Match (practice)', blurb: 'Best time in Match mode on this set, wrong-match seconds included.', unit: 'ms', low: true, data: best((e) => e.kind === 'match') });
       fastest.push({ id: 'fastLive', group: 'Fastest times', title: 'Fastest Multiplayer Match', blurb: 'Best finish in a live Match game on this set, ranked by time per pair (hidden-card games not counted).', unit: 'ms', low: true, data: best((e) => live(e) && e.game === 'match') });
     }
-    const out = boards.concat(fastest).map((bd) => {
+    // The Review games boards show for every topic together, and for a topic that has a review game.
+    const shown = boards.filter((bd) => bd.group !== 'Review games' || !sets || reviewGames.length);
+    const out = shown.concat(fastest).map((bd) => {
       const list = [...bd.data].map(([email, v]) => (typeof v === 'object' ? { email, value: v.ms, pairs: v.pairs, rank: v.rate } : { email, value: v, rank: v }))
         .filter((r) => r.value > 0)
         .sort((x, y) => (bd.low ? x.rank - y.rank : y.rank - x.rank) || names[x.email].localeCompare(names[y.email]));
@@ -439,6 +463,12 @@ export class Leaderboard extends DurableObject {
     });
     return { boards: out, periods: periodsOf(roster), me: me && { name: me.name, period: me.period } };
   }
+}
+
+// "🚗💥🚙Mass, Acceleration, and Collisions🚗💥🚙" -> " mass acceleration and collisions "
+function topicKey(v) {
+  const k = String(v == null ? '' : v).normalize('NFKD').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  return k ? ' ' + k + ' ' : '';
 }
 
 function periodSort(a, b) {
