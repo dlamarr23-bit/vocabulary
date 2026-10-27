@@ -875,6 +875,19 @@ async function boardsApi(request, env, url) {
     const inside = new Set([f, ...lib.folders.filter((x) => x.parent === f).map((x) => x.id)]);
     sets = lib.sets.filter((x) => inside.has(x.folder)).map((x) => x.id);
   }
+  // Review games belong to the topic named in their title (Donny, 2026-10-27):
+  // "Mass, Acceleration, and Collisions Review Game" goes with the folder or set
+  // called "🚗💥🚙Mass, Acceleration, and Collisions🚗💥🚙". The game server
+  // matches each game's title against every topic name (the longest name found
+  // wins) and counts the game only when that topic is picked here.
+  let picked = null;
+  if (topic.startsWith('s:')) picked = lib.sets.filter((x) => x.id === topic.slice(2)).map((x) => x.title);
+  else if (topic.startsWith('f:')) {
+    const f = topic.slice(2);
+    const inside = new Set([f, ...lib.folders.filter((x) => x.parent === f).map((x) => x.id)]);
+    picked = lib.folders.filter((x) => inside.has(x.id)).map((x) => x.name)
+      .concat(lib.sets.filter((x) => inside.has(x.folder)).map((x) => x.title));
+  }
   const year = schoolYear();
   const span = url.searchParams.get('span') === 'all' ? 'all' : 'year';
   const r = await board(env, 'boards', {
@@ -883,7 +896,9 @@ async function boardsApi(request, env, url) {
     period: String(url.searchParams.get('period') || ''),
     since: span === 'all' ? 0 : year.start,
     sets,
-    single: !!(sets && sets.length === 1)
+    single: !!(sets && sets.length === 1),
+    topicNames: lib.folders.map((x) => x.name).concat(lib.sets.map((x) => x.title)),
+    picked
   });
   if (r.status !== 200) return boardJSON(r);
   const topics = {
@@ -932,7 +947,8 @@ async function reviewResults(request, env) {
   }
   const game = String((body.game && body.game.id) || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 60);
   if (!game) return json({ error: 'The sheet did not say which game this is.' }, 400);
-  return boardJSON(await board(env, 'review', { game, rows: Array.isArray(body.rows) ? body.rows.slice(0, 500) : [] }));
+  const title = String((body.game && body.game.title) || '').slice(0, 200);
+  return boardJSON(await board(env, 'review', { game, title, rows: Array.isArray(body.rows) ? body.rows.slice(0, 500) : [] }));
 }
 
 /* ---------------- suggested definitions ---------------- */
