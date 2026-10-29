@@ -16,6 +16,8 @@
 //   - checks the teacher password before anything can be changed
 //   - keeps the words the teacher changed on the physical science site's
 //     pages (/api/book-text/<page>), which those pages ask for as they open
+//   - keeps the teacher's Assignment Launchpad list for that site's
+//     /launchpad page (/api/launchpad), which only the teacher can see
 //
 // It needs two settings on the integrated-science-8 Pages project, described
 // in textbook/README.md: a KV namespace bound as FLASHCARDS, and a secret
@@ -538,6 +540,8 @@ async function api(request, env, url) {
   if (a === 'live' && b === 'create' && method === 'POST') return liveCreate(request, env, url);
 
   if (a === 'book-text' && b && !c && method === 'PUT') return putBookText(request, env, b);
+  if (a === 'launchpad' && !b && method === 'GET') return getLaunchpad(env);
+  if (a === 'launchpad' && !b && method === 'PUT') return putLaunchpad(request, env);
   if (a === 'roster') return rosterApi(request, env, url, b);
   if (a === 'review' && b === 'key' && !c && method === 'GET') return json({ key: await reviewKey(env) });
   if (a === 'suggest' && !b && method === 'GET') return suggest(env, url);
@@ -616,6 +620,51 @@ async function putBookText(request, env, page) {
   if (count) await env.FLASHCARDS.put('book-text:' + page, JSON.stringify({ edits, saved }));
   else await env.FLASHCARDS.delete('book-text:' + page);
   return json({ ok: true, count, saved });
+}
+
+/* ---------------- the teacher's Assignment Launchpad ---------------- */
+
+// The physical science site's /launchpad page (Donny, 2026-10-28): each assignment's student link and
+// results sheet, for the teacher only. That site is plain files anyone can read, so the list is kept
+// here (KV launchpad) and only goes to a browser signed in with the teacher password, through the bridge.
+// The page sends the whole list each time; base is the saved time it started from, so a list changed
+// on another device since is not overwritten.
+const MAX_LAUNCHPAD = 256 * 1024;
+const LP_ID = /^[a-z0-9]{6,20}$/;
+const LP_LINK = /^https:\/\/[^\s"'<>]{1,1000}$/;
+const LP_SHEET = /^[A-Za-z0-9_-]{20,100}$/;
+const LP_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+async function getLaunchpad(env) {
+  const saved = await env.FLASHCARDS.get('launchpad', 'json');
+  return json({ items: (saved && saved.items) || [], saved: (saved && saved.saved) || 0 });
+}
+
+async function putLaunchpad(request, env) {
+  const buf = await readLimited(request, MAX_LAUNCHPAD);
+  if (!buf) return json({ error: 'That list is too long to save.' }, 413);
+  let body;
+  try { body = JSON.parse(new TextDecoder().decode(buf)); } catch { body = null; }
+  const given = body && body.items;
+  if (!Array.isArray(given) || given.length > 1000) return json({ error: 'Nothing to save.' }, 400);
+  const now = await env.FLASHCARDS.get('launchpad', 'json');
+  if (now && now.saved && now.saved !== body.base) return json({ error: 'The list was changed on another device. Reload this page, then try again.' }, 409);
+  const text = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
+  const items = [];
+  const ids = new Set();
+  for (const g of given) {
+    if (!g || typeof g !== 'object') return json({ error: 'One of the assignments could not be saved.' }, 400);
+    const it = { id: text(g.id, 40), title: text(g.title, 200), kind: text(g.kind, 40), unit: text(g.unit, 60), link: text(g.link, 1100), sheet: text(g.sheet, 110), date: text(g.date, 12) };
+    if (!LP_ID.test(it.id) || ids.has(it.id) || !it.title) return json({ error: 'One of the assignments could not be saved.' }, 400);
+    if ((it.link && !LP_LINK.test(it.link)) || (it.sheet && !LP_SHEET.test(it.sheet)) || (it.date && !LP_DATE.test(it.date))) {
+      return json({ error: `"${it.title}" could not be saved. Check its links.` }, 400);
+    }
+    ids.add(it.id);
+    items.push(it);
+  }
+  const saved = Date.now();
+  await env.FLASHCARDS.put('launchpad', JSON.stringify({ items, saved }));
+  return json({ ok: true, count: items.length, saved });
 }
 
 /* ---------------- signing in ---------------- */

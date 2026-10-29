@@ -13,7 +13,9 @@
      number it made, and this page picks the sign-in up (IS8Pass.claimFor);
    - the teacher signs in and out with the teacher password from that top
      bar, and saves the words changed on a page of that site
-     (/api/book-text/<page>).
+     (/api/book-text/<page>);
+   - the teacher's Assignment Launchpad on that site (/launchpad) gets and
+     saves its list of assignments (/api/launchpad, teacher only).
 
    Messages go only to and from https://physical-science-8.pages.dev, as
    { vocabBridge: { type, ... } }. A question with an id gets one answer:
@@ -48,7 +50,7 @@
       credentials: 'same-origin',
       cache: 'no-store',
       headers: { 'X-IS8-Editor': '1', 'content-type': 'application/json' },
-      body: JSON.stringify(body || {})
+      body: method === 'GET' ? undefined : JSON.stringify(body || {})
     }).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (d) {
         if (!r.ok) {
@@ -69,6 +71,11 @@
       Promise.resolve(p).then(function (d) { tell({ type: 'reply', id: m.id, ok: true, data: d || {} }); },
         function (err) { tell({ type: 'reply', id: m.id, ok: false, error: (err && err.message) || 'That did not work. Try again.', status: (err && err.status) || 0 }); });
     }
+    // the teacher password ran out or was changed: the page around it hears so
+    function signedOut(err) {
+      if (err.status === 401) { teacher = false; state(); }
+      throw err;
+    }
     switch (m.type) {
       case 'claim': reply(window.IS8Pass.claimFor(String(m.nonce || ''))); break;
       case 'stop': window.IS8Pass.stopWaiting(); break;
@@ -77,11 +84,11 @@
       case 'logout': reply(call('POST', 'logout', {}).then(session)); break;
       case 'saveText':
         if (!/^[a-z0-9][a-z0-9-]{0,79}$/.test(String(m.page || ''))) { reply(Promise.reject(new Error('This page cannot be changed.'))); break; }
-        reply(call('PUT', 'book-text/' + m.page, { edits: m.edits || {} }).catch(function (err) {
-          if (err.status === 401) { teacher = false; state(); }
-          throw err;
-        }));
+        reply(call('PUT', 'book-text/' + m.page, { edits: m.edits || {} }).catch(signedOut));
         break;
+      // the teacher's Assignment Launchpad (/launchpad on that site): the list, and saving it
+      case 'launchpad': reply(call('GET', 'launchpad').catch(signedOut)); break;
+      case 'saveLaunchpad': reply(call('PUT', 'launchpad', { items: m.items || [], base: m.base || 0 }).catch(signedOut)); break;
       case 'refresh': session(); break;
     }
   });
