@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Host Battle Royale: students face off one on one with superhero avatars.">
+<title>Battle Royale | Vocabulary</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect x=%2720%27 y=%2710%27 width=%2736%27 height=%2728%27 rx=%276%27 fill=%27%239db8f2%27/%3E%3Crect x=%278%27 y=%2724%27 width=%2738%27 height=%2730%27 rx=%276%27 fill=%27%231d4ed8%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/book.css">
+<script src="../assets/icons.js" defer></script>
+<script src="../assets/book.js" defer></script>
+<script src="../assets/pass.js?v=11aa8f89" defer></script>
+<link rel="stylesheet" href="../assets/flashcards.css?v=3d33d304">
+<link rel="stylesheet" href="../assets/live.css?v=e1dc4b13">
+<link rel="stylesheet" href="../assets/royale.css?v=ac4ece87">
+<script src="../assets/editor.js?v=dfb83758" defer></script>
+<script src="../assets/vendor/qrcode.js?v=18ae399f" defer></script>
+<script src="../assets/live-celebrate.js?v=b55c9a9c" defer></script>
+<script src="../assets/heroes.js?v=eb09730e" defer></script>
+<script src="../assets/royale-host.js?v=7af5bf10" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to the page</a><div class="topbar"><div class="topbar-inner">
+<a class="brand" href="../index.html">
+<span class="dot" aria-hidden="true"></span>
+<span class="mascot" aria-hidden="true"><svg viewBox="0 0 64 64" role="img" aria-label="Flashcards" xmlns="http://www.w3.org/2000/svg">
+<rect x="20" y="10" width="36" height="28" rx="6" fill="#9db8f2"/>
+<rect x="8" y="24" width="38" height="30" rx="6" fill="#1d4ed8"/>
+<rect x="15" y="34" width="22" height="4" rx="2" fill="#ffffff"/>
+<rect x="15" y="42" width="14" height="4" rx="2" fill="#ffffff"/>
+</svg></span>
+<span>Vocabulary</span>
+</a>
+<nav class="inline-links" aria-label="Site"><a href="../flashcards/">Review</a><a href="../live/" data-teacher-only>Host a game</a><a href="../join/">Join a game</a><a href="../leaderboard/">Leaderboard</a></nav>
+<button class="menu-btn" id="openDrawer" aria-expanded="false" aria-controls="drawer">&#9776; Menu</button>
+</div></div><div class="drawer-backdrop" id="drawerBackdrop"></div>
+<div class="drawer" id="drawer" aria-label="Menu">
+<button class="drawer-close" id="closeDrawer" aria-label="Close the menu">&times;</button>
+<h2 class="drawer-title">Menu</h2>
+<nav class="drawer-links" aria-label="Site"><a href="../flashcards/">Review</a><a href="../live/" data-teacher-only>Host a game</a><a href="../join/">Join a game</a><a href="../leaderboard/">Leaderboard</a></nav>
+
+</div><main id="main" class="container lv-page rb-page rb-host">
+
+<section class="lv-step" id="rbGate">
+<h1>Battle Royale</h1>
+<p class="lv-lede" id="rbGateText">Checking the site...</p>
+<div id="rbSignIn"></div>
+</section>
+
+<section class="lv-step" id="rbSetup" hidden>
+<div class="rb-hero-head">
+<div class="rb-hero-strip" id="rbStrip" aria-hidden="true"></div>
+<h1>Battle Royale</h1>
+<p class="lv-lede">Everyone starts with the same energy. Each round, students face a random classmate on the same question. A wrong or slower answer costs 1 energy. The last hero standing wins.</p>
+</div>
+<div class="lv-resume" id="rbResume" hidden><span id="rbResumeText"></span> <button type="button" class="btn fc-small" id="rbResumeBtn">Go back to it</button></div>
+
+<fieldset class="lv-group rb-box"><legend class="lv-q">Questions</legend>
+<div class="rb-source">
+<label class="rb-radio"><input type="radio" name="rbSource" value="qset" checked> A question set</label>
+<label class="rb-radio"><input type="radio" name="rbSource" value="flash"> A flashcard set</label>
+</div>
+<div class="rb-pick" id="rbQsetRow">
+<select id="rbQset" aria-label="Question set"></select>
+<button type="button" class="btn secondary fc-small" id="rbQsetNew">New set</button>
+<button type="button" class="btn secondary fc-small" id="rbQsetEdit">Edit</button>
+<button type="button" class="btn secondary fc-small rb-danger" id="rbQsetDelete">Delete</button>
+</div>
+<p class="lv-small" id="rbQsetNote"></p>
+<div class="rb-pick" id="rbFlashRow" hidden>
+<select id="rbFlash" aria-label="Flashcard set"></select>
+</div>
+<p class="lv-small" id="rbFlashNote" hidden>Students see each definition and pick its term. The wrong answers are other terms from the set.</p>
+</fieldset>
+
+<section class="rb-editor rb-box" id="rbEditor" hidden aria-labelledby="rbEditorTitle">
+<h2 id="rbEditorTitle">New question set</h2>
+<label class="lv-field"><span class="lv-q">Name</span><input type="text" id="rbEdName" maxlength="120" placeholder="Mass, Acceleration, and Collisions"></label>
+<div class="rb-howto">
+<p><strong>Import from a link:</strong> paste the link to a Wayground quiz or a Google Sheet, then click Import.</p>
+<p class="lv-small">In the sheet, put the question in column A, the right answer in B and up to 3 wrong answers in C, D and E (a picture link can go in F). A Wayground or Blooket spreadsheet works too.</p>
+</div>
+<div class="rb-link-import">
+<input type="url" id="rbEdLink" placeholder="https://wayground.com/... or https://docs.google.com/spreadsheets/..." aria-label="Wayground or Google Sheets link">
+<button type="button" class="btn fc-small" id="rbEdImport">Import</button>
+</div>
+<div class="rb-import-help" id="rbImportHelp" hidden></div>
+<p class="lv-small"><strong>Or paste rows</strong> straight from a sheet (select them, Ctrl+C, then Ctrl+V in the box), one question per line.</p>
+<textarea id="rbEdText" rows="10" spellcheck="false" placeholder="What is the unit of force?&#9;Newton&#9;Joule&#9;Watt&#9;Meter"></textarea>
+<div class="rb-ed-tools">
+<label class="btn secondary fc-small rb-file">Open a file (.csv or .tsv)<input type="file" id="rbEdFile" accept=".csv,.tsv,.txt,text/csv,text/plain" hidden></label>
+<span class="lv-small" id="rbEdCount" role="status"></span>
+</div>
+<div class="rb-preview" id="rbEdPreview"></div>
+<p class="lv-error" id="rbEdError" role="alert"></p>
+<div class="rb-ed-actions">
+<button type="button" class="btn" id="rbEdSave">Save set</button>
+<button type="button" class="btn secondary" id="rbEdCancel">Cancel</button>
+</div>
+</section>
+
+<fieldset class="lv-group rb-box"><legend class="lv-q">How to play</legend>
+<div class="rb-opts">
+<label class="lv-opt"><span><strong>Starting energy</strong><span class="lv-opt-note">How many questions a student can lose before they are out. More energy, longer games.</span></span>
+<select id="rbEnergy"><option value="1">1</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option></select></label>
+<label class="lv-opt"><span><strong>Time per question</strong><span class="lv-opt-note">The round ends sooner once everyone has answered.</span></span>
+<select id="rbSeconds"><option value="10">10 seconds</option><option value="15">15 seconds</option><option value="20" selected>20 seconds</option><option value="30">30 seconds</option><option value="45">45 seconds</option><option value="60">1 minute</option></select></label>
+<label class="lv-opt"><span><strong>Game clock</strong><span class="lv-opt-note">When it runs out, the round being played finishes and the most energy wins. You can add, change or remove the clock any time during the game too.</span></span>
+<select id="rbClock"><option value="0" selected>No clock</option><option value="1">1 minute</option><option value="2">2 minutes</option><option value="3">3 minutes</option><option value="4">4 minutes</option><option value="5">5 minutes</option><option value="7">7 minutes</option><option value="10">10 minutes</option><option value="15">15 minutes</option><option value="20">20 minutes</option><option value="30">30 minutes</option></select></label>
+<label class="lv-opt fc-switch"><span><strong>Comebacks</strong><span class="lv-opt-note">A student who is out and gets 3 practice questions right in a row comes back with 1 energy, once a game.</span></span><input type="checkbox" id="rbComeback" checked></label>
+<label class="lv-opt fc-switch"><span><strong>Shield streaks</strong><span class="lv-opt-note">Winning 3 matches in a row earns a shield. It blocks the next energy that student would lose.</span></span><input type="checkbox" id="rbShield" checked></label>
+<label class="lv-opt fc-switch"><span><strong>Students sign in with Class Pass</strong><span class="lv-opt-note">Their name comes from your class list and wins go on the leaderboard. Turn off only if Class Pass is not working.</span></span><input type="checkbox" id="rbPass" checked></label>
+<div class="lv-opt"><span><strong>Lobby music</strong><span class="lv-opt-note">Plays on this screen only while students join.</span></span>
+<span class="lv-music-ctl"><select id="rbLobbyMusic" aria-label="Lobby music"></select></span></div>
+<div class="lv-opt"><span><strong>Game music</strong><span class="lv-opt-note">Plays on this screen only during the game.</span></span>
+<span class="lv-music-ctl"><select id="rbGameMusic" aria-label="Game music"></select></span></div>
+</div>
+</fieldset>
+<label class="lv-default lv-demo-pick"><input type="checkbox" id="rbDemo"> <span><strong>Demo mode: 40 pretend students</strong> <span class="lv-opt-note">Try the game on your own. Pretend students join, pick heroes and play. Real students can still join with the code.</span></span></label>
+<label class="lv-default"><input type="checkbox" id="rbSaveDefault"> <span><strong>Save these as my default settings</strong> <span class="lv-opt-note">Next time, this page starts with the same questions, choices and music.</span></span></label>
+<p class="lv-error" id="rbSetupError" role="alert"></p>
+<button type="button" class="btn lv-big" id="rbCreate">Create game</button>
+</section>
+
+<section class="lv-step" id="rbLobby" hidden>
+<div class="lv-joinbox">
+<div class="lv-join-text">
+<p class="lv-join-step">Go to <strong class="rb-join-url"></strong></p>
+<p class="lv-join-step">Enter this code:</p>
+<p class="lv-code" id="rbCode"></p>
+<div class="lv-invite">
+<button type="button" class="btn lv-invite-btn" id="rbCopy">Copy join link</button>
+<a class="btn lv-invite-btn lv-classroom" href="https://classroom.google.com/" target="_blank" rel="noopener">Post to Google Classroom</a>
+</div>
+</div>
+<div class="lv-qr-side">
+<div class="lv-qr" id="rbQr" aria-label="QR code that opens the join page with this code"></div>
+<p class="lv-join-or">Scan the QR code with a camera to join.</p>
+</div>
+</div>
+<div class="lv-lobby-bar">
+<p class="lv-count" id="rbCount" aria-live="polite">Waiting for students to join...</p>
+<div class="lv-lobby-actions">
+<button type="button" class="btn secondary lv-fullscreen" data-fullscreen title="Fill the whole screen, for projecting">Full screen</button>
+<button type="button" class="btn secondary lv-close" data-close>End game</button>
+<button type="button" class="btn lv-big" id="rbStart">Start game</button>
+</div>
+</div>
+<div class="rb-lobby-opts" id="rbLobbyOpts"></div>
+<ul class="rb-players" id="rbPlayers"></ul>
+</section>
+
+<section class="lv-step rb-arena" id="rbPlay" hidden>
+<header class="rb-play-head">
+<div class="rb-ph-left">
+<h2 id="rbRound">Round 1</h2>
+<p class="rb-ph-sub"><span id="rbLeft"></span><span class="lv-ph-code">Join code <strong class="rb-mini-code"></strong></span></p>
+</div>
+<div class="rb-ph-mid" id="rbClockBox">
+<button type="button" class="lv-clock-btn" id="rbMinus" title="Take a minute off the clock" aria-label="Take a minute off the clock">&minus; 1:00</button>
+<div class="lv-big-clock rb-clock" id="rbClock2" role="timer" aria-live="off"></div>
+<button type="button" class="lv-clock-btn" id="rbPlus" title="Add a minute to the clock" aria-label="Add a minute to the clock">+ 1:00</button>
+<label class="rb-clock-set"><span class="rb-sr">Set the game clock</span><select id="rbClockSet" aria-label="Set the game clock"></select></label>
+</div>
+<div class="rb-ph-right">
+<button type="button" class="lv-tool" id="rbPause">Pause</button>
+<button type="button" class="lv-tool" id="rbSkip" title="Don't wait: go on to the next part now">Skip ahead</button>
+<button type="button" class="lv-tool" id="rbRosterBtn" aria-expanded="false" aria-controls="rbRoster"><span aria-hidden="true">👥</span> Players</button>
+<button type="button" class="lv-tool lv-fullscreen" data-fullscreen title="Fill the whole screen, for projecting">Full screen</button>
+<button type="button" class="lv-tool lv-tool-end" id="rbEnd">End game</button>
+</div>
+</header>
+<div class="rb-banner" id="rbBanner" hidden role="status"></div>
+<div class="rb-stage" id="rbStage"></div>
+</section>
+
+<div class="lv-roster-back" id="rbRosterBack" hidden></div>
+<aside class="lv-roster" id="rbRoster" hidden aria-label="Players">
+<div class="lv-roster-head"><h2>Players</h2><button type="button" class="lv-roster-close" id="rbRosterClose" aria-label="Close the player list">✖</button></div>
+<p class="lv-small">Take a student out of the game if they should not be playing. Removing and blocking keeps that device out of this game.</p>
+<div id="rbRosterBody"></div>
+</aside>
+
+<section class="lv-step rb-arena" id="rbDone" hidden>
+<h2 class="lv-done-title">Winners</h2>
+<ol class="rb-podium" id="rbPodium"></ol>
+<div class="rb-done-grid">
+<section class="rb-standings-box"><h3>Final standings</h3><ol class="rb-final" id="rbFinal"></ol></section>
+<section class="rb-missed-box" id="rbMissedBox" hidden><h3>Most missed questions</h3><ol class="rb-missed" id="rbMissed"></ol></section>
+</div>
+<div class="lv-lobby-actions lv-done-actions">
+<button type="button" class="btn secondary lv-fullscreen" data-fullscreen title="Fill the whole screen, for projecting">Full screen</button>
+<button type="button" class="btn lv-big" id="rbAgain">Play again with the same players</button>
+<button type="button" class="btn secondary" id="rbDownload" title="Every student's answer to every question, for Google Sheets or Excel">Download results</button>
+<button type="button" class="btn secondary" id="rbNew">New game</button>
+</div>
+</section>
+
+<div class="rb-music" id="rbMusic" hidden>
+<span class="lv-music-label" id="rbMusicLabel">Music</span>
+<button type="button" class="lv-music-btn" id="rbMute" aria-pressed="false">Mute</button>
+<input type="range" id="rbVolume" min="0" max="100" value="60" aria-label="Music volume" title="Volume">
+</div>
+<p class="lv-toast" id="rbToast" role="status" aria-live="polite"></p>
+<p class="lv-status" id="rbStatus" role="status" aria-live="polite"></p>
+</main><footer><div class="container">Vocabulary &middot; Flashcards and live vocabulary games </div></footer>
+</body>
+</html>

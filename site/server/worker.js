@@ -18,6 +18,8 @@
 //     pages (/api/book-text/<page>), which those pages ask for as they open
 //   - keeps the teacher's Assignment Launchpad list for that site's
 //     /launchpad page (/api/launchpad), which only the teacher can see
+//   - keeps the multiple choice question sets Battle Royale plays
+//     (/api/qsets), which only the teacher can see
 //
 // It needs two settings on the integrated-science-8 Pages project, described
 // in textbook/README.md: a KV namespace bound as FLASHCARDS, and a secret
@@ -538,6 +540,7 @@ async function api(request, env, url) {
 
   // Only the teacher hosts a game (Donny, 2026-10-14; students could before).
   if (a === 'live' && b === 'create' && method === 'POST') return liveCreate(request, env, url);
+  if (a === 'qsets' && !c) return qsetsApi(request, env, b);
 
   if (a === 'book-text' && b && !c && method === 'PUT') return putBookText(request, env, b);
   if (a === 'launchpad' && !b && method === 'GET') return getLaunchpad(env);
@@ -790,6 +793,14 @@ async function liveCreate(request, env, url) {
   if (!env.LIVE) return json({ error: 'Live games are not switched on yet. The steps are in the README, steps 4 and 5.' }, 503);
   let body;
   try { body = await request.json(); } catch { body = null; }
+  const kind = String((body && body.kind) || 'volley');
+  // Battle Royale can play a multiple choice question set instead of flashcards.
+  if (kind === 'royale' && body && body.qsetId) {
+    const qid = String(body.qsetId);
+    const set = QSET_ID.test(qid) ? await env.FLASHCARDS.get('qset:' + qid, 'json') : null;
+    if (!set) return json({ error: 'Pick a question set first.' }, 400);
+    return startLive(env, { setId: '', title: set.title, questions: set.questions, kind, opts: body.opts || {} });
+  }
   const setId = String((body && body.setId) || '');
   const entry = (await registry(env, url)).find((s) => s.id === setId);
   if (!entry) return json({ error: 'Pick a flashcard set first.' }, 400);
@@ -800,8 +811,6 @@ async function liveCreate(request, env, url) {
     const res = await env.ASSETS.fetch(new URL('/assets/flashcard-data/' + setId + '.json', url));
     if (res.ok) cards = (await res.json()).cards;
   }
-  // Only the teacher gets here (see api), so the results count on the class leaderboard.
-  const counts = true;
   // Pictures saved with a set are written relative to the set's own page.
   const base = new URL(entry.path, url);
   cards = (cards || []).map((c) => ({
@@ -809,19 +818,145 @@ async function liveCreate(request, env, url) {
     def: c.def,
     img: c.img ? new URL(c.img, base).pathname : ''
   }));
+  return startLive(env, { setId, title: entry.title, cards, kind, opts: (body && body.opts) || {} });
+}
+
+// Starts a game under a fresh code. Only the teacher gets here (see api), so
+// the results count on the class leaderboard.
+async function startLive(env, game) {
+  const counts = true;
   const hostKey = [...crypto.getRandomValues(new Uint8Array(18))].map((x) => x.toString(16).padStart(2, '0')).join('');
   for (let tries = 0; tries < 8; tries++) {
     const code = joinCode();
     const res = await env.LIVE.get(env.LIVE.idFromName(code)).fetch('https://live/init', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ code, hostKey, setId, title: entry.title, cards, kind: String((body && body.kind) || 'volley'), opts: (body && body.opts) || {}, counts })
+      body: JSON.stringify({ code, hostKey, counts, ...game })
     });
     if (res.status === 409) continue;
     if (!res.ok) return json({ error: (await res.text()) || 'The game could not be made.' }, 400);
     return json({ code, hostKey });
   }
   return json({ error: 'Every code tried was in use. Try again.' }, 503);
+}
+
+/* ---------------- Battle Royale question sets ---------------- */
+
+// Multiple choice sets for Battle Royale (Donny, 2026-10-29), kept apart from
+// the flashcards and only for the teacher: 'qsets' lists them
+// [{ id, title, count, saved }] and 'qset:<id>' holds each one
+// { title, questions: [{ q, a, w: [wrong, ...], img }], saved }.
+const QSET_ID = /^q[0-9a-f]{10}$/;
+const MAX_QSET = 512 * 1024;
+
+async function qsetIndex(env) {
+  const list = await env.FLASHCARDS.get('qsets', 'json');
+  return Array.isArray(list) ? list : [];
+}
+
+function cleanQuestions(list) {
+  const out = [];
+  for (const x of Array.isArray(list) ? list.slice(0, 500) : []) {
+    const q = cleanText(x && x.q, 600);
+    const a = cleanText(x && x.a, 200);
+    const w = (Array.isArray(x && x.w) ? x.w : []).map((v) => cleanText(v, 200)).filter((v) => v && v.toLowerCase() !== a.toLowerCase()).slice(0, 3);
+    const img = cleanText(x && x.img, 500);
+    if (!q || !a || !w.length) continue;
+    out.push({ q, a, w, img: /^(\/|https:\/\/)/.test(img) ? img : '' });
+  }
+  return out;
+}
+
+// Plain words from Wayground's HTML ("Energy&nbsp;" -> "Energy").
+const quizText = (html) => String(html || '')
+  .replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]*>/g, '')
+  .replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'")
+  .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n))).replace(/&amp;/g, '&')
+  .replace(/\s+/g, ' ').trim();
+
+// A question set from a link (Donny, 2026-10-29). A Wayground quiz: its
+// public quiz data, made into questions here. A Google Sheet shared "Anyone
+// with the link": sent back as CSV for the page to read. A sheet shared only
+// inside the school comes back { private: true }, and the page reads it with
+// the teacher's own Google sign-in instead.
+async function qsetImport(request) {
+  let body;
+  try { body = await request.json(); } catch { body = null; }
+  const link = String((body && body.url) || '').trim().slice(0, 2000);
+  const sheet = link.match(/docs\.google\.com\/spreadsheets\/d\/(e\/)?([\w-]{20,})/);
+  if (sheet) {
+    const gid = (link.match(/[#&?]gid=(\d+)/) || [])[1];
+    const src = sheet[1]
+      ? `https://docs.google.com/spreadsheets/d/e/${sheet[2]}/pub?output=csv${gid ? `&single=true&gid=${gid}` : ''}`
+      : `https://docs.google.com/spreadsheets/d/${sheet[2]}/export?format=csv${gid ? `&gid=${gid}` : ''}`;
+    let res;
+    try { res = await fetch(src, { redirect: 'follow' }); } catch { return json({ error: 'Could not reach Google Sheets. Try again in a minute.' }, 502); }
+    if (!res.ok || !/csv|text\/plain/.test(res.headers.get('content-type') || '')) {
+      return json({ private: true, error: 'That sheet is not shared with "Anyone with the link".' }, 400);
+    }
+    return json({ kind: 'sheet', text: (await res.text()).slice(0, 1000000) });
+  }
+  const quiz = link.match(/(?:wayground|quizizz)\.com\/\S*?([0-9a-f]{24})/i);
+  if (quiz) {
+    let data = null;
+    try {
+      const res = await fetch(`https://wayground.com/_quizserver/main/v2/quiz/${quiz[1]}`, { headers: { accept: 'application/json', 'user-agent': 'Mozilla/5.0' } });
+      if (res.ok) data = await res.json();
+    } catch { data = null; }
+    const info = data && data.data && data.data.quiz && data.data.quiz.info;
+    if (!info || !Array.isArray(info.questions)) {
+      return json({ error: 'Wayground did not send that quiz. Check that the link opens the quiz, or copy its questions into a sheet and paste them.' }, 400);
+    }
+    const questions = [];
+    let skipped = 0;
+    for (const x of info.questions) {
+      const s = (x && x.structure) || {};
+      const opts = (Array.isArray(s.options) ? s.options : []).map((o) => quizText(o && o.text));
+      const right = (Array.isArray(s.answer) ? s.answer : [s.answer]).filter((i) => Number.isInteger(i) && opts[i]);
+      const img = ((s.query && s.query.media) || []).find((m) => m && m.type === 'image' && /^https:\/\//.test(m.url || ''));
+      const q = quizText(s.query && s.query.text) || (img ? 'Look at the picture.' : '');
+      // Multiple choice only, and every answer needs words (picture answers cannot show).
+      const wrong = opts.filter((t, i) => !right.includes(i));
+      if (!['MCQ', 'MSQ'].includes(s.kind) || !q || !right.length || !wrong.length || opts.some((t) => !t)) { skipped += 1; continue; }
+      questions.push({ q, a: opts[right[0]], w: wrong.slice(0, 3), img: img ? img.url : '' });
+    }
+    return json({ kind: 'quiz', title: quizText(info.name).slice(0, 120), questions: cleanQuestions(questions), skipped });
+  }
+  return json({ error: 'Paste a link to a Wayground quiz or a Google Sheet.' }, 400);
+}
+
+async function qsetsApi(request, env, id) {
+  const method = request.method;
+  if (id === 'import' && method === 'POST') return qsetImport(request);
+  if (!id && method === 'GET') return json({ sets: await qsetIndex(env) });
+  if (id && !QSET_ID.test(id)) return json({ error: 'There is no question set with that name.' }, 404);
+  if (id && method === 'GET') {
+    const set = await env.FLASHCARDS.get('qset:' + id, 'json');
+    return set ? json({ id, title: set.title, questions: set.questions, saved: set.saved }) : json({ error: 'There is no question set with that name.' }, 404);
+  }
+  if (id && method === 'DELETE') {
+    await env.FLASHCARDS.delete('qset:' + id);
+    await env.FLASHCARDS.put('qsets', JSON.stringify((await qsetIndex(env)).filter((s) => s.id !== id)));
+    return json({ ok: true });
+  }
+  if ((id && method === 'PUT') || (!id && method === 'POST')) {
+    const buf = await readLimited(request, MAX_QSET);
+    if (!buf) return json({ error: 'That set is too big to save. Split it into two sets.' }, 413);
+    let body;
+    try { body = JSON.parse(new TextDecoder().decode(buf)); } catch { body = null; }
+    const title = cleanText(body && body.title, 120);
+    const questions = cleanQuestions(body && body.questions);
+    if (!title) return json({ error: 'Give the set a name.' }, 400);
+    if (!questions.length) return json({ error: 'Add at least one question with a right answer and a wrong answer.' }, 400);
+    const key = id || 'q' + [...crypto.getRandomValues(new Uint8Array(5))].map((x) => x.toString(16).padStart(2, '0')).join('');
+    const saved = Date.now();
+    await env.FLASHCARDS.put('qset:' + key, JSON.stringify({ title, questions, saved }));
+    const list = (await qsetIndex(env)).filter((s) => s.id !== key);
+    list.unshift({ id: key, title, count: questions.length, saved });
+    await env.FLASHCARDS.put('qsets', JSON.stringify(list));
+    return json({ id: key, title, count: questions.length, saved });
+  }
+  return json({ error: 'Not found.' }, 404);
 }
 
 /* ---------------- Class Pass and the class leaderboard ---------------- */

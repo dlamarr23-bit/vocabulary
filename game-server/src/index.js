@@ -21,8 +21,12 @@
 // - Match ('match'), like Quizlet's multiplayer Match: everyone gets the same
 //   cards and races to match every term to its definition. First done wins.
 //   "Hidden cards" turns it into a memory game.
+// - Battle Royale ('royale', royale.js), like Blooket's: everyone starts with
+//   some energy, faces a random opponent each round, and loses energy for a
+//   wrong or slower answer. Last one standing wins.
 import { DurableObject } from 'cloudflare:workers';
 import { cleanName, rudeName, aiSaysRude } from './names.js';
+import { royale } from './royale.js';
 export { Leaderboard } from './board.js';
 
 const LIFETIME_MS = 3 * 60 * 60 * 1000;
@@ -198,6 +202,7 @@ export class LiveGame extends DurableObject {
   /* ---------------- making a game ---------------- */
 
   async init(body) {
+    if (body && body.kind === 'royale') return this.rInit(body);
     const old = await this.load();
     if (old && Date.now() - old.created < LIFETIME_MS) return new Response('taken', { status: 409 });
     const o = body.opts || {};
@@ -271,6 +276,7 @@ export class LiveGame extends DurableObject {
       await this.close(msg, msg);
       return;
     }
+    if (g.kind === 'royale') return this.rAlarm();
     // A Blast round, or a Vocab Live game with a time limit, ends on time;
     // the game itself stays open.
     if (g.phase === 'play' && g.endsAt && now >= g.endsAt - 250) await this.timeUp();
@@ -291,6 +297,7 @@ export class LiveGame extends DurableObject {
   // Blast round, or demo mode's next tick, whichever comes first.
   nextAlarm(now) {
     const g = this.game;
+    if (g.kind === 'royale') return this.rNextAlarm(now);
     let at = Math.min(this.idleAt || now + IDLE_MS, g.created + LIFETIME_MS);
     if (g.phase === 'play' && g.endsAt) at = Math.min(at, g.endsAt);
     // During a game, a look every 15 seconds for students who have gone.
@@ -351,7 +358,7 @@ export class LiveGame extends DurableObject {
       // A student signed in with Class Pass: the site checked the sign-in and
       // says who it is (students can never send this themselves).
       server.serializeAttachment({ role: 'guest', stu: passStudent(request) });
-      server.send(JSON.stringify({ t: 'hello', kind: g.kind, title: g.title, phase: g.phase, typedNames: g.opts.typedNames, counts: !!g.counts && !g.opts.demo }));
+      server.send(JSON.stringify({ t: 'hello', kind: g.kind, title: g.title, phase: g.phase, typedNames: g.opts.typedNames, counts: !!g.counts && !g.opts.demo, needPass: g.kind === 'royale' && g.opts.pass }));
     }
     return new Response(null, { status: 101, webSocket: client });
   }
@@ -435,6 +442,7 @@ export class LiveGame extends DurableObject {
     // Aiming is only passed on to teammates: nothing is saved.
     if (m.t === 'aim' && a.pid) return this.aim(a.pid, m);
     await this.touch();
+    if (g.kind === 'royale') return this.rMessage(ws, a, m);
     // A student's screen went to the background, or came back.
     if (a.pid && (m.t === 'away' || m.t === 'back')) {
       a.away = m.t === 'away';
@@ -1784,6 +1792,7 @@ export class LiveGame extends DurableObject {
 
   board() {
     const g = this.game;
+    if (g.kind === 'royale') return this.rBoard();
     const missed = Object.keys(g.missed)
       .map((i) => ({ term: g.cards[i].term, def: g.cards[i].def, n: g.missed[i] }))
       .sort((x, y) => y.n - x.n)
@@ -1814,6 +1823,7 @@ export class LiveGame extends DurableObject {
 
   view(pid) {
     const g = this.game;
+    if (g.kind === 'royale') return this.rView(pid);
     const p = g.players[pid];
     if (!p) return { t: 'removed', msg: 'You are not in this game.' };
     const t = p.team && g.teams[p.team];
@@ -1905,6 +1915,9 @@ export class LiveGame extends DurableObject {
     return out;
   }
 }
+
+// Battle Royale's own steps (royale.js) run on the same game object.
+Object.assign(LiveGame.prototype, royale);
 
 // This Worker has no pages of its own. The Pages site reaches the games
 // through its LIVE binding.

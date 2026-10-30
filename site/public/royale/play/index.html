@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Play Battle Royale with the code on the board.">
+<title>Battle Royale | Vocabulary</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect x=%2720%27 y=%2710%27 width=%2736%27 height=%2728%27 rx=%276%27 fill=%27%239db8f2%27/%3E%3Crect x=%278%27 y=%2724%27 width=%2738%27 height=%2730%27 rx=%276%27 fill=%27%231d4ed8%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../../assets/book.css">
+<script src="../../assets/icons.js" defer></script>
+<script src="../../assets/book.js" defer></script>
+<script src="../../assets/pass.js?v=11aa8f89" defer></script>
+<link rel="stylesheet" href="../../assets/flashcards.css?v=3d33d304">
+<link rel="stylesheet" href="../../assets/live.css?v=e1dc4b13">
+<link rel="stylesheet" href="../../assets/royale.css?v=ac4ece87">
+<script src="../../assets/live-celebrate.js?v=b55c9a9c" defer></script>
+<script src="../../assets/heroes.js?v=eb09730e" defer></script>
+<script src="../../assets/royale-play.js?v=6d4e58ac" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to the page</a><div class="topbar"><div class="topbar-inner">
+<a class="brand" href="../../index.html">
+<span class="dot" aria-hidden="true"></span>
+<span class="mascot" aria-hidden="true"><svg viewBox="0 0 64 64" role="img" aria-label="Flashcards" xmlns="http://www.w3.org/2000/svg">
+<rect x="20" y="10" width="36" height="28" rx="6" fill="#9db8f2"/>
+<rect x="8" y="24" width="38" height="30" rx="6" fill="#1d4ed8"/>
+<rect x="15" y="34" width="22" height="4" rx="2" fill="#ffffff"/>
+<rect x="15" y="42" width="14" height="4" rx="2" fill="#ffffff"/>
+</svg></span>
+<span>Vocabulary</span>
+</a>
+<nav class="inline-links" aria-label="Site"><a href="../../flashcards/">Review</a><a href="../../live/" data-teacher-only>Host a game</a><a href="../../join/">Join a game</a><a href="../../leaderboard/">Leaderboard</a></nav>
+<button class="menu-btn" id="openDrawer" aria-expanded="false" aria-controls="drawer">&#9776; Menu</button>
+</div></div><div class="drawer-backdrop" id="drawerBackdrop"></div>
+<div class="drawer" id="drawer" aria-label="Menu">
+<button class="drawer-close" id="closeDrawer" aria-label="Close the menu">&times;</button>
+<h2 class="drawer-title">Menu</h2>
+<nav class="drawer-links" aria-label="Site"><a href="../../flashcards/">Review</a><a href="../../live/" data-teacher-only>Host a game</a><a href="../../join/">Join a game</a><a href="../../leaderboard/">Leaderboard</a></nav>
+
+</div><main id="main" class="container lv-page rb-page rb-play">
+
+<section class="lv-step lv-card" id="rpCode" hidden>
+<h1>Battle Royale</h1>
+<form id="rpCodeForm" class="lv-form">
+<label class="lv-q" for="rpCodeInput">Enter the join code</label>
+<input id="rpCodeInput" class="lv-code-input" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="6">
+<button type="submit" class="btn lv-big">Continue</button>
+</form>
+<p class="lv-error" id="rpCodeError" role="alert"></p>
+</section>
+
+<section class="lv-step lv-card" id="rpPass" hidden>
+<h1>Battle Royale</h1>
+<p class="lv-lede">Sign in with Class Pass to play. Your name comes from your class list, and your wins go on the class leaderboard.</p>
+<button type="button" class="btn lv-big" id="rpPassBtn">Sign in with Class Pass</button>
+<p class="lv-error" id="rpPassError" role="alert"></p>
+</section>
+
+<section class="lv-step" id="rpLobby" hidden>
+<div class="rp-me-card">
+<div class="rp-me-hero" id="rpMeHero"></div>
+<div class="rp-me-text">
+<p class="lv-eyebrow">You are in</p>
+<p class="rp-me-name" id="rpMeName"></p>
+<p class="rp-energy" id="rpMeEnergy"></p>
+<p class="lv-small" id="rpWaitText">Pick your hero. Your teacher will start the game soon.</p>
+</div>
+</div>
+<div class="rp-picker" id="rpPicker">
+<h2 class="rp-pick-title">Pick your hero</h2>
+<p class="rp-pick-msg" id="rpPickMsg" role="status"></p>
+<div class="rp-grid" id="rpGrid"></div>
+</div>
+</section>
+
+<section class="lv-step rp-screen" id="rpVs" hidden>
+<p class="rp-round" id="rpVsRound"></p>
+<div class="rp-vs">
+<div class="rp-side rp-side-me" id="rpVsMe"></div>
+<div class="rp-vs-word" aria-hidden="true">VS</div>
+<div class="rp-side rp-side-them" id="rpVsThem"></div>
+</div>
+<p class="rp-vs-note" id="rpVsNote"></p>
+</section>
+
+<section class="lv-step rp-screen" id="rpQ" hidden>
+<div class="rp-qbar">
+<span class="rp-tag" id="rpQTag"></span>
+<span class="rp-energy" id="rpQEnergy"></span>
+<span class="rp-timer" id="rpTimer" aria-label="Time left"></span>
+</div>
+<div class="rp-question">
+<p class="rp-qtext" id="rpQText"></p>
+<img class="rp-qimg" id="rpQImg" alt="" hidden>
+</div>
+<div class="rp-answers" id="rpAnswers"></div>
+<div class="rp-sent" id="rpSent" hidden><strong>Answer sent!</strong><span id="rpSentNote">Waiting for the others...</span></div>
+</section>
+
+<section class="lv-step rp-screen" id="rpResult" hidden>
+<div class="rp-banner" id="rpBanner"></div>
+<div class="rp-result-vs" id="rpResultVs"></div>
+<p class="rp-answer-was" id="rpAnswerWas"></p>
+<p class="rp-energy rp-energy-big" id="rpResultEnergy"></p>
+<p class="lv-small" id="rpResultNote"></p>
+</section>
+
+<section class="lv-step lv-card" id="rpPaused" hidden>
+<p class="lv-done-emoji" aria-hidden="true">⏸️</p>
+<p class="lv-me">Your teacher paused the game.</p>
+<p class="lv-lede">Look up at the board.</p>
+</section>
+
+<section class="lv-step lv-card rp-done" id="rpDone" hidden>
+<div class="rp-done-hero" id="rpDoneHero"></div>
+<p class="lv-me" id="rpDoneText"></p>
+<ol class="rb-podium rp-mini-podium" id="rpPodium" aria-label="Winners"></ol>
+<p class="lv-lede" id="rpDoneMore"></p>
+</section>
+
+<section class="lv-step lv-card" id="rpGone" hidden>
+<p class="lv-me" id="rpGoneText"></p>
+<a class="btn" href="../../join/">Join a game</a>
+</section>
+
+<div class="lv-toast" id="rpToast" role="status" aria-live="polite"></div>
+<p class="lv-status" id="rpStatus" role="status" aria-live="polite"></p>
+</main><footer><div class="container">Vocabulary &middot; Flashcards and live vocabulary games </div></footer>
+</body>
+</html>

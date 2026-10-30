@@ -44,7 +44,7 @@ const int = (v, lo, hi) => {
 const EMAIL = /^[^@\s,;<>"]+@[^@\s,;<>"]+\.[a-z]{2,}$/i;
 const SET_ID = /^[A-Za-z0-9_-]{1,60}$/;
 const PRACTICE = ['match', 'test', 'learn'];
-const GAMES = ['volley', 'blast', 'match'];
+const GAMES = ['volley', 'blast', 'match', 'royale'];
 // The day in California, for "once a day" counting.
 const dayOf = (ms) => new Date(ms - 7 * 3600 * 1000).toISOString().slice(0, 10);
 
@@ -412,12 +412,13 @@ export class Leaderboard extends DurableObject {
     const live = (e) => e.kind === 'live';
     const boards = [
       { id: 'teamWins', group: 'Class champions', title: 'Team game wins', blurb: 'Vocab Live and Blast games won by your team.', unit: 'win', data: tally((e) => live(e) && e.team && e.win, one) },
-      { id: 'soloWins', group: 'Class champions', title: 'Solo game wins', blurb: 'Multiplayer Match and solo Vocab Live games won on your own.', unit: 'win', data: tally((e) => live(e) && !e.team && e.win, one) },
+      { id: 'soloWins', group: 'Class champions', title: 'Solo game wins', blurb: 'Multiplayer Match, Battle Royale and solo Vocab Live games won on your own.', unit: 'win', data: tally((e) => live(e) && !e.team && e.win, one) },
       { id: 'podiums', group: 'Class champions', title: 'Top 3 finishes', blurb: 'Live games where you or your team came 1st, 2nd or 3rd.', unit: 'finish', data: tally((e) => live(e) && e.place >= 1 && e.place <= 3 && e.place < (e.total || 2), one) },
       { id: 'right', group: 'Class champions', title: 'Correct answers in games', blurb: 'Right answers you gave in live games.', unit: 'answer', data: tally(live, (e) => e.correct || 0) },
       { id: 'volley', group: 'Wins by game', title: 'Vocab Live wins', blurb: 'Team and solo.', unit: 'win', data: tally((e) => live(e) && e.game === 'volley' && e.win, one) },
       { id: 'blast', group: 'Wins by game', title: 'Blast wins', blurb: 'Games your team won.', unit: 'win', data: tally((e) => live(e) && e.game === 'blast' && e.win, one) },
       { id: 'mmatch', group: 'Wins by game', title: 'Multiplayer Match wins', blurb: 'First to match every card.', unit: 'win', data: tally((e) => live(e) && e.game === 'match' && e.win, one) },
+      { id: 'royale', group: 'Wins by game', title: 'Battle Royale wins', blurb: 'Last hero standing, or the most energy when the clock ran out.', unit: 'win', data: tally((e) => live(e) && e.game === 'royale' && e.win, one) },
       { id: 'practice', group: 'Studying', title: 'Practice sessions', blurb: 'Match, Test or Learn finished on your own. Each set counts once per mode, per day.', unit: 'session', data: distinct((e) => PRACTICE.includes(e.kind), (e) => e.set_id + '|' + e.kind + '|' + e.day) },
       { id: 'perfect', group: 'Studying', title: 'Perfect tests', blurb: '100% on a practice test of 10 or more questions (or the whole set). Each set counts once a day.', unit: 'test', data: distinct((e) => e.kind === 'test' && e.full && e.score === e.total, (e) => e.set_id + '|' + e.day) },
       { id: 'mastered', group: 'Studying', title: 'Sets mastered in Learn', blurb: 'Every term mastered in Learn mode. Each set counts once.', unit: 'set', data: distinct((e) => e.kind === 'learn', (e) => e.set_id) },

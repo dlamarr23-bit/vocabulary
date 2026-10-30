@@ -222,6 +222,8 @@
   function local(serverTime) { return serverTime - (skew || 0); }
   function handle(m) {
     if (m.t === 'hello') {
+      // Battle Royale has a screen of its own (royale/play/).
+      if (m.kind === 'royale') { leaving = true; if (ws) try { ws.close(); } catch (e) { /* closed */ } location.replace('../royale/play/#' + code); return; }
       lastHello = m;
       typedNames = m.typedNames;
       counts = !!m.counts;
