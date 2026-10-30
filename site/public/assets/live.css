@@ -871,3 +871,15 @@ html:has(.lv-page){ font-size:16px; }
 .lv-pass-note .pass-badge{ vertical-align:1px; }
 .lv-pass-link{ font-size:inherit; color:var(--accent-dark); }
 .lv-pass-tick{ color:var(--good); font-weight:800; margin-left:4px; }
+/* Five games in the row, and the flashcard and question set boxes side by side
+   (Donny, 2026-10-30: Battle Royale and Surge Showdown on the Host a game page). */
+.lv-choices-5{ grid-template-columns:repeat(5, minmax(0, 1fr)); }
+@media (max-width:900px){ .lv-choices-5{ grid-template-columns:repeat(3, minmax(0, 1fr)); } }
+@media (max-width:600px){ .lv-choices-5{ grid-template-columns:1fr; } }
+.lv-sets{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:0 1rem; }
+.lv-sets select{ width:100%; }
+.lv-sets .lv-small{ display:block; margin-top:0.375rem; }
+.lv-sets .lv-field.off{ opacity:.5; }
+@media (max-width:600px){ .lv-sets{ grid-template-columns:1fr; } }
+.lv-other{ background:var(--accent-tint); border-radius:var(--radius); padding:1rem 1.25rem; margin:0 0 1rem; }
+.lv-other p{ margin:0; }

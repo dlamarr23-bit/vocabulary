@@ -47,7 +47,7 @@ const HOST = `<main id="main" class="container lv-page rb-page rb-host">
 <div class="rb-hero-head">
 <div class="rb-hero-strip" id="rbStrip" aria-hidden="true"></div>
 <h1>Battle Royale</h1>
-<p class="lv-lede">Everyone starts with the same energy. Each round, students face a random classmate on the same question. A wrong or slower answer costs 1 energy. The last hero standing wins.</p>
+<p class="lv-lede">Everyone starts with the same HP (health points). Each round, students face random classmates on the same question. The fastest right answer wins; a wrong or slower answer costs 1 HP. The last hero standing wins.</p>
 </div>
 <div class="lv-resume" id="rbResume" hidden><span id="rbResumeText"></span> <button type="button" class="btn fc-small" id="rbResumeBtn">Go back to it</button></div>
 
@@ -74,7 +74,7 @@ const HOST = `<main id="main" class="container lv-page rb-page rb-host">
 <label class="lv-field"><span class="lv-q">Name</span><input type="text" id="rbEdName" maxlength="120" placeholder="Mass, Acceleration, and Collisions"></label>
 <div class="rb-howto">
 <p><strong>Import from a link:</strong> paste the link to a Wayground quiz or a Google Sheet, then click Import.</p>
-<p class="lv-small">In the sheet, put the question in column A, the right answer in B and up to 3 wrong answers in C, D and E (a picture link can go in F). A Wayground or Blooket spreadsheet works too.</p>
+<p class="lv-small">Start a sheet from the template: <a id="rbTemplate" href="#" target="_blank" rel="noopener">make a copy in Google Sheets</a> (or <a href="../assets/question-template.xlsx" download>download it for Excel</a>). It has a picture column for the question and for every answer: paste a picture link there (a Google Drive link works). Surge Showdown uses the same template. A Wayground or Blooket spreadsheet works too.</p>
 </div>
 <div class="rb-link-import">
 <input type="url" id="rbEdLink" placeholder="https://wayground.com/... or https://docs.google.com/spreadsheets/..." aria-label="Wayground or Google Sheets link">
@@ -97,14 +97,16 @@ const HOST = `<main id="main" class="container lv-page rb-page rb-host">
 
 <fieldset class="lv-group rb-box"><legend class="lv-q">How to play</legend>
 <div class="rb-opts">
-<label class="lv-opt"><span><strong>Starting energy</strong><span class="lv-opt-note">How many questions a student can lose before they are out. More energy, longer games.</span></span>
-<select id="rbEnergy"><option value="1">1</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option></select></label>
+<label class="lv-opt"><span><strong>Starting HP</strong><span class="lv-opt-note">Health points: how many face-offs a student can lose before they are eliminated. More HP, longer games.</span></span>
+<select id="rbEnergy"><option value="1">1 HP</option><option value="2">2 HP</option><option value="3" selected>3 HP</option><option value="4">4 HP</option><option value="5">5 HP</option><option value="6">6 HP</option><option value="7">7 HP</option><option value="8">8 HP</option><option value="9">9 HP</option><option value="10">10 HP</option></select></label>
+<label class="lv-opt"><span><strong>Students per face-off</strong><span class="lv-opt-note">The fastest right answer in each group wins and everyone else in it loses 1 HP, so bigger groups make shorter games. You can change it any time during the game.</span></span>
+<select id="rbSize"><option value="2" selected>2 (one on one)</option><option value="3">3 players</option><option value="4">4 players</option><option value="5">5 players</option></select></label>
 <label class="lv-opt"><span><strong>Time per question</strong><span class="lv-opt-note">The round ends sooner once everyone has answered.</span></span>
 <select id="rbSeconds"><option value="10">10 seconds</option><option value="15">15 seconds</option><option value="20" selected>20 seconds</option><option value="30">30 seconds</option><option value="45">45 seconds</option><option value="60">1 minute</option></select></label>
 <label class="lv-opt"><span><strong>Game clock</strong><span class="lv-opt-note">When it runs out, the round being played finishes and the most energy wins. You can add, change or remove the clock any time during the game too.</span></span>
 <select id="rbClock"><option value="0" selected>No clock</option><option value="1">1 minute</option><option value="2">2 minutes</option><option value="3">3 minutes</option><option value="4">4 minutes</option><option value="5">5 minutes</option><option value="7">7 minutes</option><option value="10">10 minutes</option><option value="15">15 minutes</option><option value="20">20 minutes</option><option value="30">30 minutes</option></select></label>
-<label class="lv-opt fc-switch"><span><strong>Comebacks</strong><span class="lv-opt-note">A student who is out and gets 3 practice questions right in a row comes back with 1 energy, once a game.</span></span><input type="checkbox" id="rbComeback" checked></label>
-<label class="lv-opt fc-switch"><span><strong>Shield streaks</strong><span class="lv-opt-note">Winning 3 matches in a row earns a shield. It blocks the next energy that student would lose.</span></span><input type="checkbox" id="rbShield" checked></label>
+<label class="lv-opt fc-switch"><span><strong>Revives</strong><span class="lv-opt-note">A student who is eliminated and gets 3 practice questions right in a row is revived with 1 HP, once a game.</span></span><input type="checkbox" id="rbComeback" checked></label>
+<label class="lv-opt fc-switch"><span><strong>Shield streaks</strong><span class="lv-opt-note">Winning 3 face-offs in a row earns a shield. It blocks the next HP that student would lose.</span></span><input type="checkbox" id="rbShield" checked></label>
 <label class="lv-opt fc-switch"><span><strong>Students sign in with Class Pass</strong><span class="lv-opt-note">Their name comes from your class list and wins go on the leaderboard. Turn off only if Class Pass is not working.</span></span><input type="checkbox" id="rbPass" checked></label>
 <div class="lv-opt"><span><strong>Lobby music</strong><span class="lv-opt-note">Plays on this screen only while students join.</span></span>
 <span class="lv-music-ctl"><select id="rbLobbyMusic" aria-label="Lobby music"></select></span></div>
@@ -157,6 +159,7 @@ const HOST = `<main id="main" class="container lv-page rb-page rb-host">
 <div class="lv-big-clock rb-clock" id="rbClock2" role="timer" aria-live="off"></div>
 <button type="button" class="lv-clock-btn" id="rbPlus" title="Add a minute to the clock" aria-label="Add a minute to the clock">+ 1:00</button>
 <label class="rb-clock-set"><span class="rb-sr">Set the game clock</span><select id="rbClockSet" aria-label="Set the game clock"></select></label>
+<label class="rb-size-now">Face-offs <select id="rbSizeNow" aria-label="Students per face-off, from the next round"><option value="2">2 (one on one)</option><option value="3">3 players</option><option value="4">4 players</option><option value="5">5 players</option></select></label>
 </div>
 <div class="rb-ph-right">
 <button type="button" class="lv-tool" id="rbPause">Pause</button>
@@ -167,7 +170,10 @@ const HOST = `<main id="main" class="container lv-page rb-page rb-host">
 </div>
 </header>
 <div class="rb-banner" id="rbBanner" hidden role="status"></div>
+<div class="rb-play-grid">
+<aside class="rb-spot" id="rbSpot" aria-label="Highlights from the last round"></aside>
 <div class="rb-stage" id="rbStage"></div>
+</div>
 </section>
 
 <div class="lv-roster-back" id="rbRosterBack" hidden></div>

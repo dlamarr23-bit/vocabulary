@@ -10,13 +10,13 @@
 <link rel="stylesheet" href="../assets/book.css">
 <script src="../assets/icons.js" defer></script>
 <script src="../assets/book.js" defer></script>
-<script src="../assets/pass.js?v=11aa8f89" defer></script>
+<script src="../assets/pass.js?v=f773610b" defer></script>
 <link rel="stylesheet" href="../assets/flashcards.css?v=3d33d304">
-<link rel="stylesheet" href="../assets/live.css?v=e1dc4b13">
+<link rel="stylesheet" href="../assets/live.css?v=eab2fb9a">
 <script src="../assets/editor.js?v=dfb83758" defer></script>
 <script src="../assets/vendor/qrcode.js?v=18ae399f" defer></script>
 <script src="../assets/live-celebrate.js?v=b55c9a9c" defer></script>
-<script src="../assets/live-host.js?v=b0b11cc9" defer></script>
+<script src="../assets/live-host.js?v=9a66da1e" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to the page</a><div class="topbar"><div class="topbar-inner">
@@ -52,13 +52,18 @@
 <p class="lv-lede">Pick a game, a set and how to play. Players join on their own screens with a code.</p>
 </div>
 <div class="lv-resume" id="lvResume" hidden><span id="lvResumeText"></span> <button type="button" class="btn fc-small" id="lvResumeBtn">Go back to it</button></div>
-<div class="lv-resume"><span><strong>Battle Royale:</strong> students face a random classmate each round with superhero avatars. Play your own question sets or any flashcard set.</span> <a class="btn fc-small" href="../royale/">Open Battle Royale</a></div>
 <p class="lv-note" id="lvSetupNote" role="status"></p>
-<label class="lv-field"><span class="lv-q">Flashcard set</span>
-<select id="lvSet"></select></label>
+<div class="lv-sets">
+<label class="lv-field" id="lvSetField"><span class="lv-q">Flashcard set</span>
+<select id="lvSet"></select>
+<span class="lv-small">For Vocab Live, Blast and Match.</span></label>
+<div class="lv-field" id="lvQsetField"><label class="lv-q" for="lvQset">Question set</label>
+<select id="lvQset"><option value="">Loading your question sets...</option></select>
+<span class="lv-small">For Battle Royale and Surge Showdown. <a href="../royale/#new">Make a new question set</a></span></div>
+</div>
 
 <fieldset class="lv-group"><legend class="lv-q">Which game?</legend>
-<div class="lv-choices lv-choices-3">
+<div class="lv-choices lv-choices-5">
 <label class="lv-choice"><input type="radio" name="lvGame" value="volley" checked>
 <span class="lv-choice-art" aria-hidden="true"><svg viewBox="0 0 32 32" aria-hidden="true"><rect class="a" x="5" y="6" width="19" height="4.6" rx="2.3" transform="rotate(-12 14.5 8.3)"/><rect class="b" x="8" y="13.7" width="19" height="4.6" rx="2.3" transform="rotate(-12 17.5 16)"/><rect class="a" x="5" y="21.4" width="19" height="4.6" rx="2.3" transform="rotate(-12 14.5 23.7)"/></svg></span>
 <span class="lv-choice-title">Vocab Live</span>
@@ -74,7 +79,20 @@
 <span class="lv-choice-title">Match</span>
 <span class="lv-choice-text">Everyone races to match every term to its definition. First done wins.</span>
 </label>
+<label class="lv-choice"><input type="radio" name="lvGame" value="royale">
+<span class="lv-choice-art" aria-hidden="true"><svg viewBox="0 0 32 32" aria-hidden="true"><rect class="b" x="2" y="10" width="11" height="12" rx="3"/><circle class="w" cx="5.5" cy="15" r="1.4"/><circle class="w" cx="9.5" cy="15" r="1.4"/><rect class="a" x="19" y="10" width="11" height="12" rx="3"/><circle class="w" cx="22.5" cy="15" r="1.4"/><circle class="w" cx="26.5" cy="15" r="1.4"/><path class="a" d="M16.8 6l-3.2 8.5h2.7l-1.7 8.5 4.6-10.5h-2.8l2-6.5z"/></svg></span>
+<span class="lv-choice-title">Battle Royale</span>
+<span class="lv-choice-text">Students face off with superhero avatars. A wrong or slower answer costs 1 HP. Last hero standing wins.</span>
+</label>
+<label class="lv-choice"><input type="radio" name="lvGame" value="surge">
+<span class="lv-choice-art" aria-hidden="true"><svg viewBox="0 0 32 32" aria-hidden="true"><circle class="b" cx="16" cy="16" r="12.5"/><path class="a" d="M18.5 4.5l-9.5 13h6.2l-2.2 10 9.8-13.5h-6.3z"/></svg></span>
+<span class="lv-choice-title">Surge Showdown</span>
+<span class="lv-choice-text">Team battle: earn energy with right answers, then attack, heal and shield. Opens Surge Showdown.</span>
+</label>
 </div></fieldset>
+
+<div class="lv-other" id="lvOther" hidden><p id="lvOtherText"></p></div>
+<div id="lvClassic">
 
 <fieldset class="lv-group" data-for="volley"><legend class="lv-q">How would you like your teams arranged?</legend>
 <div class="lv-choices lv-choices-3">
@@ -154,6 +172,7 @@
 </div>
 <label class="lv-default lv-demo-pick"><input type="checkbox" id="lvDemo"> <span><strong>Demo mode: 40 pretend students</strong> <span class="lv-opt-note">Try the game on your own. Pretend students join using your settings, play, and get some answers right and some wrong. Real students can still join with the code.</span></span></label>
 <label class="lv-default"><input type="checkbox" id="lvSaveDefault"> <span><strong>Save these as my default settings</strong> <span class="lv-opt-note">Next time, this page starts with the same game, set, choices and music.</span></span></label>
+</div>
 <p class="lv-error" id="lvSetupError" role="alert"></p>
 <button type="button" class="btn lv-big" id="lvCreate">Create game</button>
 </section>

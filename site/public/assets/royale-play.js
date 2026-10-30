@@ -3,9 +3,11 @@
 
    Students arrive from the join page (join/ sends a Battle Royale code
    here). They sign in with Class Pass if the teacher needs it, pick a hero
-   while the class joins, then each round see who they face, answer the
-   question on four colored buttons, and see whether they won the match.
-   A student who is out keeps answering to practice.
+   while the class joins, then each round see who they face (one classmate,
+   or up to four, or the ghost of a classmate when they are on their own),
+   answer the question on four colored buttons, and see whether they won.
+   A student who is eliminated keeps answering to practice, and can be
+   revived.
 
    The game code, the player number it was given and the last hero picked
    are kept in this browser (is8-royale-play-v1), so a student who closes the
@@ -56,7 +58,7 @@
     return s.device;
   }
 
-  /* ---------------- heroes ---------------- */
+  /* ---------------- heroes and HP ---------------- */
 
   var heroByKey = {};
   (AV ? AV.list : []).forEach(function (h) { heroByKey[h.key] = h; });
@@ -66,18 +68,23 @@
     if (!heroSrc[key]) heroSrc[key] = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(AV.render(heroByKey[key]));
     return heroSrc[key];
   }
-  function heroImg(key, cls) {
-    var img = mk('img', 'rb-hero' + (cls ? ' ' + cls : ''));
+  // An eliminated student's hero is grayed out.
+  function heroImg(key, cls, gone) {
+    var img = mk('img', 'rb-hero' + (cls ? ' ' + cls : '') + (gone ? ' gray' : ''));
     img.alt = heroByKey[key] ? heroByKey[key].name : '';
     img.src = heroURL(key);
     return img;
   }
-  function bolts(n, of) {
-    var box = mk('span', 'rb-bolts');
-    box.setAttribute('aria-label', n + ' energy');
-    if (of > 6 || n > 6) { box.textContent = '⚡' + n; return box; }
-    for (var i = 0; i < Math.max(n, of || 0); i++) box.appendChild(mk('span', i < n ? 'on' : 'off', '⚡'));
-    return box;
+  // HP as hearts (a number past 6), with the shield beside it when there is one.
+  function hp(n, of, shield) {
+    var line = mk('span', 'rb-hp-line');
+    var box = mk('span', 'rb-hp');
+    box.setAttribute('aria-label', n + ' HP');
+    if (of > 6 || n > 6) box.textContent = '❤️ ' + n + ' HP';
+    else for (var i = 0; i < Math.max(n, of || 0); i++) box.appendChild(mk('span', i < n ? 'on' : 'off', '❤️'));
+    line.appendChild(box);
+    if (shield) { var s = mk('span', 'rb-shield', '🛡️'); s.title = 'Shield: blocks the next HP you would lose'; line.appendChild(s); }
+    return line;
   }
   function fill(el, node) { el.textContent = ''; if (node) el.appendChild(node); }
   function secs(ms) { return (ms / 1000).toFixed(2) + 's'; }
@@ -227,7 +234,7 @@
   function drawLobby(v) {
     fill($('rpMeHero'), heroImg(v.hero, 'big'));
     $('rpMeName').textContent = v.name;
-    fill($('rpMeEnergy'), bolts(v.energy, v.start));
+    fill($('rpMeEnergy'), hp(v.energy, v.start));
     $('rpWaitText').textContent = v.phase === 'play'
       ? 'The game has started. You join in at the next round.'
       : v.hero ? 'Nice pick! Your teacher will start the game soon. You can still change your hero.' : 'Pick your hero! If you don’t, you get one at random.';
@@ -262,26 +269,28 @@
 
   /* -------- a round -------- */
 
-  // Energy, with the shield beside it when the student holds one.
-  function energy(n, of, shield) {
-    var box = mk('span', 'rp-energy-line');
-    box.appendChild(bolts(n, of));
-    if (shield) { var s = mk('span', 'rb-shield', '🛡️'); s.title = 'Shield: blocks the next energy you would lose'; box.appendChild(s); }
-    return box;
-  }
-  function side(p, energyOf, label) {
-    var box = mk('div', 'rp-fighter');
+  function side(p, energyOf, cls, label) {
+    var box = mk('div', 'rp-fighter' + (cls ? ' ' + cls : ''));
     if (!p) { box.appendChild(mk('p', 'rp-fighter-name', label || '')); return box; }
-    box.appendChild(heroImg(p.hero, 'big'));
-    box.appendChild(mk('p', 'rp-fighter-name', p.name));
-    box.appendChild(energy(p.energy, energyOf, p.shield));
+    box.appendChild(heroImg(p.hero, 'big', !!p.out));
+    box.appendChild(mk('p', 'rp-fighter-name', label || p.name));
+    if (!/ghost/.test(cls || '')) box.appendChild(hp(p.energy, energyOf, p.shield));
     return box;
   }
-  function meAsPerson(v) { return { name: v.name, hero: v.hero, energy: v.energy, shield: v.shield }; }
-  // A student who is out: how close they are to coming back.
-  function comebackNote(v) {
-    if (!v.comeback) return v.out ? 'You are out, but keep answering to practice!' : '';
-    return 'You are out. Get ' + v.comeback.need + ' practice questions right in a row to come back: ' + v.comeback.run + ' of ' + v.comeback.need + ' so far!';
+  function meAsPerson(v) { return { name: v.name, hero: v.hero, energy: v.energy, shield: v.shield, out: v.out }; }
+  // An eliminated student: how close they are to being revived.
+  function reviveNote(v) {
+    if (!v.comeback) return v.out ? 'You are eliminated, but keep answering to practice!' : '';
+    return 'You are eliminated. Get ' + v.comeback.need + ' practice questions right in a row to be revived: ' + v.comeback.run + ' of ' + v.comeback.need + ' so far!';
+  }
+  // Who I face: one classmate big, several smaller, or a ghost.
+  function drawFoes(box, v, r) {
+    box.textContent = '';
+    if (r.role === 'ghost' && r.ghost) { box.appendChild(side(r.ghost, v.start, 'ghost', '👻 Ghost of ' + r.ghost.name)); return; }
+    if (r.role !== 'match') return;
+    var many = r.others.length > 1;
+    box.classList.toggle('rp-many', many);
+    r.others.forEach(function (p) { box.appendChild(side(p, v.start, many ? 'small' : '')); });
   }
 
   function drawVs(v, r) {
@@ -289,15 +298,12 @@
     var screen = $('rpVs');
     screen.classList.toggle('practice', r.role === 'practice');
     fill($('rpVsMe'), side(meAsPerson(v), v.start));
+    drawFoes($('rpVsThem'), v, r);
     var note = '';
-    if (r.role === 'match') fill($('rpVsThem'), side(r.opp, v.start, 'Left the game'));
-    else {
-      fill($('rpVsThem'), null);
-      note = r.role === 'sat' ? 'No opponent this round. Answer right to stay safe!'
-        : v.out ? comebackNote(v)
-          : 'You join the battle next round. Practice this one!';
-    }
-    screen.querySelector('.rp-vs-word').hidden = r.role !== 'match';
+    if (r.role === 'ghost') note = 'You battle a ghost this round: beat ' + (r.ghost ? r.ghost.name + '’s' : 'their') + ' answer to win.';
+    else if (r.role === 'match' && r.others.length > 1) note = (r.others.length + 1) + ' heroes face off: the fastest right answer wins!';
+    else if (r.role === 'practice') note = v.out ? reviveNote(v) : 'You join the battle next round. Practice this one!';
+    screen.querySelector('.rp-vs-word').hidden = r.role === 'practice';
     if (!note && v.shieldOn && !v.shield && v.streak) note = 'Win ' + (v.shieldRun - v.streak) + ' more in a row for a shield!';
     $('rpVsNote').textContent = note || (r.last ? '' : v.left + ' heroes left');
   }
@@ -305,8 +311,10 @@
   var shownQ = '';
   function drawQuestion(v, r) {
     show('rpQ');
-    $('rpQTag').textContent = r.role === 'practice' ? 'Practice' : r.role === 'sat' ? 'Round ' + r.n + ': answer alone' : 'Round ' + r.n + ' vs ' + (r.opp ? r.opp.name : '');
-    fill($('rpQEnergy'), r.role === 'practice' ? null : energy(v.energy, v.start, v.shield));
+    $('rpQTag').textContent = r.role === 'practice' ? 'Practice'
+      : r.role === 'ghost' ? 'Round ' + r.n + ' vs a ghost'
+        : 'Round ' + r.n + ' vs ' + (r.others.length > 1 ? r.others.length + ' heroes' : r.others[0] ? r.others[0].name : '');
+    fill($('rpQEnergy'), r.role === 'practice' ? null : hp(v.energy, v.start, v.shield));
     var key = r.n + '|' + r.q.text;
     if (shownQ !== key) {
       shownQ = key;
@@ -317,10 +325,12 @@
       var box = $('rpAnswers');
       box.textContent = '';
       r.q.opts.forEach(function (o, i) {
-        var b = mk('button', 'rp-answer');
+        var pic = (r.q.imgs || [])[i];
+        var b = mk('button', 'rp-answer' + (pic ? ' has-img' : ''));
         b.type = 'button';
         b.style.setProperty('--tile', COLORS[i % 4]);
-        b.appendChild(mk('span', 'rp-answer-text', o));
+        if (pic) { var im = mk('img', 'rp-answer-img'); im.alt = o || 'Answer ' + (i + 1); im.src = pic; im.referrerPolicy = 'no-referrer'; b.appendChild(im); }
+        if (o) b.appendChild(mk('span', 'rp-answer-text', o));
         b.addEventListener('click', function () {
           if (view && view.round && view.round.mine) return;
           [].forEach.call(box.querySelectorAll('button'), function (x) { x.disabled = true; });
@@ -336,20 +346,19 @@
       b.classList.toggle('picked', answered && r.mine.k === i);
     });
     $('rpSent').hidden = !answered;
-    $('rpSentNote').textContent = r.role === 'match' ? 'Waiting for ' + (r.opp ? r.opp.name : 'the others') + '...' : 'Waiting for the others...';
+    $('rpSentNote').textContent = r.role === 'match' && r.others.length === 1 ? 'Waiting for ' + r.others[0].name + '...' : 'Waiting for the others...';
   }
 
   function drawResult(v, r) {
     show('rpResult');
     var banner = $('rpBanner');
     var word, cls;
-    if (r.back) { word = 'Comeback!'; cls = 'win'; }
+    if (r.back) { word = 'Revived!'; cls = 'win'; }
     else if (r.role === 'practice') { word = r.ok ? 'Correct!' : 'Not this time'; cls = r.ok ? 'win' : 'lose'; }
     else if (r.knockedOut) { word = 'Eliminated'; cls = 'out'; }
     else if (r.blocked) { word = 'Shield saved you!'; cls = 'win'; }
-    else if (r.role === 'sat') { word = r.ok ? 'Safe!' : 'Missed it'; cls = r.ok ? 'win' : 'lose'; }
     else if (r.won) { word = 'Victory!'; cls = 'win'; }
-    else if (r.lost && r.oppOk === false && !r.ok) { word = 'Both missed'; cls = 'lose'; }
+    else if (r.lost && r.role === 'match' && !r.anyRight) { word = r.others.length > 1 ? 'Nobody got it' : 'Both missed'; cls = 'lose'; }
     else if (r.lost) { word = 'Defeated'; cls = 'lose'; }
     else { word = 'Safe'; cls = 'win'; }
     banner.textContent = word;
@@ -357,26 +366,29 @@
     var vs = $('rpResultVs');
     vs.textContent = '';
     var how = function (ok, ms, answered) { return ok ? '✔ ' + secs(ms) : answered ? '✖ wrong' : '✖ no answer'; };
-    var mine = mk('div', 'rp-res-side' + (r.won || (r.role !== 'match' && r.ok) ? ' won' : r.lost ? ' lost' : ''));
-    mine.appendChild(heroImg(v.hero));
+    var mine = mk('div', 'rp-res-side' + (r.won || (r.role === 'practice' && r.ok) ? ' won' : r.lost ? ' lost' : ''));
+    mine.appendChild(heroImg(v.hero, '', !!v.out));
     mine.appendChild(mk('span', 'rp-res-name', 'You'));
     mine.appendChild(mk('span', 'rp-res-how', how(r.ok, r.mine ? r.mine.ms : 0, !!r.mine)));
     vs.appendChild(mine);
-    if (r.role === 'match' && r.opp) {
-      vs.appendChild(mk('span', 'rp-vs-small', 'VS'));
-      var them = mk('div', 'rp-res-side' + (r.won ? ' lost' : r.oppOk ? ' won' : ' lost'));
-      them.appendChild(heroImg(r.opp.hero));
-      them.appendChild(mk('span', 'rp-res-name', r.opp.name));
-      them.appendChild(mk('span', 'rp-res-how', how(r.oppOk, r.oppMs, !!r.oppMs)));
+    var foes = r.role === 'ghost' && r.ghost ? [r.ghost] : r.role === 'match' ? r.others : [];
+    if (foes.length) vs.appendChild(mk('span', 'rp-vs-small', 'VS'));
+    foes.forEach(function (p) {
+      var ghost = r.role === 'ghost';
+      var them = mk('div', 'rp-res-side' + (ghost ? ' ghost' : '') + (!r.won && p.ok ? ' won' : ' lost'));
+      them.appendChild(heroImg(p.hero, '', !ghost && !!p.out));
+      them.appendChild(mk('span', 'rp-res-name', ghost ? '👻 Ghost of ' + p.name : p.name));
+      them.appendChild(mk('span', 'rp-res-how', how(p.ok, p.ms, p.answered)));
       vs.appendChild(them);
-    }
-    $('rpAnswerWas').textContent = r.c >= 0 && r.q ? 'The answer was: ' + r.q.opts[r.c] : '';
-    fill($('rpResultEnergy'), r.role === 'practice' && v.out ? null : energy(v.energy, v.start, v.shield));
-    $('rpResultNote').textContent = r.back ? '3 right in a row! You are back in the battle next round with 1 energy.'
-      : r.knockedOut || (v.out && r.role === 'practice') ? comebackNote(v)
-        : r.earned ? 'You won 3 in a row and earned a shield! It blocks the next energy you would lose.'
-          : r.blocked ? 'Your shield blocked the lost energy. It is used up now.'
-            : r.sudden ? 'Sudden death: nobody is out this round.'
+    });
+    var right = r.c >= 0 && r.q ? (r.q.opts[r.c] || 'the picture answer') : '';
+    $('rpAnswerWas').textContent = right ? 'The answer was: ' + right : '';
+    fill($('rpResultEnergy'), r.role === 'practice' && v.out ? null : hp(v.energy, v.start, v.shield));
+    $('rpResultNote').textContent = r.back ? '3 right in a row! You are revived and back in the battle next round with 1 HP.'
+      : r.knockedOut || (v.out && r.role === 'practice') ? reviveNote(v)
+        : r.earned ? 'You won 3 in a row and earned a shield! It blocks the next HP you would lose.'
+          : r.blocked ? 'Your shield blocked the lost HP. It is used up now.'
+            : r.sudden ? 'Sudden death: nobody is eliminated this round.'
               : r.last ? 'That was the last round.' : v.left + ' heroes left.';
   }
 
@@ -396,9 +408,9 @@
       li.appendChild(mk('span', 'rb-step-place', ordinal(p.place)));
       pod.appendChild(li);
     });
-    var more = d.right + (d.right === 1 ? ' right answer' : ' right answers') + ' and ' + v.wins + (v.wins === 1 ? ' match won.' : ' matches won.');
+    var more = d.right + (d.right === 1 ? ' right answer' : ' right answers') + ' and ' + v.wins + (v.wins === 1 ? ' win.' : ' wins.');
     if (d.avg) more += ' Your average right answer took ' + secs(d.avg) + '.';
-    if (d.practice && (d.practice.right || d.practice.wrong)) more += ' After you were out you got ' + d.practice.right + ' of ' + (d.practice.right + d.practice.wrong) + ' practice questions right.';
+    if (d.practice && (d.practice.right || d.practice.wrong)) more += ' After you were eliminated you got ' + d.practice.right + ' of ' + (d.practice.right + d.practice.wrong) + ' practice questions right.';
     $('rpDoneMore').textContent = more;
     if (was && was.phase === 'play' && d.place === 1 && window.IS8Celebrate) try { IS8Celebrate.start({}); } catch (e) { /* only confetti */ }
   }
@@ -408,4 +420,9 @@
   var c0 = location.hash.slice(1).toUpperCase();
   if (CODE.test(c0)) start(c0);
   else show('rpCode');
+  // A new game's link opened on this same page: join that game.
+  window.addEventListener('hashchange', function () {
+    var c = location.hash.slice(1).toUpperCase();
+    if (CODE.test(c) && c !== code) start(c);
+  });
 })();

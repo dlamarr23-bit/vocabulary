@@ -37,7 +37,10 @@ const ART = {
   typed: '<svg viewBox="0 0 64 40"><rect class="b" x="6" y="9" width="52" height="22" rx="6"/><rect class="a" x="13" y="16" width="8" height="8" rx="2"/><rect class="a" x="24" y="16" width="8" height="8" rx="2"/><rect class="a" x="44" y="13" width="3" height="14" rx="1.5"/></svg>',
   volley: TILE.volley,
   blast: TILE.blast,
-  match: TILE.mmatch
+  match: TILE.mmatch,
+  // Two heroes face to face, and a lightning bolt.
+  royale: '<svg viewBox="0 0 32 32" aria-hidden="true"><rect class="b" x="2" y="10" width="11" height="12" rx="3"/><circle class="w" cx="5.5" cy="15" r="1.4"/><circle class="w" cx="9.5" cy="15" r="1.4"/><rect class="a" x="19" y="10" width="11" height="12" rx="3"/><circle class="w" cx="22.5" cy="15" r="1.4"/><circle class="w" cx="26.5" cy="15" r="1.4"/><path class="a" d="M16.8 6l-3.2 8.5h2.7l-1.7 8.5 4.6-10.5h-2.8l2-6.5z"/></svg>',
+  surge: '<svg viewBox="0 0 32 32" aria-hidden="true"><circle class="b" cx="16" cy="16" r="12.5"/><path class="a" d="M18.5 4.5l-9.5 13h6.2l-2.2 10 9.8-13.5h-6.3z"/></svg>'
 };
 
 // The music bar's mute button picture (a speaker).
@@ -76,17 +79,27 @@ export function renderLiveHost(chapters, units, sets) {
 <p class="lv-lede">Pick a game, a set and how to play. Players join on their own screens with a code.</p>
 </div>
 <div class="lv-resume" id="lvResume" hidden><span id="lvResumeText"></span> <button type="button" class="btn fc-small" id="lvResumeBtn">Go back to it</button></div>
-<div class="lv-resume"><span><strong>Battle Royale:</strong> students face a random classmate each round with superhero avatars. Play your own question sets or any flashcard set.</span> <a class="btn fc-small" href="../royale/">Open Battle Royale</a></div>
 <p class="lv-note" id="lvSetupNote" role="status"></p>
-<label class="lv-field"><span class="lv-q">Flashcard set</span>
-<select id="lvSet">${list.map((s) => `<option value="${esc(s.id)}">${esc(s.where)}: ${esc(s.title)} (${s.count} terms)</option>`).join('')}</select></label>
+<div class="lv-sets">
+<label class="lv-field" id="lvSetField"><span class="lv-q">Flashcard set</span>
+<select id="lvSet">${list.map((s) => `<option value="${esc(s.id)}">${esc(s.where)}: ${esc(s.title)} (${s.count} terms)</option>`).join('')}</select>
+<span class="lv-small">For Vocab Live, Blast and Match.</span></label>
+<div class="lv-field" id="lvQsetField"><label class="lv-q" for="lvQset">Question set</label>
+<select id="lvQset"><option value="">Loading your question sets...</option></select>
+<span class="lv-small">For Battle Royale and Surge Showdown. <a href="../royale/#new">Make a new question set</a></span></div>
+</div>
 
 <fieldset class="lv-group"><legend class="lv-q">Which game?</legend>
-<div class="lv-choices lv-choices-3">
+<div class="lv-choices lv-choices-5">
 ${choiceCard('lvGame', 'volley', 'Vocab Live', 'Teams race to answer in a row. Each teammate holds some of the answers.', ART.volley, true)}
 ${choiceCard('lvGame', 'blast', 'Blast', 'Teams of up to 4 blast the asteroid with the right term before time runs out.', ART.blast, false)}
 ${choiceCard('lvGame', 'match', 'Match', 'Everyone races to match every term to its definition. First done wins.', ART.match, false)}
+${choiceCard('lvGame', 'royale', 'Battle Royale', 'Students face off with superhero avatars. A wrong or slower answer costs 1 HP. Last hero standing wins.', ART.royale, false)}
+${choiceCard('lvGame', 'surge', 'Surge Showdown', 'Team battle: earn energy with right answers, then attack, heal and shield. Opens Surge Showdown.', ART.surge, false)}
 </div></fieldset>
+
+<div class="lv-other" id="lvOther" hidden><p id="lvOtherText"></p></div>
+<div id="lvClassic">
 
 <fieldset class="lv-group" data-for="volley"><legend class="lv-q">How would you like your teams arranged?</legend>
 <div class="lv-choices lv-choices-3">
@@ -138,6 +151,7 @@ ${choiceCard('lvWho', 'typed', 'Students type their name', 'First name and last 
 </div>
 <label class="lv-default lv-demo-pick"><input type="checkbox" id="lvDemo"> <span><strong>Demo mode: 40 pretend students</strong> <span class="lv-opt-note">Try the game on your own. Pretend students join using your settings, play, and get some answers right and some wrong. Real students can still join with the code.</span></span></label>
 <label class="lv-default"><input type="checkbox" id="lvSaveDefault"> <span><strong>Save these as my default settings</strong> <span class="lv-opt-note">Next time, this page starts with the same game, set, choices and music.</span></span></label>
+</div>
 <p class="lv-error" id="lvSetupError" role="alert"></p>
 <button type="button" class="btn lv-big" id="lvCreate">Create game</button>
 </section>

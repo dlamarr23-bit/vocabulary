@@ -76,8 +76,11 @@
       $('lvResume').hidden = false;
     }
     // Opened from a set page's game card: live/?game=blast#<set>
-    var kind = (location.search.match(/[?&]game=(volley|blast|match)/) || [])[1];
+    var kind = (location.search.match(/[?&]game=(volley|blast|match|royale|surge)/) || [])[1];
     if (kind) document.querySelector('input[name="lvGame"][value="' + kind + '"]').checked = true;
+    // The question sets come from the site; the saved pick waits for them.
+    $('lvQset').dataset.want = (defaults && defaults.lvQset) || '';
+    loadQsets();
     syncOptions();
     // Players per team follows the game unless his default is for this game.
     if (defaults && defaults.lvGame === (picked('lvGame') || 'volley') && defaults.lvSize) $('lvSize').value = defaults.lvSize;
@@ -86,7 +89,7 @@
   // Save these as my default settings (Gennaro, 2026-09-29): every choice on
   // the setup screen, kept in this browser and filled in next time.
   var DEFAULT_RADIOS = ['lvGame', 'lvTeams', 'lvPrompt', 'lvWho'];
-  var DEFAULT_SELECTS = ['lvSet', 'lvMinutes', 'lvPairs', 'lvPause', 'lvTarget', 'lvWinners', 'lvSize', 'lvPickTeams', 'lvLimit'];
+  var DEFAULT_SELECTS = ['lvSet', 'lvQset', 'lvMinutes', 'lvPairs', 'lvPause', 'lvTarget', 'lvWinners', 'lvSize', 'lvPickTeams', 'lvLimit'];
   var POWER_KINDS = ['shield', 'strike', 'freeze', 'glitch', 'swap', 'double', 'fifty', 'mirror'];
   var DEFAULT_CHECKS = ['lvHidden', 'lvFast', 'lvPowers', 'lvDoodle'].concat(POWER_KINDS.map(function (k) { return 'lvPw-' + k; }));
   // Blast's minutes box: a whole number from 1 to 30, 5 if it is left empty.
@@ -124,10 +127,47 @@
     var el = document.querySelector('input[name="' + name + '"]:checked');
     return el ? el.value : '';
   }
+  // Battle Royale and Surge Showdown (Donny, 2026-10-30) have their own
+  // screens: picking one hides this page's team and game options, and Create
+  // goes on to that screen with the set picked here.
+  var OTHER = {
+    royale: { text: 'Battle Royale has its own setup screen: HP, group size, time per question and the game clock. It plays the question set picked above, or the flashcard set when no question set is picked.', button: 'Next: Battle Royale settings' },
+    surge: { text: 'Surge Showdown opens in a new tab with the question set picked above already loaded (or the flashcard set, made into multiple choice). Set up the teams there and create the game.', button: 'Open Surge Showdown' }
+  };
+  function syncOther(kind) {
+    var other = OTHER[kind];
+    $('lvClassic').hidden = !!other;
+    $('lvOther').hidden = !other;
+    if (other) $('lvOtherText').textContent = other.text;
+    $('lvCreate').textContent = other ? other.button : 'Create game';
+    // The set box that game does not use is dimmed.
+    $('lvSetField').classList.toggle('off', kind === 'surge' && !!$('lvQset').value);
+    $('lvQsetField').classList.toggle('off', !other);
+  }
+  function loadQsets() {
+    fetch('/api/qsets', { headers: { 'X-IS8-Editor': '1' }, credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (d) {
+      var sel = $('lvQset');
+      var want = sel.dataset.want || sel.value;
+      sel.textContent = '';
+      var none = mk('option', '', (d.sets || []).length ? 'Pick a question set' : 'No question sets yet');
+      none.value = '';
+      sel.appendChild(none);
+      (d.sets || []).forEach(function (s) {
+        var o = mk('option', '', s.title + ' (' + s.count + (s.count === 1 ? ' question)' : ' questions)'));
+        o.value = s.id;
+        sel.appendChild(o);
+      });
+      if (want && (d.sets || []).some(function (s) { return s.id === want; })) sel.value = want;
+      syncOptions();
+    }, function () { $('lvQset').textContent = ''; });
+  }
+  $('lvQset').addEventListener('change', function () { syncOptions(); });
+
   // Each game shows only its own options.
   var lastKind = '';
   function syncOptions() {
     var kind = picked('lvGame') || 'volley';
+    syncOther(kind);
     [].forEach.call(document.querySelectorAll('#lvSetup [data-for]'), function (el) {
       el.hidden = el.getAttribute('data-for').split(' ').indexOf(kind) === -1;
     });
@@ -144,10 +184,57 @@
   document.querySelectorAll('input[name="lvTeams"], input[name="lvGame"]').forEach(function (r) { r.addEventListener('change', syncOptions); });
   $('lvPowers').addEventListener('change', syncOptions);
 
+  // Surge Showdown's own site; its host screen reads a set sent as #qs=.
+  var SURGE = 'https://surge-showdown.pages.dev/surge/host';
+  // A flashcard set as multiple choice: the definition, then pick the term
+  // (wrong answers are three other terms from the set), as Battle Royale does.
+  function cardsToQuestions(cards) {
+    var terms = [];
+    cards.forEach(function (c) { if (c.term && terms.indexOf(c.term) < 0) terms.push(c.term); });
+    return cards.filter(function (c) { return c.term && c.def; }).map(function (c) {
+      var others = terms.filter(function (t) { return t.toLowerCase() !== c.term.toLowerCase(); });
+      for (var i = others.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = others[i]; others[i] = others[j]; others[j] = t; }
+      return { q: c.def, img: '', a: c.term, ai: '', w: others.slice(0, 3), wi: [] };
+    }).filter(function (q) { return q.w.length; });
+  }
+  function openSurge() {
+    var qid = $('lvQset').value;
+    // Opened now, while the click still counts, so no pop-up blocker stops it.
+    var win = window.open('', '_blank');
+    var got = qid
+      ? fetch('/api/qsets/' + encodeURIComponent(qid), { headers: { 'X-IS8-Editor': '1' }, credentials: 'same-origin' }).then(function (r) { return r.json(); })
+        .then(function (s) { if (!s.questions) throw new Error(s.error || 'That question set did not open.'); return { name: s.title, questions: s.questions }; })
+      : ED.getSet($('lvSet').value).then(function (s) {
+        var title = (sets.filter(function (x) { return x.id === $('lvSet').value; })[0] || {}).title || (s && s.title) || 'Flashcard set';
+        return { name: title, questions: cardsToQuestions((s && s.cards) || []) };
+      });
+    got.then(function (set) {
+      // Surge Showdown's question shape: correct, wrong, and pictures cImg, wImg.
+      var qs = set.questions.map(function (x) { return { q: x.q, img: x.img || '', correct: x.a, cImg: x.ai || '', wrong: x.w, wImg: x.wi || [] }; });
+      var json = JSON.stringify({ name: set.name, questions: qs });
+      var b64 = btoa(unescape(encodeURIComponent(json))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      if (win) win.location.href = SURGE + '#qs=' + b64;
+      else location.href = SURGE + '#qs=' + b64;
+    }).catch(function (err) {
+      if (win) win.close();
+      $('lvSetupError').textContent = err.message;
+    });
+  }
+
   $('lvCreate').addEventListener('click', function () {
     var btn = this;
     $('lvSetupError').textContent = '';
     $('lvSetupNote').textContent = '';
+    var kind0 = picked('lvGame');
+    if (kind0 === 'royale' || kind0 === 'surge') {
+      if ($('lvSaveDefault').checked) { var sd0 = readSaved(); sd0.defaults = collectDefaults(); writeSaved(sd0); }
+      if (kind0 === 'royale') {
+        location.href = '../royale/' + ($('lvQset').value ? '#qset=' + encodeURIComponent($('lvQset').value) : '#set=' + encodeURIComponent($('lvSet').value));
+        return;
+      }
+      openSurge();
+      return;
+    }
     btn.disabled = true;
     btn.textContent = 'Making the game...';
     $('lvResume').hidden = true;

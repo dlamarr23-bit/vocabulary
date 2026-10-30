@@ -854,15 +854,29 @@ async function qsetIndex(env) {
   return Array.isArray(list) ? list : [];
 }
 
+// Each question: q, its picture img, the right answer a with its picture ai,
+// and up to 3 wrong answers w with their pictures wi. An answer may be words,
+// a picture or both (Donny, 2026-10-30: pictures for answers).
 function cleanQuestions(list) {
   const out = [];
+  const pic = (v) => { const s = cleanText(v, 500); return /^(\/|https:\/\/)/.test(s) ? s : ''; };
   for (const x of Array.isArray(list) ? list.slice(0, 500) : []) {
     const q = cleanText(x && x.q, 600);
+    const img = pic(x && x.img);
     const a = cleanText(x && x.a, 200);
-    const w = (Array.isArray(x && x.w) ? x.w : []).map((v) => cleanText(v, 200)).filter((v) => v && v.toLowerCase() !== a.toLowerCase()).slice(0, 3);
-    const img = cleanText(x && x.img, 500);
-    if (!q || !a || !w.length) continue;
-    out.push({ q, a, w, img: /^(\/|https:\/\/)/.test(img) ? img : '' });
+    const ai = pic(x && x.ai);
+    const pics = Array.isArray(x && x.wi) ? x.wi : [];
+    const w = [];
+    const wi = [];
+    (Array.isArray(x && x.w) ? x.w : []).forEach((v, i) => {
+      const t = cleanText(v, 200);
+      const p = pic(pics[i]);
+      if ((!t && !p) || w.length >= 3 || (t && t.toLowerCase() === a.toLowerCase())) return;
+      w.push(t);
+      wi.push(p);
+    });
+    if ((!q && !img) || (!a && !ai) || !w.length) continue;
+    out.push({ q, a, w, img, ai, wi });
   }
   return out;
 }
@@ -911,14 +925,17 @@ async function qsetImport(request) {
     let skipped = 0;
     for (const x of info.questions) {
       const s = (x && x.structure) || {};
-      const opts = (Array.isArray(s.options) ? s.options : []).map((o) => quizText(o && o.text));
-      const right = (Array.isArray(s.answer) ? s.answer : [s.answer]).filter((i) => Number.isInteger(i) && opts[i]);
-      const img = ((s.query && s.query.media) || []).find((m) => m && m.type === 'image' && /^https:\/\//.test(m.url || ''));
+      const picOf = (part) => (((part && part.media) || []).find((m) => m && m.type === 'image' && /^https:\/\//.test(m.url || '')) || {}).url || '';
+      const options = Array.isArray(s.options) ? s.options : [];
+      const opts = options.map((o) => quizText(o && o.text));
+      const pics = options.map(picOf);
+      const right = (Array.isArray(s.answer) ? s.answer : [s.answer]).filter((i) => Number.isInteger(i) && (opts[i] || pics[i]));
+      const img = picOf(s.query);
       const q = quizText(s.query && s.query.text) || (img ? 'Look at the picture.' : '');
-      // Multiple choice only, and every answer needs words (picture answers cannot show).
-      const wrong = opts.filter((t, i) => !right.includes(i));
-      if (!['MCQ', 'MSQ'].includes(s.kind) || !q || !right.length || !wrong.length || opts.some((t) => !t)) { skipped += 1; continue; }
-      questions.push({ q, a: opts[right[0]], w: wrong.slice(0, 3), img: img ? img.url : '' });
+      // Multiple choice only; an answer may be words, a picture or both.
+      const wrong = opts.map((t, i) => i).filter((i) => !right.includes(i) && (opts[i] || pics[i]));
+      if (!['MCQ', 'MSQ'].includes(s.kind) || !q || !right.length || !wrong.length) { skipped += 1; continue; }
+      questions.push({ q, a: opts[right[0]], ai: pics[right[0]], w: wrong.slice(0, 3).map((i) => opts[i]), wi: wrong.slice(0, 3).map((i) => pics[i]), img });
     }
     return json({ kind: 'quiz', title: quizText(info.name).slice(0, 120), questions: cleanQuestions(questions), skipped });
   }
