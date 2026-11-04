@@ -17,13 +17,12 @@ export function renderLeaderboard() {
   }) +
     topbar(depth, 'leaderboard') +
     drawer(depth, [], null, null) +
-    `<div class="hero hero-page"><div class="hero-inner">
+    `<div class="hero hero-page hero-section"><div class="hero-inner">
 <div>
-<span class="eyebrow">Class Pass</span>
 <h1>Leaderboard</h1>
 <p class="lede">Game wins, fastest times and practice for every class. Sign in with Class Pass when you play or study, and your results count here.</p>
 </div>
-<div class="hero-icon lb-hero-icon" aria-hidden="true"><svg viewBox="0 0 64 64"><rect x="6" y="30" width="16" height="26" rx="3" fill="var(--accent-tint)"/><rect x="24" y="18" width="16" height="38" rx="3" fill="var(--accent)"/><rect x="42" y="38" width="16" height="18" rx="3" fill="var(--accent-tint)"/><path d="M32 4l2.6 5.3 5.8.8-4.2 4.1 1 5.8L32 17.3 26.8 20l1-5.8-4.2-4.1 5.8-.8z" fill="var(--brand-gold)"/></svg></div>
+<img class="hero-pic" src="${v('leaderboard-icon.webp')}" width="240" height="160" alt="">
 </div></div>
 <main id="main" class="container lb-page">
 <form class="lb-filters" id="lbFilters" hidden>

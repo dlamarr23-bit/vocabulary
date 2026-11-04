@@ -154,6 +154,16 @@ html:not(.is-teacher) [data-teacher-only]{ display:none !important; }
 .hero-icon{ justify-self:end; }
 .hero-icon svg{ width:180px; height:180px; color:var(--accent); }
 @media (max-width:700px){ .hero-inner{ grid-template-columns:1fr; } .hero-icon{ display:none; } }
+/* Review and Leaderboard have the same header as the physical science site's section pages (its style.css
+   .hero-section; the Sims page copies it too): no label above the title, the section's picture on the right.
+   Inside that site the header also takes its color. */
+.hero.hero-section .hero-inner{ grid-template-columns:minmax(0,1fr) 240px; padding:34px 20px; }
+.hero-pic{ display:block; justify-self:end; width:240px; height:160px; border-radius:18px; box-shadow:var(--shadow-sm); }
+.in-book .hero.hero-section{ background:linear-gradient(150deg,#eaf1f6,#fff 65%); }
+@media (max-width:700px){
+  .hero.hero-section .hero-inner{ grid-template-columns:1fr; padding:26px 20px; }
+  .hero-section .hero-pic{ display:none; }
+}
 
 /* ---------------- callout ---------------- */
 .callout{

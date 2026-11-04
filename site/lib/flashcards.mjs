@@ -406,14 +406,13 @@ export function renderFlashcardIndex(chapters, lib) {
   }) +
     topbar(depth, 'flashcards') +
     drawer(depth, chapters, null, null) +
-    `<div class="hero hero-page"><div class="hero-inner">
+    `<div class="hero hero-page hero-section"><div class="hero-inner">
 <div>
-<span class="eyebrow">Study tools</span>
 <h1>Review</h1>
 <p class="lede">Study a set on your own, or play it as a class.</p>
 ${joinBox('../')}
 </div>
-<div class="hero-icon" data-icon="flashcards"></div>
+<img class="hero-pic" src="${v('review-icon.webp')}" width="240" height="160" alt="">
 </div></div>
 <main id="main" class="container fc-page fx-page">
 <div class="fx-teacher" id="fxTeacher" hidden></div>
