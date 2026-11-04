@@ -548,6 +548,17 @@
     });
     window.addEventListener('pageshow', tellBook);
     window.addEventListener('hashchange', tellBook);
+    // Light or dark (Donny, 2026-11-03): that site's Class Pass menu has the switch, and its page tells this
+    // one ({vocabTheme}), now and every time a page opens here. The line in each page's <head> draws the
+    // page in the last mode it named (vocab-theme) until then.
+    window.addEventListener('message', function (e) {
+      if (e.origin !== BOOK_SITE || e.source !== window.parent) return;
+      var t = e.data && e.data.vocabTheme;
+      if (t !== 'light' && t !== 'dark') return;
+      if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+      else document.documentElement.removeAttribute('data-theme');
+      try { localStorage.setItem('vocab-theme', t); } catch (err) { /* this page only */ }
+    });
   }
 
   document.addEventListener('DOMContentLoaded', function () {

@@ -24,6 +24,7 @@ export function head({ title, description, unitId, depth, extraHead = '' }) {
 <title>${esc(title)}</title>
 <link rel="icon" href="${FAVICON}">
 <link rel="stylesheet" href="${up}assets/book.css">
+<script>/* dark mode, only inside the physical science site, before the page draws: its page names the mode (?theme=), else the last one it named (book.js keeps it up to date) */(function(){if(window.parent===window)return;var t="";try{t=new URLSearchParams(location.search).get("theme")||""}catch(e){}try{if(t==="dark"||t==="light")localStorage.setItem("vocab-theme",t);else t=localStorage.getItem("vocab-theme")||""}catch(e){}if(t==="dark")document.documentElement.setAttribute("data-theme","dark")})()</script>
 <script src="${up}assets/icons.js" defer></script>
 <script src="${up}assets/book.js" defer></script>
 <script src="${up}assets/pass.js?v=${assetVersion('pass.js')}" defer></script>
