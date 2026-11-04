@@ -221,10 +221,36 @@
       sec.appendChild(grid);
       box.appendChild(sec);
     });
+    if (teacher && data.reviewGames) box.appendChild(reviewTopicsBox());
     if (!topic.startsWith('s:')) {
       box.appendChild(mk('p', 'lb-note', 'Fastest Match times show when you pick one set under Topic.'));
     }
     box.appendChild(mk('p', 'lb-note', 'How it counts: live games count when your teacher hosts them and you joined signed in with Class Pass. A win is first place. Practice counts when you finish Match, a test, or every term in Learn while signed in. Review games count your best try on each of your teacher’s review games.'));
+  }
+
+  // Teacher only (Donny, 2026-11-03): which Topic each review game shows under. A game goes with the folder or
+  // set whose name is in the game's title. A game whose sheet sent its points before the site kept titles shows
+  // under All topics only until the sheet sends them again.
+  function reviewTopicsBox() {
+    var games = data.reviewGames || [], untitled = data.reviewUntitled || 0;
+    var trouble = untitled || games.some(function (g) { return !g.topic; });
+    var details = mk('details', 'lb-roster-box');
+    if (trouble) details.open = true;
+    details.appendChild(mk('summary', null, 'Review games and their topics'));
+    details.appendChild(mk('p', 'lb-small', 'A review game shows under the Topic whose folder or set name is in the game’s title, like “Review: Kinetic Energy and Speed” under a folder called Kinetic Energy and Speed.'));
+    if (games.length) {
+      var ul = mk('ul', 'lb-small');
+      games.forEach(function (g) {
+        ul.appendChild(mk('li', null, g.title + ': ' + (g.topic ? 'shows under ' + g.topic : 'no topic yet (no folder or set name is in this title), so it shows under All topics only')));
+      });
+      details.appendChild(ul);
+    }
+    if (untitled) {
+      details.appendChild(mk('p', 'lb-small', plural(untitled, 'review game') + ' sent points before this site kept game titles, so ' + (untitled === 1 ? 'it shows' : 'they show') +
+        ' under All topics only. To fix it, open that game’s Google Sheet and click Self-Check > Send game points to the website leaderboard now. (Sheets on version 2026.11.03b or newer do this by themselves within an hour.)'));
+    }
+    if (!games.length && !untitled) details.appendChild(mk('p', 'lb-small', 'No review game has sent its points yet.'));
+    return details;
   }
 
   ['lbPeriod', 'lbTopic'].forEach(function (id) { $(id).addEventListener('change', function () { keep(); load(); }); });

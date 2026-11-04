@@ -354,18 +354,39 @@ export class Leaderboard extends DurableObject {
 
   /* ---------------- the leaderboards ---------------- */
 
-  // The review games that belong to the picked topic. A game belongs to the
-  // longest topic name (a folder or a set) found, as whole words, in its title.
-  reviewGamesFor(topicNames, picked) {
-    if (!Array.isArray(topicNames) || !Array.isArray(picked) || !picked.length) return [];
-    const names = [...new Set(topicNames.slice(0, 1000).map(topicKey).filter(Boolean))];
-    const want = new Set(picked.slice(0, 1000).map(topicKey).filter(Boolean));
-    return this.all('SELECT id, title FROM review_games').filter((g) => {
+  // Every review game the board knows the title of, with the topic it belongs
+  // to: the longest topic name (a folder or a set) found, as whole words, in
+  // its title ('' when none is). A game's title arrives with its results.
+  reviewTopics(topicNames) {
+    const byKey = new Map();
+    (Array.isArray(topicNames) ? topicNames.slice(0, 1000) : []).forEach((n) => { const k = topicKey(n); if (k && !byKey.has(k)) byKey.set(k, clean(n, 200)); });
+    const keys = [...byKey.keys()];
+    return this.all('SELECT id, title FROM review_games').map((g) => {
       const t = topicKey(g.title);
       let best = '';
-      names.forEach((n) => { if (n.length > best.length && t.includes(n)) best = n; });
-      return best && want.has(best);
-    }).map((g) => g.id);
+      keys.forEach((k) => { if (k.length > best.length && t.includes(k)) best = k; });
+      return { id: g.id, title: g.title, key: best, topic: best ? byKey.get(best) : '' };
+    });
+  }
+
+  // The review games that belong to the picked topic.
+  reviewGamesFor(topicNames, picked) {
+    if (!Array.isArray(picked) || !picked.length) return [];
+    const want = new Set(picked.slice(0, 1000).map(topicKey).filter(Boolean));
+    return this.reviewTopics(topicNames).filter((g) => g.key && want.has(g.key)).map((g) => g.id);
+  }
+
+  // For the teacher (Donny, 2026-11-03): each review game and the topic it shows
+  // under, and how many games have results but never sent a title (those show
+  // under All topics only, until the sheet sends its points again).
+  reviewGamesInfo(topicNames) {
+    const known = this.reviewTopics(topicNames);
+    const titled = new Set(known.map((g) => g.id));
+    const played = this.all("SELECT DISTINCT set_id FROM events WHERE kind = 'review'").map((r) => r.set_id);
+    return {
+      reviewGames: known.map((g) => ({ title: g.title, topic: g.topic })).sort((x, y) => x.title.localeCompare(y.title)),
+      reviewUntitled: played.filter((id) => !titled.has(id)).length
+    };
   }
 
   // b: { since (ms, 0 = all time), period ('' = every class), sets (null =
@@ -388,8 +409,9 @@ export class Leaderboard extends DurableObject {
     // class's results are thousands of rows at most.
     let q = 'SELECT email, at, day, kind, game, set_id, team, place, win, correct, ms, pairs, score, total, full FROM events WHERE at >= ?';
     const args = [since];
+    const forTeacher = b.teacher ? this.reviewGamesInfo(b.topicNames) : {};
     if (sets) {
-      if (!sets.length) return { boards: [], periods: periodsOf(roster), me: me && { name: me.name, period: me.period } };
+      if (!sets.length) return { boards: [], periods: periodsOf(roster), me: me && { name: me.name, period: me.period }, ...forTeacher };
       q += ' AND set_id IN (' + sets.map(() => '?').join(',') + ')';
       args.push(...sets);
     }
@@ -462,7 +484,7 @@ export class Leaderboard extends DurableObject {
       const mine = me && list.find((r) => r.email === me.email);
       return { id: bd.id, group: bd.group, title: bd.title, blurb: bd.blurb, unit: bd.unit, low: !!bd.low, rows: top, mine: mine && !top.some((x) => x.me) ? row(mine) : null, players: list.length };
     });
-    return { boards: out, periods: periodsOf(roster), me: me && { name: me.name, period: me.period } };
+    return { boards: out, periods: periodsOf(roster), me: me && { name: me.name, period: me.period }, ...forTeacher };
   }
 }
 
