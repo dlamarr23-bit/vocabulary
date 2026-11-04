@@ -15,7 +15,16 @@
      bar, and saves the words changed on a page of that site
      (/api/book-text/<page>);
    - the teacher's Assignment Launchpad on that site (/launchpad) gets and
-     saves its list of assignments (/api/launchpad, teacher only).
+     saves its list of assignments (/api/launchpad, teacher only);
+   - a guest (a teacher from another school, Donny 2026-11-03) types the
+     guest code on that site's sign-in screen; the key it gives is kept on
+     this device (is8-guest-v1) and checked each time a page opens, so a new
+     code signs them out. The teacher sees and changes the code
+     (/api/guest/code).
+
+   The state also says whether this frame can keep a sign-in at all (kept):
+   some browsers block a framed site's storage, and then the page around it
+   keeps its own record.
 
    Messages go only to and from https://physical-science-8.pages.dev, as
    { vocabBridge: { type, ... } }. A question with an id gets one answer:
@@ -29,11 +38,33 @@
 
   var teacher = false, checked = false;
 
+  var GUEST = 'is8-guest-v1', guestMem = '', kept = true;
+  try { localStorage.setItem(GUEST + '-test', '1'); localStorage.removeItem(GUEST + '-test'); } catch (e) { kept = false; }
+  function guestKey() {
+    var k = guestMem;
+    if (kept) try { k = localStorage.getItem(GUEST) || ''; } catch (e) { /* kept for this page only */ }
+    return /^[0-9a-f]{64}$/.test(k) ? k : '';
+  }
+  function setGuest(k) {
+    guestMem = k;
+    if (kept) try { if (k) localStorage.setItem(GUEST, k); else localStorage.removeItem(GUEST); } catch (e) { /* kept for this page only */ }
+    state();
+  }
+
   function tell(msg) {
     try { window.parent.postMessage({ vocabBridge: msg }, BOOK_SITE); } catch (e) { /* the page around it went away */ }
   }
   function state() {
-    tell({ type: 'state', me: window.IS8Pass.me(), teacher: teacher, checked: checked });
+    tell({ type: 'state', me: window.IS8Pass.me(), teacher: teacher, checked: checked, guest: Boolean(guestKey()), kept: kept });
+  }
+
+  // Still a guest? Only a clear "no" from the site (a new code) signs the guest out, not being offline.
+  function guestCheck() {
+    var k = guestKey();
+    if (!k) return;
+    fetch('/api/guest', { cache: 'no-store', headers: { 'X-Guest': k } })
+      .then(function (r) { return r.ok ? r.json() : {}; })
+      .then(function (d) { if (d && d.guest === false && guestKey() === k) setGuest(''); }, function () { /* offline: try again next page */ });
   }
 
   // Is the teacher password in on this device? (The cookie is the site's own; this page can send it.)
@@ -90,9 +121,22 @@
       case 'launchpad': reply(call('GET', 'launchpad').catch(signedOut)); break;
       case 'saveLaunchpad': reply(call('PUT', 'launchpad', { items: m.items || [], base: m.base || 0 }).catch(signedOut)); break;
       case 'refresh': session(); break;
+      // a guest: the code gives a key; signing out forgets it
+      case 'guest':
+        reply(call('POST', 'guest', { code: String(m.code || '') }).then(function (d) {
+          if (!/^[0-9a-f]{64}$/.test(String(d.key || ''))) throw new Error('That did not work. Try again.');
+          setGuest(d.key);
+          return { guest: true };
+        }));
+        break;
+      case 'guestOut': setGuest(''); break;
+      // the teacher: the guest code, and changing it
+      case 'guestCode': reply(call('GET', 'guest/code').catch(signedOut)); break;
+      case 'saveGuestCode': reply(call('PUT', 'guest/code', { code: String(m.code || '') }).catch(signedOut)); break;
     }
   });
 
   window.IS8Pass.onChange(state);
   session();
+  guestCheck();
 })();

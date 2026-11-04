@@ -18,6 +18,8 @@
 //     pages (/api/book-text/<page>), which those pages ask for as they open
 //   - keeps the teacher's Assignment Launchpad list for that site's
 //     /launchpad page (/api/launchpad), which only the teacher can see
+//   - keeps the guest code that lets a teacher from another school into that
+//     site without Class Pass (/api/guest, /api/guest/code for the teacher)
 //   - keeps the multiple choice question sets Battle Royale plays
 //     (/api/qsets), which only the teacher can see
 //
@@ -534,6 +536,8 @@ async function api(request, env, url) {
   // so nothing can be changed from outside the editor.
   if (method !== 'GET' && request.headers.get('X-IS8-Editor') !== '1') return json({ error: 'Not allowed.' }, 403);
 
+  // A guest's way into the physical science site (the guest code; no teacher password needed).
+  if (a === 'guest' && !b) return guestApi(request, env);
   if (a === 'login' && method === 'POST') return login(request, env);
   if (a === 'logout' && method === 'POST') return signedCookies(json({ ok: true }), '', 0);
   if (!(await isEditor(request, env))) return json({ error: 'Sign in with the teacher password first.' }, 401);
@@ -545,6 +549,7 @@ async function api(request, env, url) {
   if (a === 'book-text' && b && !c && method === 'PUT') return putBookText(request, env, b);
   if (a === 'launchpad' && !b && method === 'GET') return getLaunchpad(env);
   if (a === 'launchpad' && !b && method === 'PUT') return putLaunchpad(request, env);
+  if (a === 'guest' && b === 'code' && !c) return guestCodeApi(request, env);
   if (a === 'roster') return rosterApi(request, env, url, b);
   if (a === 'review' && b === 'key' && !c && method === 'GET') return json({ key: await reviewKey(env) });
   if (a === 'suggest' && !b && method === 'GET') return suggest(env, url);
@@ -668,6 +673,56 @@ async function putLaunchpad(request, env) {
   const saved = Date.now();
   await env.FLASHCARDS.put('launchpad', JSON.stringify({ items, saved }));
   return json({ ok: true, count: items.length, saved });
+}
+
+/* ---------------- the guest code for the physical science site ---------------- */
+
+// Students sign in with Class Pass to use the physical science site (Donny, 2026-11-03). A teacher from
+// another school has no account on the class list, so Donny gives them a guest code: they type it once on
+// that site's sign-in screen, and the key it gives is kept on their device by the bridge. The code and its
+// key are kept here (KV guest-pass). A new code makes a new key, which signs out everyone who used the
+// old one; no code saved means no guests.
+const GUEST_CODE = /^[a-z0-9][a-z0-9 -]{6,38}[a-z0-9]$/;
+const guestPlain = (s) => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+
+async function guestApi(request, env) {
+  const saved = await env.FLASHCARDS.get('guest-pass', 'json');
+  // Still a guest? The bridge sends the key back in X-Guest each time a page opens.
+  if (request.method === 'GET') {
+    const key = String(request.headers.get('X-Guest') || '');
+    return json({ guest: Boolean(saved && /^[0-9a-f]{64}$/.test(key) && same(key, saved.key)) });
+  }
+  if (request.method !== 'POST') return json({ error: 'Not found.' }, 404);
+  let body;
+  try { body = await request.json(); } catch { body = null; }
+  const given = guestPlain(body && body.code);
+  if (!saved || !given || !same(given, saved.code)) {
+    await new Promise((r) => setTimeout(r, 700));
+    return json({ error: 'That guest code is not right. Check it and try again.' }, 401);
+  }
+  return json({ key: saved.key });
+}
+
+// The teacher sees the code and changes it; an empty code turns guests off.
+async function guestCodeApi(request, env) {
+  if (request.method === 'GET') {
+    const saved = await env.FLASHCARDS.get('guest-pass', 'json');
+    return json({ code: (saved && saved.code) || '' });
+  }
+  if (request.method !== 'PUT') return json({ error: 'Not found.' }, 404);
+  let body;
+  try { body = await request.json(); } catch { body = null; }
+  const code = guestPlain(body && body.code);
+  if (!code) {
+    await env.FLASHCARDS.delete('guest-pass');
+    return json({ code: '' });
+  }
+  if (!GUEST_CODE.test(code)) return json({ error: 'Use 8 to 40 letters, numbers, spaces or dashes.' }, 400);
+  // the same code saved again keeps its key, so its guests stay in
+  const saved = await env.FLASHCARDS.get('guest-pass', 'json');
+  if (saved && saved.code === code) return json({ code });
+  await env.FLASHCARDS.put('guest-pass', JSON.stringify({ code, key: hex(crypto.getRandomValues(new Uint8Array(32))), saved: Date.now() }));
+  return json({ code });
 }
 
 /* ---------------- signing in ---------------- */
