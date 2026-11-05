@@ -337,9 +337,41 @@
   function teamStyle(el, team) { el.style.setProperty('--team', team ? team.color : ''); }
   function ordinal(n) { var t = n % 100, o = n % 10; return n + (t > 10 && t < 14 ? 'th' : o === 1 ? 'st' : o === 2 ? 'nd' : o === 3 ? 'rd' : 'th'); }
 
+  // Slow down rule (Donny, 2026-11-04): 3 wrong answers within 10 seconds
+  // cover this screen for 5 seconds. The game server keeps the time and
+  // ignores answers until it is up; this only shows it.
+  var slowEnd = 0, slowTick = 0;
+  function slowCover(v) {
+    var box = $('jnSlow');
+    if (!box) {
+      box = mk('div', 'lv-slow');
+      box.id = 'jnSlow';
+      box.hidden = true;
+      box.setAttribute('role', 'alert');
+      var card = mk('div', 'lv-slow-card');
+      card.appendChild(mk('p', 'lv-slow-emoji', '\u{1F422}'));
+      card.appendChild(mk('p', 'lv-slow-title', 'Slow down and read!'));
+      card.appendChild(mk('p', 'lv-slow-text', 'Read the question and every answer before you pick. Clicking until something works does not count as knowing it.'));
+      card.appendChild(mk('p', 'lv-slow-num'));
+      box.appendChild(card);
+      document.body.appendChild(box);
+    }
+    slowEnd = v.phase === 'play' && v.slowMs > 0 ? Date.now() + v.slowMs : 0;
+    clearInterval(slowTick);
+    var tick = function () {
+      var left = Math.ceil((slowEnd - Date.now()) / 1000);
+      box.hidden = left <= 0;
+      if (left <= 0) { clearInterval(slowTick); return; }
+      box.querySelector('.lv-slow-num').textContent = 'Back in ' + left;
+    };
+    tick();
+    if (slowEnd) slowTick = setInterval(tick, 200);
+  }
+
   // Confetti and fireworks (no sound on a student's screen) when the game ends.
   var lastPhase = '';
   function draw(v) {
+    slowCover(v);
     if (v.phase === 'done' && lastPhase === 'play' && window.IS8Celebrate) window.IS8Celebrate.start();
     if (v.phase !== lastPhase && !document.hidden) touched();
     lastPhase = v.phase;

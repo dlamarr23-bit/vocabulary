@@ -45,6 +45,22 @@ const blastMinutes = (m, dflt) => { const n = Math.round(Number(m)); return Numb
 const BLAST_ROCKS = 6;
 // A wrong asteroid stops that player's ship for a moment.
 const BLAST_STUN_MS = 2000;
+// No guessing in Blast (Donny, 2026-11-04: students "keep clicking randomly
+// until they get a correct answer"). On unless the teacher switches it off:
+// a wrong asteroid stays in the field (so clicking every one no longer finds
+// the answer), costs the team 1 point, and each wrong hit in a row stops that
+// ship 2 seconds longer, up to 10. A right hit, or 30 seconds without a
+// wrong one, starts it over at 2.
+const BLAST_STUN_MOST_MS = 10000;
+const BLAST_RUN_RESET_MS = 30 * 1000;
+// Slow down (Donny, 2026-11-04), in Vocab Live, Blast and Match: 3 wrong
+// answers within 10 seconds freeze that student for 5 seconds with a "Slow
+// down" message, and the teacher's screen shows a turtle by their name. On
+// unless the teacher switches it off. Not in Match's Hidden cards, where
+// turning over two cards that do not match is how the memory game is played.
+const SLOW_WRONGS = 3;
+const SLOW_WINDOW_MS = 10 * 1000;
+const SLOW_MS = 5000;
 const MATCH_PAIRS = [4, 6, 8];
 // Match (Donny, 2026-10-14): a wrong pair holds the player for a second only
 // until they have cleared MATCH_FREE_AFTER pairs. After that a wrong pair
@@ -260,6 +276,9 @@ export class LiveGame extends DurableObject {
         powers: (kind === 'volley' || kind === 'blast') && o.powers === true,
         // The drawing pad on students' waiting screens (on unless switched off).
         doodle: o.doodle !== false,
+        // No guessing in Blast, and Slow down in all three (see the top).
+        noGuess: kind === 'blast' && o.noGuess !== false,
+        slow: o.slow !== false,
         powerKinds: powerKinds(o.powerKinds)
       },
       phase: 'lobby',
@@ -837,21 +856,35 @@ export class LiveGame extends DurableObject {
     if (!t.q.rocks.includes(k) || t.q.gone.includes(k)) return;
     const card = t.q.card;
     const ok = k === card;
-    t.last = { seq: t.q.seq, ok, by: p.name, pid, k, right: g.cards[card].term, prompt: g.cards[card].def, at: Date.now() };
+    const now = Date.now();
+    t.last = { seq: t.q.seq, ok, by: p.name, pid, k, right: g.cards[card].term, prompt: g.cards[card].def, at: now };
     this.tally(card, ok, t.q.at, p.name, pid);
     if (ok) {
       const twice = g.opts.powers && t.fx && t.fx.double > 0;
       t.progress += twice ? 2 : 1;
       if (twice) t.fx.double -= 1;
-      t.scoredAt = Date.now();
+      t.scoredAt = now;
       t.streak = (t.streak || 0) + 1;
+      p.missRun = 0;
       if (g.opts.powers) this.earn(t);
       this.nextQuestion(t);
     } else {
       t.streak = 0;
-      t.q.gone.push(k);
-      this.stun[pid] = Date.now() + BLAST_STUN_MS;
-      t.last.stunMs = BLAST_STUN_MS;
+      let stun = BLAST_STUN_MS;
+      if (g.opts.noGuess) {
+        // The asteroid stays; the team loses a point (it can go below zero);
+        // the ship waits longer for each wrong hit in a row.
+        p.missRun = now - (p.missAt || 0) < BLAST_RUN_RESET_MS ? (p.missRun || 0) + 1 : 1;
+        p.missAt = now;
+        stun = Math.min(BLAST_STUN_MOST_MS, BLAST_STUN_MS * p.missRun);
+        t.progress = (t.progress || 0) - 1;
+        t.last.minus = 1;
+      } else {
+        t.q.gone.push(k);
+      }
+      if (this.slowDown(p, now)) { stun = Math.max(stun, SLOW_MS); t.last.slow = true; }
+      this.stun[pid] = now + stun;
+      t.last.stunMs = stun;
     }
     await this.save();
     this.toTeam(t.id);
@@ -982,8 +1015,10 @@ export class LiveGame extends DurableObject {
     if (!es.length) return;
     es.forEach((e, i) => this.tally(matchCard(e), false, 0, '', i ? '' : pid));
     const added = this.matchAddPair(t);
+    // Slow down: the player's screen covers the cards for 5 seconds.
+    const slowed = this.slowDown(p, Date.now());
     await this.save();
-    if (added) { this.toTeam(t.id); this.toHost(); }
+    if (added || slowed) { this.toTeam(t.id); this.toHost(); }
   }
 
   // One more pair on a player's board after a wrong match: a card from the
@@ -1010,6 +1045,21 @@ export class LiveGame extends DurableObject {
     this.matchProgress(t);
     return true;
   }
+
+  // Slow down (see the top): call on every wrong answer. Gives back true when
+  // this one is the 3rd within 10 seconds, which freezes the student for 5
+  // seconds (p.slowUntil) and adds one to their turtle count (p.slow).
+  slowDown(p, now) {
+    const g = this.game;
+    if (!g.opts.slow || (g.kind === 'match' && g.opts.hidden)) return false;
+    p.wrongAt = (p.wrongAt || []).filter((x) => now - x < SLOW_WINDOW_MS).concat([now]).slice(-SLOW_WRONGS);
+    if (p.wrongAt.length < SLOW_WRONGS) return false;
+    p.wrongAt = [];
+    p.slowUntil = now + SLOW_MS;
+    p.slow = (p.slow || 0) + 1;
+    return true;
+  }
+  slowMs(p) { return Math.max(0, ((p && p.slowUntil) || 0) - Date.now()); }
 
   // Answer statistics for the end of the game (Gennaro, 2026-09-29): for each
   // card, right and wrong answers, and how long right answers took, counted
@@ -1135,6 +1185,8 @@ export class LiveGame extends DurableObject {
     // Frozen, or waiting after a swap: the answer does not count, and the
     // screen is sent again so its buttons come back.
     if (t.fx && Date.now() < (t.fx.holdUntil || 0)) { this.toPlayer(pid); return; }
+    // Slow down: this student waits out their 5 seconds.
+    if (this.slowMs(p)) { this.toPlayer(pid); return; }
     const hand = (t.q.deal && t.q.deal[pid]) || [];
     const k = Number(m.k);
     if (!hand.includes(k)) return;
@@ -1173,6 +1225,7 @@ export class LiveGame extends DurableObject {
       // Back to 0, or stay put below it after a strike.
       if (!g.opts.fast) t.progress = Math.min(0, t.progress);
       t.streak = 0;
+      this.slowDown(p, Date.now());
       t.lockUntil = Date.now() + (g.opts.pause || DEFAULT_PAUSE) * 1000;
       t.ready = [];
       this.nextQuestion(t);
@@ -1820,7 +1873,8 @@ export class LiveGame extends DurableObject {
       num: g.teamOrder.indexOf(t.id) + 1,
       color: t.color,
       emoji: t.emoji,
-      members: t.members.map((pid) => ({ id: pid, name: g.players[pid] ? g.players[pid].name : '?', on: this.online(pid) })),
+      // slow: how many times Slow down froze this student (the turtle on the teacher's screen).
+      members: t.members.map((pid) => ({ id: pid, name: g.players[pid] ? g.players[pid].name : '?', on: this.online(pid), slow: (g.players[pid] && g.players[pid].slow) || 0 })),
       progress: t.progress || 0,
       place: t.place || 0,
       finishMs: t.finishMs || 0,
@@ -1884,6 +1938,8 @@ export class LiveGame extends DurableObject {
     if (!p) return { t: 'removed', msg: 'You are not in this game.' };
     const t = p.team && g.teams[p.team];
     const out = { t: 'view', kind: g.kind, now: Date.now(), goAt: g.phase === 'play' ? g.goAt || 0 : 0, phase: g.phase, title: g.title, name: p.name, me: pid, teamsMode: g.opts.teams, target: g.opts.target, fast: g.opts.fast, doodle: g.opts.doodle !== false, endsAt: g.phase === 'play' ? g.endsAt || 0 : 0 };
+    // Slow down: what is left of this student's 5 seconds.
+    if (g.phase === 'play') out.slowMs = this.slowMs(p);
     if (t) out.team = this.teamSummary(t);
     if (this.picking()) {
       out.pick = {

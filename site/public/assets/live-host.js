@@ -93,7 +93,7 @@
   var DEFAULT_RADIOS = ['lvGame', 'lvTeams', 'lvPrompt', 'lvWho'];
   var DEFAULT_SELECTS = ['lvSet', 'lvQset', 'lvMinutes', 'lvPairs', 'lvPause', 'lvTarget', 'lvWinners', 'lvSize', 'lvPickTeams', 'lvLimit'];
   var POWER_KINDS = ['shield', 'strike', 'freeze', 'glitch', 'swap', 'double', 'fifty', 'mirror'];
-  var DEFAULT_CHECKS = ['lvHidden', 'lvFast', 'lvPowers', 'lvDoodle'].concat(POWER_KINDS.map(function (k) { return 'lvPw-' + k; }));
+  var DEFAULT_CHECKS = ['lvHidden', 'lvFast', 'lvPowers', 'lvDoodle', 'lvNoGuess', 'lvSlow'].concat(POWER_KINDS.map(function (k) { return 'lvPw-' + k; }));
   // Blast's minutes box: a whole number from 1 to 30, 5 if it is left empty.
   function minutesIn(input) {
     var n = Math.round(Number(input.value));
@@ -220,6 +220,8 @@
       pairs: Number($('lvPairs').value),
       hidden: $('lvHidden').checked,
       doodle: $('lvDoodle').checked,
+      noGuess: $('lvNoGuess').checked,
+      slow: $('lvSlow').checked,
       powers: $('lvPowers').checked && POWER_KINDS.some(function (k) { return $('lvPw-' + k).checked; }),
       powerKinds: POWER_KINDS.filter(function (k) { return $('lvPw-' + k).checked; }),
       demo: $('lvDemo').checked
@@ -1284,9 +1286,12 @@
         lanes[t.id] = lane;
       }
       lane.li.style.setProperty('--team', t.color);
-      lane.title.textContent = t.name;
+      // Slow down rule: a turtle by a student who kept guessing (x2 and up
+      // when it happened again). Playing alone, it goes by the lane's name.
+      var turtle = function (m) { return m && m.slow ? ' \u{1F422}' + (m.slow > 1 ? '×' + m.slow : '') : ''; };
+      lane.title.textContent = t.name + (b.opts.teams ? '' : turtle(t.members[0]));
       // Someone who has left stays on the team as a ghost.
-      lane.members.textContent = b.opts.teams ? t.members.map(function (m) { return m.on ? m.name : '\u{1F47B} ' + m.name; }).join(', ') : '';
+      lane.members.textContent = b.opts.teams ? t.members.map(function (m) { return (m.on ? m.name : '\u{1F47B} ' + m.name) + turtle(m); }).join(', ') : '';
       lane.li.classList.toggle('gone', !t.members.some(function (m) { return m.on; }));
       lane.fill.style.width = Math.max(0, Math.min(100, t.progress / goal * 100)) + '%';
       lanePower(lane, t.pu, t.streak);

@@ -24,7 +24,9 @@
     slides = [
       { icon: '⚡', h: 'Answer questions to earn energy!', pts: [
         ['✅', `Every correct answer earns <b>energy</b>. You start at <b>${gain[0]} energy</b> per question.`],
-        ['❌', st.wrongPenalty ? `A wrong answer <b>costs ${st.wrongPenalty} energy</b>. Read carefully. Do not guess!` : 'Wrong answers do not cost energy, but they do not earn any either.'],
+        ['❌', st.wrongPenalty === 'match' ? 'A wrong answer <b>costs as much energy as a right one earns</b>, even below 0. Read carefully. Guessing loses!'
+          : st.wrongPenalty ? `A wrong answer <b>costs ${st.wrongPenalty} energy</b>. Read carefully. Do not guess!` : 'Wrong answers do not cost energy, but they do not earn any either.'],
+        ...(st.slowDown ? [['🐢', '<b>3 wrong answers in 10 seconds</b> freeze your screen for 5 seconds. Slow down and read!']] : []),
         ['🔥', 'Get answers right <b>in a row</b> to build a streak.']
       ] },
       { icon: '🛒', h: 'Upgrade in the shop!', pts: [

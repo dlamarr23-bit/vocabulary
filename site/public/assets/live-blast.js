@@ -4,9 +4,11 @@
    Like Quizlet Blast. A team of up to four shares one asteroid field; each
    player has a ship in a corner (theirs has a ring). A definition shows at
    the top and every asteroid carries a term. Blast the right one: the team
-   scores and new asteroids fly in. A wrong one breaks apart and that ship
-   recharges for a moment. The team with the most points when the clock runs
-   out wins.
+   scores and new asteroids fly in. A wrong one costs the team a point and
+   stays in the field, and that ship recharges, longer for each wrong hit in
+   a row (No guessing, Donny 2026-11-04; switched off, a wrong one breaks
+   apart and the ship waits 2 seconds). The team with the most points when
+   the clock runs out wins.
 
    The asteroids' patches and paths come from a seed the game server sends,
    so teammates with the same kind of screen see them in the same places. live-join.js owns the connection
@@ -254,11 +256,12 @@
 
   function shoot(k) {
     if (!cur || !rocks[k]) return;
-    if (now() < stunUntil) { say('Your ship is recharging. Wait a moment.'); return; }
+    if (now() < stunUntil) { say('Your ship is recharging: ' + secs(stunUntil - now()) + '. Read the asteroids while you wait.'); return; }
     laser(cur.me, k);
     rocks[k].el.disabled = true;
     send({ t: 'shoot', seq: cur.blast.seq, k: k });
   }
+  function secs(ms) { var n = Math.max(1, Math.ceil(ms / 1000)); return n + (n === 1 ? ' second' : ' seconds'); }
   function say(text, good) {
     var m = $('blMsg');
     m.textContent = text;
@@ -279,9 +282,12 @@
     if (last && last.at !== shownLast && cur && last.seq === cur.blast.seq) {
       shownLast = last.at;
       laser(last.pid, last.k, last.ok);
+      // No guessing (index.js): a wrong hit costs the team a point, and the
+      // ship's wait grows with each wrong hit in a row.
+      var minus = last.minus ? ' Your team loses 1 point.' : '';
       if (last.ok) say((last.pid === v.me ? 'You' : last.by) + ' blasted it! ' + last.right + '.', true);
-      else if (last.pid === v.me) say('Not that one. Your ship is recharging.');
-      else say(last.by + ' hit the wrong asteroid.');
+      else if (last.pid === v.me) say('Not that one.' + minus + ' Your ship is recharging for ' + secs(last.stunMs || 2000) + '.');
+      else say(last.by + ' hit the wrong asteroid.' + (last.minus ? ' -1 point.' : ''));
     } else if (last) {
       shownLast = last.at;
     }
@@ -305,6 +311,9 @@
     else (b.gone || []).forEach(function (k) {
       if (rocks[k]) { var el = rocks[k].el; delete rocks[k]; el.classList.add('leaving'); el.disabled = true; setTimeout(function () { el.remove(); }, 450); }
     });
+    // A wrong asteroid that stays in the field (No guessing) can be picked
+    // again once the ship has recharged.
+    Object.keys(rocks).forEach(function (k) { rocks[k].el.disabled = false; });
     if (!readyShown) {
       readyShown = true;
       say('Get ready! Your ship is the one with the ring. Click or tap the asteroid with the right term.', true);

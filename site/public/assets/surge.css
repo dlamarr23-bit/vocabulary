@@ -307,6 +307,8 @@ body.sg-showdown .sg .timer{ color:var(--sg-bad); }
 .sg .feedback{ font-weight:800; font-size:28px; margin-top:14px; min-height:40px; }
 .sg .feedback.good{ color:var(--sg-good); } .sg .feedback.bad{ color:var(--sg-bad); }
 .sg .sg-gamble-lost{ font-size:20px; }
+.sg .sg-read-next{ font-size:18px; font-weight:700; opacity:.9; margin-top:4px; }
+.sg .sg-read-next:empty{ display:none; }
 .sg .streak{ color:var(--sg-accent); font-weight:700; }
 .sg .shop h3{ font-size:19px; margin:18px 0 10px; }
 .sg .shop-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(210px, 1fr)); gap:12px; }

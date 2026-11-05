@@ -47,13 +47,17 @@
     title: 'Surge Showdown', theme: 'elements', teamCount: 4, teams: themeTeams('elements'),
     durationMin: 10, hpAmount: 300, hpMode: 'perPlayer', surgeMax: 5, surgeCurve: 4,
     powerScale: 1, energyScale: 1, fallenCanAttack: true, sizeBoost: true, lastTeamEnds: false, teamPick: 'auto',
-    lateJoin: true, wrongPenalty: 5, ptsCorrect: 10, ptsDamage: 1, survivalBonus: 300, koBonus: 200, koPenalty: 0, feedNames: true, demo: false, intro: 'auto',
+    lateJoin: true, wrongPenalty: 'match', readPause: 3, slowDown: true, ptsCorrect: 10, ptsDamage: 1, survivalBonus: 300, koBonus: 200, koPenalty: 0, feedNames: true, demo: false, intro: 'auto',
     gamble: true, bounty: true, comeback: 10, supplyDrops: true, showdown: true, announcer: true
   };
 
   const saved = store.get(KEY, {}) || {};
   let cfg = { ...DEFAULTS, ...(saved.cfg || {}) };
   if (!Array.isArray(cfg.teams) || cfg.teams.length < 10) cfg.teams = themeTeams(cfg.theme);
+  // Settings saved before the guessing changes (Donny, 2026-11-04) held the
+  // old 5 energy for a wrong answer: those start at the new default once.
+  if (saved.cfg && !saved.cfg.guessV) cfg.wrongPenalty = DEFAULTS.wrongPenalty;
+  cfg.guessV = 1;
   let conn = null, S = null, game = null, editing = false, sortKey = 'points', lastHp = {}, lastStatus = null, qrFor = '';
   // The question set this game is playing ('q:<id>' or 'f:<id>'), so Save changes knows when it changed.
   let playing = '';
@@ -105,7 +109,9 @@
     { g: 'teams', k: 'lateJoin', label: 'Join after the game starts', desc: 'New students can jump in during the game. You can also open or lock joining during the game.', opts: yesNo },
     { g: 'battle', k: 'hpAmount', label: 'Team health', desc: 'Starting health. Teams fall when it reaches zero.', opts: range([100, 150, 200, 250, 300, 400, 500, 750, 1000, 1500, 2000], String) },
     { g: 'battle', k: 'hpMode', label: 'Health is counted', desc: 'Per player gives bigger teams more health.', opts: [['perPlayer', 'Per player'], ['flat', 'Per team']] },
-    { g: 'battle', k: 'wrongPenalty', label: 'Energy lost on a wrong answer', desc: 'Keeps students from guessing.', opts: range([0, 2, 5, 10, 15, 20, 25, 50], String) },
+    { g: 'battle', k: 'wrongPenalty', label: 'Energy lost on a wrong answer', desc: 'Keeps students from guessing. "Same as a right answer" means clicking at random loses energy, and energy can drop below 0 (down to 5 right answers’ worth). A number stops at 0.', opts: [['match', 'Same as a right answer earns'], ...range([0, 2, 5, 10, 15, 20, 25, 50], String)] },
+    { g: 'battle', k: 'readPause', label: 'Read the right answer', desc: 'After a wrong answer, the right one stays up this long before the next question.', opts: [[3, '3 seconds'], [5, '5 seconds'], [0, 'Quick look (under 2 seconds)']] },
+    { g: 'battle', k: 'slowDown', label: '🐢 Slow down rule', desc: '3 wrong answers within 10 seconds freeze that student for 5 seconds with a "Slow down and read" message, and put a 🐢 by their name in your player list.', opts: yesNo },
     { g: 'battle', k: 'powerScale', label: 'Power-up strength', desc: 'Bigger means faster, more dramatic battles.', opts: range([0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3], times) },
     { g: 'battle', k: 'energyScale', label: 'Energy earned per answer', desc: 'How fast students can afford power-ups.', opts: range([0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3], times) },
     { g: 'battle', k: 'fallenCanAttack', label: 'Fallen teams can still attack', desc: 'Knocked out teams keep answering and attacking.', opts: yesNo },
@@ -573,7 +579,7 @@
     ps.sort((a, b) => (sortKey === 'name' ? a.name.localeCompare(b.name) : sortKey === 'team' ? a.team - b.team : (b[sortKey] ?? 0) - (a[sortKey] ?? 0)));
     $('#sgPtable').innerHTML = `<thead><tr>${cols.map(([k, l]) => `<th data-sort="${k}" scope="col"${k === 'name' || k === 'team' ? '' : ' class="num"'}>${sortKey === k ? '▾ ' : ''}${l}</th>`).join('')}<th><span class="sg-sr">Remove</span></th></tr></thead><tbody>` +
       ps.map((p) => `<tr>
-        <td><span class="${p.online ? '' : 'off'}">${esc(p.name)}</span>${tags(p)}</td>
+        <td><span class="${p.online ? '' : 'off'}">${esc(p.name)}</span>${tags(p)}${p.slow ? ` <span title="Slow down rule: froze ${p.slow} ${p.slow === 1 ? 'time' : 'times'} for guessing">🐢${p.slow > 1 ? '×' + p.slow : ''}</span>` : ''}</td>
         <td><select data-move="${p.id}" aria-label="Team for ${esc(p.name)}">${teamOptions(p.team, true)}</select></td>
         <td class="num">${p.correct}</td><td class="num">${p.wrong}</td><td class="num">${p.acc}%</td><td class="num">${p.energy}</td><td class="num">${p.dmg}</td><td class="num"><b>${p.points}</b></td>
         <td><button type="button" class="xbtn" data-kick="${p.id}" title="Remove ${esc(p.name)}" aria-label="Remove ${esc(p.name)}">✕</button></td></tr>`).join('') + '</tbody>';

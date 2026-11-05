@@ -300,10 +300,53 @@
       document.querySelectorAll('.opt').forEach((b, i) => { if (i === m.right) b.classList.add('right'); else if (b === lastPick) b.classList.add('wrong'); });
       if (m.gamble && m.gamble.win === false) fb.insertAdjacentHTML('beforeend', `<div class="sg-gamble-lost">🎲 Lost the bet: -${m.gamble.amt} team health</div>`);
     }
+    // After a wrong answer the right one stays up (the Read the right answer
+    // setting), and the Slow down rule covers the screen. The game server
+    // ignores answers until both are over (Donny, 2026-11-04).
+    const wait = m.correct ? (m.gamble ? 1800 : 650) : Math.max(m.gamble ? 1800 : 1700, m.readMs || 0, m.slowMs || 0);
+    clearInterval(readTick);
+    if (!m.correct && (m.readMs || m.slowMs)) {
+      const end = Date.now() + wait;
+      const line = document.createElement('div');
+      line.className = 'sg-read-next';
+      fb.appendChild(line);
+      const tick = () => {
+        const left = Math.ceil((end - Date.now()) / 1000);
+        line.textContent = left > 0 ? `Read the right answer. Next question in ${left}` : '';
+        if (left <= 0) clearInterval(readTick);
+      };
+      tick();
+      readTick = setInterval(tick, 200);
+    }
+    if (m.slowMs) slowCover(m.slowMs, m.answer);
     setTimeout(() => {
       locked = false;
       if (queuedQ) { curQ = queuedQ; queuedQ = null; renderQ(); }
-    }, m.gamble ? 1800 : m.correct ? 650 : 1700);
+    }, wait);
+  }
+  let readTick = 0, slowTick = 0;
+  function slowCover(ms, answerText) {
+    let box = document.getElementById('spSlow');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'spSlow';
+      box.className = 'lv-slow';
+      box.setAttribute('role', 'alert');
+      box.innerHTML = '<div class="lv-slow-card"><p class="lv-slow-emoji">🐢</p><p class="lv-slow-title">Slow down and read!</p><p class="lv-slow-text"></p><p class="lv-slow-num"></p></div>';
+      document.body.appendChild(box);
+    }
+    box.querySelector('.lv-slow-text').innerHTML = '3 wrong answers in 10 seconds is guessing.' +
+      (answerText ? ` The right answer was <b>${esc(answerText)}</b>.` : '') + ' Read every choice before you pick.';
+    const end = Date.now() + ms;
+    clearInterval(slowTick);
+    const tick = () => {
+      const left = Math.ceil((end - Date.now()) / 1000);
+      box.hidden = left <= 0;
+      if (left <= 0) { clearInterval(slowTick); return; }
+      box.querySelector('.lv-slow-num').textContent = 'Back in ' + left;
+    };
+    tick();
+    slowTick = setInterval(tick, 200);
   }
 
   /* ---------------- the shop ---------------- */

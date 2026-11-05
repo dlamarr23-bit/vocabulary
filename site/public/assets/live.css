@@ -281,6 +281,15 @@
 .lv-feedback.ok{ background:var(--good-tint); color:var(--good-ink); border:2px solid var(--good); }
 .lv-feedback.bad{ background:var(--bad-tint); color:var(--bad-ink); border:2px solid var(--bad); }
 .lv-feedback strong{ font-size:1.3rem; }
+/* Slow down rule: covers a student's screen for 5 seconds (live-join.js, surge-play.js). */
+.lv-slow{ position:fixed; inset:0; z-index:9000; display:flex; align-items:center; justify-content:center; padding:1rem; background:rgba(14,16,22,.72); }
+.lv-slow[hidden]{ display:none; }
+.lv-slow-card{ max-width:26rem; width:100%; background:var(--card); color:var(--ink); border:3px solid var(--bad); border-radius:var(--radius); padding:1.5rem 1.25rem; text-align:center; box-shadow:0 1rem 2.5rem rgba(0,0,0,.35); }
+.lv-slow-card p{ margin:0; }
+.lv-slow-emoji{ font-size:3.5rem; line-height:1.1; }
+.lv-slow-title{ font-size:1.6rem; font-weight:800; margin-top:0.25rem !important; }
+.lv-slow-text{ font-size:1.02rem; color:var(--ink-soft); margin-top:0.5rem !important; line-height:1.45; }
+.lv-slow-num{ font-size:1.3rem; font-weight:800; color:var(--bad); margin-top:0.875rem !important; }
 .lv-wait-bar{ height:0.375rem; background:rgba(0,0,0,.08); border-radius:62.4375rem; overflow:hidden; margin-top:0.375rem; }
 .lv-wait-bar span{ display:block; height:100%; background:currentColor; width:100%; }
 .lv-done-emoji{ font-size:4rem; margin:0; line-height:1.1; }

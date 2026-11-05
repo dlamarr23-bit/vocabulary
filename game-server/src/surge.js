@@ -73,7 +73,9 @@ const DEFAULT_SETTINGS = {
   lastTeamEnds: false,
   teamPick: 'auto',
   lateJoin: true,
-  wrongPenalty: 5,
+  wrongPenalty: 'match',
+  readPause: 3,
+  slowDown: true,
   ptsCorrect: 10,
   ptsDamage: 1,
   survivalBonus: 300,
@@ -87,6 +89,25 @@ const DEFAULT_SETTINGS = {
   supplyDrops: true,
   showdown: true
 };
+
+// Guessing (Donny, 2026-11-04: students "keep clicking randomly until they
+// get a correct answer", and a wrong answer cost only 5 energy, so once a
+// student had the 20 energy upgrade, random clicking paid better than reading).
+// - wrongPenalty 'match' (the default): a wrong answer costs as much energy as
+//   a right one earns at the student's Energy per Question level (not the
+//   streak bonus), so with 4 choices guessing loses energy. Energy can drop
+//   below 0, down to minus WRONG_FLOOR right answers' worth. A number is the
+//   old flat cost, which stops at 0.
+// - readPause: after a wrong answer the right one stays up this many seconds
+//   before the next question (0: the old short look); answers sent sooner
+//   are ignored.
+// - slowDown: 3 wrong answers within 10 seconds freeze the student for 5
+//   seconds, and the teacher's player list shows a turtle by their name.
+const WRONG_FLOOR = 5;
+const READ_PAUSES = [0, 3, 5];
+const SLOW_WRONGS = 3;
+const SLOW_WINDOW_MS = 10 * 1000;
+const SLOW_MS = 5000;
 
 const DEMO_COUNT = 40;
 const MAX_SURGE_PLAYERS = 120;
@@ -134,12 +155,15 @@ export function sanitizeSettings(input, prev = DEFAULT_SETTINGS) {
   s.surgeCurve = num(i.surgeCurve, s.surgeCurve, 0.5, 10);
   s.powerScale = num(i.powerScale, s.powerScale, 0.25, 5);
   s.energyScale = num(i.energyScale, s.energyScale, 0.25, 5);
-  for (const k of ['fallenCanAttack', 'sizeBoost', 'lastTeamEnds', 'lateJoin', 'feedNames', 'demo', 'gamble', 'bounty', 'supplyDrops', 'showdown']) {
+  for (const k of ['fallenCanAttack', 'sizeBoost', 'lastTeamEnds', 'lateJoin', 'feedNames', 'demo', 'gamble', 'bounty', 'supplyDrops', 'showdown', 'slowDown']) {
     if (typeof i[k] === 'boolean') s[k] = i[k];
     else if (i[k] === 'true' || i[k] === 'false') s[k] = i[k] === 'true';
   }
   s.teamPick = i.teamPick === 'choose' ? 'choose' : i.teamPick === 'auto' ? 'auto' : s.teamPick;
-  s.wrongPenalty = Math.round(num(i.wrongPenalty, s.wrongPenalty, 0, 1000));
+  const wp = i.wrongPenalty ?? s.wrongPenalty;
+  s.wrongPenalty = wp === 'match' ? 'match' : Math.round(num(wp, 5, 0, 1000));
+  const rp = Number(i.readPause ?? s.readPause);
+  s.readPause = READ_PAUSES.includes(rp) ? rp : DEFAULT_SETTINGS.readPause;
   s.ptsCorrect = Math.round(num(i.ptsCorrect, s.ptsCorrect, 0, 1000));
   s.ptsDamage = num(i.ptsDamage, s.ptsDamage, 0, 100);
   s.survivalBonus = Math.round(num(i.survivalBonus, s.survivalBonus, 0, 100000));
@@ -429,7 +453,7 @@ export class SurgeRoom {
     const players = Object.values(s.players).filter((p) => !p.kicked).map((p) => ({
       id: p.id, name: p.name, team: p.team, online: p.online, bot: !!p.bot, watch: !!p.watch,
       points: Math.round(p.points), correct: p.correct, dmg: Math.round(p.dmg),
-      ...(isHost ? { wrong: p.wrong, energy: Math.floor(p.energy), email: p.stu || '', guest: !!p.guest, pass: !!p.stu } : {})
+      ...(isHost ? { wrong: p.wrong, energy: Math.floor(p.energy), email: p.stu || '', guest: !!p.guest, pass: !!p.stu, slow: p.slow || 0 } : {})
     }));
     return {
       code: s.code, status: s.status, settings: { ...s.settings }, qCount: s.cards.length, setTitle: s.title,
@@ -743,7 +767,13 @@ export class SurgeRoom {
       if (p.streak >= 10 && p.streak % 5 === 0) this.callout(`🔥 ${this.who(p)} ${p.streak >= 20 ? 'is UNSTOPPABLE:' : 'is on'} a ${p.streak}-answer streak!`, 'streak');
     } else {
       p.streak = 0; p.wrong++;
-      gained = -Math.min(Math.floor(p.energy), s.settings.wrongPenalty);
+      if (s.settings.wrongPenalty === 'match') {
+        // What a right answer earns, down to minus WRONG_FLOOR of them.
+        const cost = Math.round(RULES.upgrades.gain.levels[p.upg.gain] * s.settings.energyScale);
+        gained = -Math.max(0, Math.min(cost, Math.floor(p.energy) + cost * WRONG_FLOOR));
+      } else {
+        gained = -Math.min(Math.max(0, Math.floor(p.energy)), s.settings.wrongPenalty);
+      }
       p.energy += gained;
     }
     p.gres = p.gamble ? this.resolveGamble(p, ok) : null;
@@ -766,6 +796,16 @@ export class SurgeRoom {
     }
     this.events();
     return gained;
+  }
+  // Slow down (see the top): true when this wrong answer is the 3rd within
+  // 10 seconds. Adds one to the student's turtle count (p.slow).
+  slowDown(p, now) {
+    if (!this.s.settings.slowDown) return false;
+    p.wrongAt = (p.wrongAt || []).filter((x) => now - x < SLOW_WINDOW_MS).concat([now]).slice(-SLOW_WRONGS);
+    if (p.wrongAt.length < SLOW_WRONGS) return false;
+    p.wrongAt = [];
+    p.slow = (p.slow || 0) + 1;
+    return true;
   }
   who(p) { const t = this.s.teams[p.team]; return this.s.settings.feedNames ? `${p.name} (${t.icon} ${t.name})` : `A player on ${t.icon} ${t.name}`; }
   callout(text, kind) {
@@ -937,13 +977,22 @@ export class SurgeRoom {
     if (m.t === 'answer') {
       if (s.status !== 'running') return this.send(ws, { t: 'error', msg: s.status === 'paused' ? 'The game is paused.' : 'The game is not running.' });
       if (now - p.lastAns < 350 || Number(m.qid) !== p.cur) return;
+      // Reading the right answer after a wrong one, or Slow down: the
+      // student's screen waits too (a little early is let through, for lag).
+      if (now < (p.waitUntil || 0) - 250) return;
       p.lastAns = now;
       const q = s.cards[p.cur];
       const pick = Number(m.pick);
       const right = (p.opts || []).indexOf(0);
       const ok = Number.isInteger(pick) && !!p.opts && p.opts[pick] === 0;
       const gained = this.applyAnswer(p, ok);
-      this.send(ws, { t: 'result', correct: ok, gained, answer: q.ans[0].t, answerImg: q.ans[0].img || '', right, streak: p.streak, gamble: p.gres });
+      let readMs = 0, slowMs = 0;
+      if (!ok) {
+        readMs = (s.settings.readPause || 0) * 1000;
+        if (this.slowDown(p, now)) slowMs = SLOW_MS;
+        p.waitUntil = now + Math.max(readMs, slowMs);
+      }
+      this.send(ws, { t: 'result', correct: ok, gained, answer: q.ans[0].t, answerImg: q.ans[0].img || '', right, streak: p.streak, gamble: p.gres, readMs, slowMs });
       this.sendMe(p);
       this.nextQuestion(p);
       this.broadcast();
