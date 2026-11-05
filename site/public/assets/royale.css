@@ -3,7 +3,9 @@
    Built on live.css; the game screens are a purple arena like Blooket's,
    with the superhero avatars from heroes.js.
    ============================================================ */
-.rb-page{ --arena:#5b2a8c; --arena-2:#7b3fc0; --arena-ink:#fff; --gold:#f2b705; }
+/* --w-ink: words on the white cards in the purple arena. The arena looks the same in light and dark mode,
+   so its white cards keep dark words even when the site's --ink turns light (Donny, 2026-11-04). */
+.rb-page{ --arena:#5b2a8c; --arena-2:#7b3fc0; --arena-ink:#fff; --gold:#f2b705; --w-ink:#1b1f2a; --w-soft:#4a5063; }
 .rb-page [hidden]{ display:none !important; }
 .rb-sr{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
 .rb-hero{ display:block; width:3.5rem; height:3.5rem; flex:none; }
@@ -20,18 +22,20 @@
 .rb-hero-strip .rb-hero:nth-child(odd){ transform:rotate(-4deg); }
 .rb-hero-strip .rb-hero:nth-child(even){ transform:rotate(4deg) translateY(.2rem); }
 .rb-hero-head .lv-lede{ max-width:46rem; margin:0 auto; }
-.rb-box{ background:#fff; border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow-sm); padding:1.1rem 1.4rem; margin:0 0 1.1rem; }
-.rb-box > legend{ padding:0 .4rem; }
+.rb-box{ background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow-sm); padding:1.1rem 1.4rem; margin:0 0 1.1rem; }
+/* The box's title sits inside the box, not on its top edge (2026-11-04). */
+.rb-box > legend{ float:left; width:100%; padding:0; margin:0 0 .5rem; font-size:1.15rem; }
+.rb-box > legend + *{ clear:both; }
 .rb-source{ display:flex; flex-wrap:wrap; gap:.5rem 1.5rem; margin:.25rem 0 .75rem; }
 .rb-radio{ display:flex; align-items:center; gap:.45rem; font-weight:700; cursor:pointer; }
 .rb-radio input{ width:1.15rem; height:1.15rem; accent-color:var(--accent); }
 .rb-pick{ display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; }
-.rb-pick select{ flex:1 1 18rem; min-width:0; font:inherit; font-weight:600; padding:.55rem .7rem; border:1px solid var(--line); border-radius:var(--radius-sm); background:#fff; }
+.rb-pick select{ flex:1 1 18rem; min-width:0; font:inherit; font-weight:600; padding:.55rem .7rem; border:1px solid var(--line); border-radius:var(--radius-sm); background:var(--card); color:var(--ink); }
 .rb-editor h2{ margin:0 0 .75rem; font-size:1.3rem; }
-.rb-editor input[type=text]{ width:100%; font:inherit; padding:.55rem .7rem; border:1px solid var(--line); border-radius:var(--radius-sm); }
+.rb-editor input[type=text]{ width:100%; font:inherit; padding:.55rem .7rem; border:1px solid var(--line); border-radius:var(--radius-sm); background:var(--card); color:var(--ink); }
 .rb-howto{ background:var(--accent-tint); border-radius:var(--radius-sm); padding:.6rem .9rem; margin:.75rem 0; }
 .rb-howto p{ margin:.2rem 0; }
-.rb-editor textarea{ width:100%; box-sizing:border-box; font:.92rem/1.45 ui-monospace, Consolas, monospace; padding:.7rem; border:1px solid var(--line); border-radius:var(--radius-sm); resize:vertical; tab-size:18; }
+.rb-editor textarea{ width:100%; box-sizing:border-box; font:.92rem/1.45 ui-monospace, Consolas, monospace; padding:.7rem; background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:var(--radius-sm); resize:vertical; tab-size:18; }
 .rb-ed-tools{ display:flex; flex-wrap:wrap; align-items:center; gap:.75rem; margin:.5rem 0; }
 .rb-file{ cursor:pointer; }
 .rb-preview{ display:grid; gap:.5rem; margin:.5rem 0; }
@@ -41,36 +45,44 @@
 .rb-ok{ color:var(--good-ink); font-weight:700; }
 .rb-no{ color:var(--bad-ink); }
 .rb-ed-actions{ display:flex; gap:.6rem; margin-top:.5rem; }
-.rb-opts .lv-opt select{ font:inherit; font-weight:600; padding:.45rem .6rem; border:1px solid var(--line); border-radius:var(--radius-sm); background:#fff; }
+.rb-opts .lv-opt select{ font:inherit; font-weight:600; padding:.45rem .6rem; border:1px solid var(--line); border-radius:var(--radius-sm); background:var(--card); color:var(--ink); }
 
 /* ---------- lobby ---------- */
-.rb-lobby-opts{ display:flex; flex-wrap:wrap; gap:.6rem 1.4rem; margin:.25rem 0 1rem; padding:.7rem 1rem; background:#fff; border:1px solid var(--line); border-radius:var(--radius); }
+.rb-lobby-opts{ display:flex; flex-wrap:wrap; gap:.6rem 1.4rem; margin:.25rem 0 1rem; padding:.7rem 1rem; background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:var(--radius); }
 .rb-lo{ display:flex; align-items:center; gap:.5rem; font-weight:700; }
-.rb-lo select{ font:inherit; padding:.3rem .5rem; border:1px solid var(--line); border-radius:8px; }
+.rb-lo select{ font:inherit; padding:.3rem .5rem; border:1px solid var(--line); border-radius:8px; background:var(--card); color:var(--ink); }
 .rb-players{ list-style:none; margin:0; padding:1rem; display:grid; grid-template-columns:repeat(auto-fill, minmax(10.5rem, 1fr)); gap:.6rem; background:var(--arena); border-radius:var(--radius); min-height:6rem; }
-.rb-player{ position:relative; display:flex; align-items:center; gap:.5rem; background:#fff; border-radius:14px; padding:.35rem .5rem .35rem .35rem; box-shadow:0 3px 0 rgba(0,0,0,.18); }
+.rb-player{ position:relative; display:flex; align-items:center; gap:.5rem; background:#fff; color:var(--w-ink); border-radius:14px; padding:.35rem .5rem .35rem .35rem; box-shadow:0 3px 0 rgba(0,0,0,.18); }
 .rb-player.new{ animation:rbPop .25s ease-out; }
 .rb-player.gone{ opacity:.5; }
 .rb-player .rb-hero{ width:3rem; height:3rem; }
-.rb-player-name{ font-weight:800; overflow-wrap:anywhere; line-height:1.15; }
+.rb-player-name{ min-width:0; font-weight:800; overflow-wrap:anywhere; line-height:1.15; }
 .rb-picking{ position:absolute; left:.4rem; bottom:-.55rem; font-size:.7rem; font-weight:700; background:var(--gold); color:#3b2a00; border-radius:99px; padding:0 .4rem; }
+.rb-page .lv-roll-pick{ gap:.5rem 1.4rem; margin:.25rem 0 .9rem; }
+.rb-page .lv-roll-pick label{ display:flex; align-items:center; gap:.5rem; }
+.rb-page .lv-roll-pick select{ font:inherit; font-weight:600; padding:.35rem .55rem; border:1px solid var(--line); border-radius:8px; background:var(--card); color:var(--ink); }
 .rb-x{ margin-left:auto; border:0; background:none; font-size:1.3rem; line-height:1; color:#8b90a3; cursor:pointer; padding:.1rem .3rem; border-radius:6px; }
 .rb-x:hover{ background:var(--bad-tint); color:var(--bad-ink); }
 @keyframes rbPop{ from{ transform:scale(.6); opacity:0; } to{ transform:none; opacity:1; } }
 
 /* ---------- the arena (game and winners) ---------- */
-.rb-arena{ background:radial-gradient(circle at 50% 0, var(--arena-2), var(--arena) 70%); color:var(--arena-ink); border-radius:var(--radius); padding:1rem 1.25rem 1.5rem; min-height:70vh; }
-.rb-play-head{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:.75rem 1.25rem; }
-.rb-play-head h2{ margin:0; font-size:clamp(1.6rem, 3vw, 2.3rem); color:#fff; }
-.rb-ph-sub{ margin:.1rem 0 0; display:flex; flex-wrap:wrap; gap:.4rem 1.2rem; font-weight:700; opacity:.9; }
+.rb-arena{ background:radial-gradient(circle at 50% 0, var(--arena-2), var(--arena) 70%); color:var(--arena-ink); border-radius:var(--radius); padding:.85rem 1rem 1rem; }
+.rb-play-head{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:.6rem 1rem; }
+.rb-play-head h2{ margin:0; font-size:clamp(1.5rem, 2.4vw, 2.2rem); line-height:1.1; color:#fff; }
+.rb-ph-sub{ margin:.1rem 0 0; display:flex; flex-wrap:wrap; gap:.3rem .9rem; font-weight:700; opacity:.9; font-variant-numeric:tabular-nums; }
 .rb-ph-sub strong{ letter-spacing:.06em; color:#fff; }
 .rb-arena .lv-done-title{ background:none; color:#fff; -webkit-text-fill-color:#fff; text-align:center; text-shadow:0 3px 0 rgba(0,0,0,.25); }
 .rb-arena h3{ color:#fff; }
 .rb-ph-mid{ display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; justify-content:center; }
-.rb-clock{ color:#fff; background:rgba(0,0,0,.25); border-radius:12px; padding:.1rem .7rem; min-width:5.5rem; text-align:center; }
+.rb-clock{ color:#fff; background:rgba(0,0,0,.25); border-radius:12px; padding:.15rem .7rem; min-width:5.6rem; font-size:2rem; font-variant-numeric:tabular-nums; text-align:center; }
 .rb-clock.low{ background:#e03131; animation:rbPulse 1s ease-in-out infinite; }
 .rb-clock-set select{ font:inherit; font-weight:700; border:0; border-radius:10px; padding:.45rem .6rem; background:var(--gold); color:#3b2a00; cursor:pointer; }
 .rb-ph-right{ display:flex; flex-wrap:wrap; gap:.4rem; }
+.rb-ph-right{ gap:.35rem; }
+.rb-ph-right .lv-tool{ font-size:.88rem; padding:.42rem .75rem; }
+.rb-ph-mid{ gap:.4rem; }
+/* The two menus are only as wide as the choice showing, so the whole top bar fits one row on a Chromebook. */
+.rb-clock-set select, .rb-size-now select{ field-sizing:content; }
 .rb-ph-right .lv-tool.on{ background:var(--gold); color:#3b2a00; }
 .rb-banner{ margin:.9rem 0 0; text-align:center; font-weight:800; font-size:1.25rem; background:rgba(255,255,255,.16); border-radius:12px; padding:.5rem 1rem; }
 .rb-banner.rb-banner-time{ background:#e03131; }
@@ -80,22 +92,28 @@
 .rb-vs-title{ font-size:clamp(1.6rem, 3.4vw, 2.6rem); font-weight:900; text-shadow:0 3px 0 rgba(0,0,0,.25); }
 .rb-countdown{ display:inline-grid; place-items:center; min-width:3.6rem; height:3.6rem; border-radius:50%; background:var(--gold); color:#3b2a00; font-size:2rem; font-weight:900; box-shadow:0 4px 0 rgba(0,0,0,.25); }
 .rb-countdown-small{ min-width:2.6rem; height:2.6rem; font-size:1.3rem; }
-.rb-matchups{ display:grid; grid-template-columns:repeat(auto-fill, minmax(21rem, 1fr)); gap:.7rem; }
-.rb-matchups.many{ grid-template-columns:repeat(auto-fill, minmax(17rem, 1fr)); gap:.5rem; }
-.rb-matchup{ display:flex; align-items:center; gap:.5rem; background:#fff; color:var(--ink); border-radius:16px; padding:.45rem .6rem; box-shadow:0 4px 0 rgba(0,0,0,.22); animation:rbPop .3s ease-out both; }
+/* Face-off cards: every card is at least 21rem wide, so two names, their hearts and their badges always fit
+   side by side without running into each other or into the VS (Donny, 2026-11-04). */
+.rb-matchups{ display:grid; grid-template-columns:repeat(auto-fill, minmax(min(100%, 21rem), 1fr)); gap:.6rem; }
+.rb-matchups.many{ gap:.5rem; }
+.rb-matchup{ display:flex; align-items:stretch; gap:.4rem; min-width:0; background:#fff; color:var(--w-ink); border-radius:16px; padding:.4rem .5rem; box-shadow:0 4px 0 rgba(0,0,0,.22); animation:rbPop .3s ease-out both; }
 .rb-matchup:nth-child(2n){ animation-delay:.05s; }
 .rb-matchup:nth-child(3n){ animation-delay:.1s; }
-.rb-vs-word{ flex:none; font-weight:900; font-size:1.1rem; color:#e8590c; font-style:italic; }
-.rb-fighter{ position:relative; flex:1 1 0; min-width:0; display:flex; align-items:center; gap:.45rem; border-radius:12px; padding:.2rem; }
+.rb-vs-word{ flex:none; align-self:center; font-weight:900; font-size:1.05rem; color:#e8590c; font-style:italic; }
+.rb-fighter{ position:relative; flex:1 1 0; min-width:0; display:flex; align-items:center; gap:.4rem; border-radius:12px; padding:.25rem .35rem; }
 .rb-fighter.right{ flex-direction:row-reverse; text-align:right; }
-.rb-fighter .rb-hero{ width:3.2rem; height:3.2rem; }
+.rb-fighter .rb-hero{ width:2.9rem; height:2.9rem; }
 .rb-matchups.many .rb-fighter .rb-hero{ width:2.6rem; height:2.6rem; }
-.rb-fighter-text{ display:flex; flex-direction:column; min-width:0; }
+.rb-fighter-text{ flex:1 1 auto; display:flex; flex-direction:column; align-items:flex-start; gap:.1rem; min-width:0; }
+.rb-fighter-text > *{ max-width:100%; }
 .rb-fighter.right .rb-fighter-text{ align-items:flex-end; }
-.rb-fighter-name{ font-weight:800; line-height:1.1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rb-fighter-name{ display:block; font-weight:800; font-size:.98rem; line-height:1.15; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rb-fighter .rb-hp{ flex-wrap:wrap; }
+.rb-fighter.right .rb-hp-line{ flex-direction:row-reverse; }
 .rb-fighter.won{ background:#d3f9d8; box-shadow:inset 0 0 0 2px #2f9e44; }
 .rb-fighter.lost{ background:#ffe3e3; }
-.rb-how{ font-size:.82rem; font-weight:700; color:var(--ink-soft); }
+.rb-how{ font-size:.82rem; font-weight:700; color:var(--w-soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.rb-ghost-tag{ display:block; font-size:.72rem; font-weight:900; letter-spacing:.05em; text-transform:uppercase; color:#6741d9; }
 .rb-ko, .rb-minus{ position:absolute; top:-.55rem; font-size:.75rem; font-weight:900; border-radius:99px; padding:.05rem .45rem; color:#fff; }
 .rb-fighter .rb-ko, .rb-fighter .rb-minus{ right:.3rem; }
 .rb-fighter.right .rb-ko, .rb-fighter.right .rb-minus{ right:auto; left:.3rem; }
@@ -104,20 +122,23 @@
 .rb-sat{ background:#fff4d6; }
 .rb-sat-note{ flex:1; font-weight:700; font-size:.9rem; color:#7a5a00; }
 .rb-q-top{ display:flex; gap:1rem; align-items:stretch; }
-.rb-q{ flex:1; background:#fff; color:var(--ink); border-radius:18px; padding:1.25rem 1.5rem; box-shadow:0 5px 0 rgba(0,0,0,.2); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; min-height:9rem; }
+.rb-q{ flex:1; min-width:0; background:#fff; color:var(--w-ink); border-radius:18px; padding:1.25rem 1.5rem; box-shadow:0 5px 0 rgba(0,0,0,.2); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; min-height:9rem; }
 .rb-q-text{ margin:0; font-size:clamp(1.4rem, 3vw, 2.4rem); font-weight:800; line-height:1.25; overflow-wrap:anywhere; }
 .rb-q-img{ max-height:32vh; max-width:100%; margin-top:.75rem; border-radius:10px; }
 .rb-q-small{ min-height:0; padding:.8rem 1rem; }
 .rb-q-small .rb-q-text{ font-size:clamp(1.1rem, 2vw, 1.5rem); }
-.rb-q-side{ flex:none; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.5rem; background:rgba(0,0,0,.2); border-radius:18px; padding:.8rem 1rem; min-width:9rem; }
-.rb-countdown-q{ min-width:5rem; height:5rem; font-size:2.6rem; }
-.rb-got{ font-weight:800; text-align:center; }
+/* The countdown and "8 of 40 answered": one fixed size, so it never grows or shrinks as the numbers change. */
+.rb-q-side{ flex:none; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.5rem; background:rgba(0,0,0,.2); border-radius:18px; padding:.8rem .6rem; width:10rem; }
+.rb-countdown-q{ width:5rem; min-width:0; height:5rem; font-size:2.6rem; font-variant-numeric:tabular-nums; }
+.rb-got{ font-weight:800; text-align:center; line-height:1.15; font-variant-numeric:tabular-nums; }
+.rb-got strong{ display:block; font-size:1.45rem; font-weight:900; white-space:nowrap; }
 .rb-timebar{ height:.6rem; background:rgba(0,0,0,.25); border-radius:99px; margin:.8rem 0; overflow:hidden; }
 .rb-timebar span{ display:block; height:100%; width:100%; background:var(--gold); border-radius:99px; transition:width .2s linear; }
 .rb-tiles{ display:grid; grid-template-columns:1fr 1fr; gap:.6rem; }
 .rb-tile{ position:relative; overflow:hidden; background:var(--tile); color:#fff; border-radius:14px; padding:1rem 1.2rem; min-height:4.5rem; display:flex; align-items:center; justify-content:space-between; gap:.75rem; font-size:clamp(1.1rem, 2.2vw, 1.6rem); font-weight:800; box-shadow:0 5px 0 rgba(0,0,0,.25); }
 .rb-tile-text{ position:relative; z-index:1; overflow-wrap:anywhere; }
-.rb-tile.wrong{ opacity:.45; }
+/* Wrong answers fade to a muted color, but their words stay solid white so they can still be read. */
+.rb-tile.wrong{ background:color-mix(in srgb, var(--tile) 35%, #3f2a63); box-shadow:0 5px 0 rgba(0,0,0,.2); }
 .rb-tile.right{ box-shadow:0 0 0 4px #fff, 0 5px 0 rgba(0,0,0,.25); }
 .rb-tile-count{ position:relative; z-index:1; flex:none; background:rgba(0,0,0,.25); border-radius:99px; padding:.1rem .6rem; }
 .rb-tile-fill{ position:absolute; left:0; bottom:0; height:.4rem; background:rgba(255,255,255,.7); }
@@ -126,14 +147,14 @@
 
 /* ---------- the winners ---------- */
 .rb-podium{ list-style:none; margin:1rem 0 1.5rem; padding:0; display:flex; justify-content:center; align-items:flex-end; gap:1rem; }
-.rb-step{ display:flex; flex-direction:column; align-items:center; gap:.3rem; background:#fff; color:var(--ink); border-radius:18px 18px 8px 8px; padding:1rem .9rem .8rem; width:min(13rem, 30vw); box-shadow:0 6px 0 rgba(0,0,0,.25); animation:rbRise .6s ease-out both; }
+.rb-step{ display:flex; flex-direction:column; align-items:center; gap:.3rem; background:#fff; color:var(--w-ink); border-radius:18px 18px 8px 8px; padding:1rem .9rem .8rem; width:min(13rem, 30vw); box-shadow:0 6px 0 rgba(0,0,0,.25); animation:rbRise .6s ease-out both; }
 .rb-step-1{ min-height:17rem; box-shadow:0 0 0 .3rem var(--gold), 0 6px 0 rgba(0,0,0,.25); animation-delay:.6s; }
 .rb-step-2{ min-height:14rem; animation-delay:.3s; }
 .rb-step-3{ min-height:12rem; }
 .rb-step .rb-hero{ width:6rem; height:6rem; }
 .rb-step-1 .rb-hero{ width:8rem; height:8rem; }
 .rb-step-name{ font-weight:900; font-size:1.3rem; text-align:center; overflow-wrap:anywhere; }
-.rb-step-wins{ font-weight:700; color:var(--ink-soft); }
+.rb-step-wins{ font-weight:700; color:var(--w-soft); }
 .rb-step-place{ margin-top:auto; font-weight:900; font-size:1.6rem; color:#7a5a00; }
 .rb-step.mine{ box-shadow:0 0 0 .3rem #2f9e44, 0 6px 0 rgba(0,0,0,.25); }
 @keyframes rbRise{ from{ transform:translateY(2rem); opacity:0; } to{ transform:none; opacity:1; } }
@@ -141,11 +162,11 @@
 .rb-done-grid h3{ margin:0 0 .5rem; }
 .rb-standings-box, .rb-missed-box{ background:rgba(255,255,255,.12); border-radius:16px; padding:1rem; }
 .rb-final{ list-style:none; margin:0; padding:0; display:grid; gap:.35rem; max-height:26rem; overflow:auto; }
-.rb-final-row{ display:grid; grid-template-columns:auto auto minmax(0, 1fr); align-items:center; column-gap:.6rem; background:#fff; color:var(--ink); border-radius:12px; padding:.3rem .6rem; }
+.rb-final-row{ display:grid; grid-template-columns:auto auto minmax(0, 1fr); align-items:center; column-gap:.6rem; background:#fff; color:var(--w-ink); border-radius:12px; padding:.3rem .6rem; }
 .rb-final-row .rb-hero{ width:2.4rem; height:2.4rem; grid-row:span 2; }
 .rb-final-place{ font-weight:900; min-width:2.6rem; grid-row:span 2; }
 .rb-final-row .rb-player-name{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.rb-final-stat{ grid-column:3; font-size:.84rem; font-weight:700; color:var(--ink-soft); }
+.rb-final-stat{ grid-column:3; font-size:.84rem; font-weight:700; color:var(--w-soft); }
 .rb-missed{ margin:0; padding-left:1.3rem; display:grid; gap:.5rem; }
 .rb-missed li span{ display:block; }
 .rb-missed-q{ font-weight:800; }
@@ -161,23 +182,49 @@
 .rb-out-tag{ font-weight:800; color:var(--bad-ink); }
 
 /* ---------- music ---------- */
-.rb-music{ display:flex; align-items:center; gap:.6rem; margin:.75rem 0; padding:.45rem .8rem; background:#fff; border:1px solid var(--line); border-radius:99px; width:max-content; max-width:100%; }
-.rb-music .lv-music-btn{ font:inherit; font-weight:700; border:1px solid var(--line); background:var(--paper-soft); border-radius:99px; padding:.2rem .8rem; cursor:pointer; }
+.rb-music{ display:flex; align-items:center; gap:.6rem; margin:.75rem 0; padding:.45rem .8rem; background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:99px; width:max-content; max-width:100%; }
+.rb-music .lv-music-btn{ font:inherit; font-weight:700; border:1px solid var(--line); background:var(--paper-soft); color:var(--ink); border-radius:99px; padding:.2rem .8rem; cursor:pointer; }
+
+/* ---------- the whole screen (Donny, 2026-11-04: the class plays on Chromebooks) ----------
+   The game screens use the whole width and height of the window (or of the frame inside the
+   physical science site); the setup page stays a comfortable reading width. royale-host.js and
+   royale-play.js put rb-body on <body> and name the step showing in data-rb-step. */
+.lv-page.container.rb-page{ max-width:none; padding-left:.75rem; padding-right:.75rem; }
+.rb-host > #rbGate, .rb-host > #rbSetup{ max-width:68.75rem; margin-left:auto; margin-right:auto; }
+body.rb-body{ min-height:100vh; min-height:100dvh; display:flex; flex-direction:column; }
+body.rb-body > main.rb-page{ flex:1 0 auto; width:100%; display:flex; flex-direction:column; }
+body.rb-body > main.rb-page > .lv-step:not([hidden]){ width:100%; }
+body.rb-body > main.rb-page > .rb-arena, body.rb-body > main.rb-page > .rp-screen{ flex:1 0 auto; display:flex; flex-direction:column; }
+body.rb-body > main.rb-page > .lv-status:empty{ display:none; }
+body[data-rb-step="rbPlay"] > main.rb-page, body[data-rb-step="rbDone"] > main.rb-page,
+body[data-rb-step="rpVs"] > main.rb-page, body[data-rb-step="rpQ"] > main.rb-page, body[data-rb-step="rpResult"] > main.rb-page{ padding-top:.6rem; padding-bottom:.6rem; }
+body[data-rb-step="rbPlay"] > footer, body[data-rb-step="rbDone"] > footer,
+body[data-rb-step="rpVs"] > footer, body[data-rb-step="rpQ"] > footer, body[data-rb-step="rpResult"] > footer{ display:none; }
+/* The question and its answers grow to fill the screen. */
+#rbPlay > .rb-play-grid{ flex:1 1 auto; align-items:stretch; }
+#rbPlay .rb-spot{ align-self:start; }
+.rb-stage{ display:flex; flex-direction:column; min-width:0; }
+.rb-stage-question .rb-q-top{ flex:1 1 auto; }
+.rb-stage-question .rb-tiles{ flex:1.25 1 auto; grid-auto-rows:minmax(4.5rem, 1fr); }
+.rb-stage-question .rb-timebar{ flex:none; }
 
 /* Full screen for projecting: the site's top bar steps aside. */
 body.rb-full .topbar, body.rb-full footer, body.rb-full .skip{ display:none; }
-body.rb-full .rb-page{ max-width:none; padding:1rem; }
-body.rb-full .rb-arena{ min-height:calc(100vh - 2rem); }
+body.rb-full .rb-page{ max-width:none; padding:.75rem; }
 
 /* ============ the students' screen ============ */
-.rb-play{ max-width:56rem; }
+.rb-play{ max-width:none; }
+.rb-play > .lv-card{ width:100%; max-width:40rem; margin-left:auto; margin-right:auto; }
+.rb-play > #rpLobby{ max-width:72rem; margin-left:auto; margin-right:auto; }
+#rpVs, #rpResult{ justify-content:center; }
+#rpQ .rp-answers{ flex:1 1 auto; grid-auto-rows:minmax(5.5rem, 1fr); }
 .rp-me-card{ display:flex; align-items:center; gap:1.25rem; background:var(--arena); color:#fff; border-radius:var(--radius); padding:1rem 1.25rem; box-shadow:var(--shadow); }
 .rp-me-card .lv-eyebrow{ color:#e3d4ff; margin:0; }
 .rp-me-name{ margin:0; font-size:1.8rem; font-weight:900; }
 .rp-me-text .lv-small{ color:#efe6ff; margin:.3rem 0 0; }
 .rp-me-hero .rb-hero{ width:7rem; height:7rem; }
 .rp-energy{ margin:.2rem 0 0; }
-.rp-picker{ margin-top:1rem; background:#fff; border:1px solid var(--line); border-radius:var(--radius); padding:.8rem 1rem 1rem; }
+.rp-picker{ margin-top:1rem; background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:var(--radius); padding:.8rem 1rem 1rem; }
 .rp-pick-title{ margin:0 0 .2rem; font-size:1.3rem; }
 .rb-hp-line{ display:inline-flex; align-items:center; gap:.4rem; }
 .rb-shield{ font-size:1.15em; line-height:1; filter:drop-shadow(0 1px 0 rgba(0,0,0,.3)); }
@@ -186,13 +233,14 @@ body.rb-full .rb-arena{ min-height:calc(100vh - 2rem); }
 .rb-fighter.right .rb-blocked, .rb-fighter.right .rb-earned{ right:auto; left:.3rem; }
 .rb-earned{ background:#2f9e44; }
 .rb-back-list{ display:flex; flex-wrap:wrap; justify-content:center; gap:.5rem; margin:.6rem 0 0; }
-.rb-back-chip{ display:flex; align-items:center; gap:.4rem; background:#fff; color:var(--ink); border-radius:99px; padding:.15rem .7rem .15rem .2rem; font-weight:800; }
+.rb-back-chip{ display:flex; align-items:center; gap:.4rem; background:#fff; color:var(--w-ink); border-radius:99px; padding:.15rem .7rem .15rem .2rem; font-weight:800; }
 .rb-back-chip .rb-hero{ width:2rem; height:2rem; }
 .rb-link-import{ display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; margin:.6rem 0; }
-.rb-link-import input{ flex:1 1 20rem; min-width:0; font:inherit; padding:.5rem .7rem; border:1px solid var(--line); border-radius:var(--radius-sm); }
+.rb-link-import input{ flex:1 1 20rem; min-width:0; font:inherit; padding:.5rem .7rem; border:1px solid var(--line); border-radius:var(--radius-sm); background:var(--card); color:var(--ink); }
 /* Add a saved set to the one being made (merging, Donny 2026-11-04). */
 .rb-merge-row select{ flex:1 1 16rem; min-width:0; font:inherit; font-weight:600; padding:.5rem .7rem; border:1px solid var(--line); border-radius:var(--radius-sm); background:var(--card, #fff); color:inherit; }
-.rb-import-help{ background:#fff7e0; border-radius:var(--radius-sm); padding:.5rem .8rem; margin:.2rem 0 .6rem; font-size:.92rem; }
+.rb-import-help{ background:#fff7e0; color:#1b1f2a; border-radius:var(--radius-sm); padding:.5rem .8rem; margin:.2rem 0 .6rem; font-size:.92rem; }
+html[data-theme="dark"] .rb-import-help{ background:#2b2512; color:var(--ink); }
 .rb-import-help ol{ margin:.3rem 0 0; padding-left:1.3rem; }
 .rp-pick-msg{ margin:0 0 .4rem; font-weight:700; color:var(--bad-ink); min-height:1.2em; }
 .rp-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(5.6rem, 1fr)); gap:.5rem; }
@@ -201,6 +249,8 @@ body.rb-full .rb-arena{ min-height:calc(100vh - 2rem); }
 .rp-pick .rb-hero{ width:4.2rem; height:4.2rem; }
 .rp-pick-name{ font-size:.74rem; font-weight:700; text-align:center; line-height:1.1; color:var(--ink); }
 .rp-pick.mine{ border-color:var(--gold); background:#fff7d6; box-shadow:0 0 0 3px rgba(242,183,5,.35); }
+html[data-theme="dark"] .rp-pick{ background:#262b3a; }
+html[data-theme="dark"] .rp-pick.mine{ background:#3a3216; }
 .rp-pick.taken{ cursor:not-allowed; opacity:.35; filter:grayscale(.7); }
 .rp-lock{ position:absolute; top:.2rem; right:.25rem; font-size:.9rem; }
 .rp-screen{ background:radial-gradient(circle at 50% 0, var(--arena-2), var(--arena) 70%); color:#fff; border-radius:var(--radius); padding:1rem; min-height:70vh; }
@@ -213,19 +263,20 @@ body.rb-full .rb-arena{ min-height:calc(100vh - 2rem); }
 .rp-vs-word{ font-size:3.5rem; font-weight:900; font-style:italic; color:var(--gold); text-shadow:0 4px 0 rgba(0,0,0,.3); }
 .rp-vs-note{ text-align:center; font-weight:800; font-size:1.2rem; }
 .rp-qbar{ display:flex; align-items:center; gap:.75rem; margin-bottom:.75rem; }
-.rp-tag{ font-weight:800; }
+.rp-tag{ font-weight:800; font-size:clamp(1.05rem, 1.8vw, 1.4rem); min-width:0; overflow-wrap:anywhere; }
 .rp-qbar .rp-energy{ margin:0 0 0 auto; }
 .rp-timer{ display:inline-grid; place-items:center; width:2.8rem; height:2.8rem; border-radius:50%; background:var(--gold); color:#3b2a00; font-weight:900; font-size:1.3rem; }
 .rp-timer.low{ background:#e03131; color:#fff; }
-.rp-question{ background:#fff; color:var(--ink); border-radius:16px; padding:1rem 1.2rem; text-align:center; box-shadow:0 4px 0 rgba(0,0,0,.2); }
-.rp-qtext{ margin:0; font-size:clamp(1.15rem, 3.5vw, 1.6rem); font-weight:800; overflow-wrap:anywhere; }
+.rp-question{ background:#fff; color:var(--w-ink); border-radius:16px; padding:1rem 1.2rem; text-align:center; box-shadow:0 4px 0 rgba(0,0,0,.2); }
+.rp-qtext{ margin:0; font-size:clamp(1.15rem, 2.6vw, 2.1rem); font-weight:800; line-height:1.25; overflow-wrap:anywhere; }
 .rp-qimg{ max-width:100%; max-height:28vh; border-radius:10px; margin-top:.6rem; }
 .rp-answers{ display:grid; grid-template-columns:1fr 1fr; gap:.6rem; margin-top:.9rem; }
-.rp-answer{ font:inherit; font-weight:800; font-size:clamp(1rem, 3vw, 1.3rem); color:#fff; background:var(--tile); border:0; border-radius:14px; min-height:5.5rem; padding:.8rem; cursor:pointer; box-shadow:0 5px 0 rgba(0,0,0,.25); overflow-wrap:anywhere; }
+.rp-answer{ font:inherit; font-weight:800; font-size:clamp(1rem, 2.2vw, 1.75rem); color:#fff; background:var(--tile); border:0; border-radius:14px; min-height:5.5rem; padding:.8rem; cursor:pointer; box-shadow:0 5px 0 rgba(0,0,0,.25); overflow-wrap:anywhere; }
 .rp-answer:active:not(:disabled){ transform:translateY(3px); box-shadow:0 2px 0 rgba(0,0,0,.25); }
-.rp-answer:disabled{ cursor:default; opacity:.45; }
-.rp-answer.picked{ opacity:1; box-shadow:0 0 0 4px #fff, 0 5px 0 rgba(0,0,0,.25); }
-.rp-sent{ margin-top:1rem; text-align:center; background:#fff; color:var(--ink); border-radius:14px; padding:.8rem; display:flex; flex-direction:column; gap:.2rem; }
+/* After answering, the other answers turn a muted color; their words stay solid white so they can be read. */
+.rp-answer:disabled{ cursor:default; background:color-mix(in srgb, var(--tile) 35%, #3f2a63); box-shadow:0 5px 0 rgba(0,0,0,.2); }
+.rp-answer.picked{ opacity:1; background:var(--tile); box-shadow:0 0 0 4px #fff, 0 5px 0 rgba(0,0,0,.25); }
+.rp-sent{ margin-top:1rem; text-align:center; background:#fff; color:var(--w-ink); border-radius:14px; padding:.8rem; display:flex; flex-direction:column; gap:.2rem; }
 .rp-sent strong{ font-size:1.4rem; }
 .rp-banner{ margin:1rem auto; text-align:center; font-size:clamp(2.2rem, 9vw, 3.6rem); font-weight:900; text-transform:uppercase; letter-spacing:.02em; padding:.4rem 1rem; border-radius:16px; transform:rotate(-2deg); width:max-content; max-width:100%; box-shadow:0 6px 0 rgba(0,0,0,.25); animation:rbPop .35s ease-out; }
 .rp-banner.win{ background:var(--gold); color:#3b2a00; }
@@ -248,16 +299,16 @@ body.rb-full .rb-arena{ min-height:calc(100vh - 2rem); }
 .rp-done-hero .rb-hero{ margin:0 auto; }
 
 /* ---------- 2026-10-30: groups, ghosts, highlights, answer pictures ---------- */
-.rb-play-grid{ display:grid; grid-template-columns:10.5rem minmax(0, 1fr); gap:1rem; margin-top:1rem; align-items:start; }
+.rb-play-grid{ display:grid; grid-template-columns:10rem minmax(0, 1fr); gap:.85rem; margin-top:.75rem; align-items:start; }
 .rb-play-grid .rb-stage{ margin-top:0; }
 .rb-spot{ display:flex; flex-direction:column; gap:.6rem; background:rgba(0,0,0,.18); border-radius:16px; padding:.7rem .6rem; }
 .rb-spot-title{ margin:0; font-size:1.05rem; text-align:center; color:#fff; letter-spacing:.03em; }
 .rb-spot-wait{ margin:0; font-size:.85rem; text-align:center; opacity:.85; }
-.rb-spot-card{ display:flex; flex-direction:column; align-items:center; gap:.2rem; background:#fff; color:var(--ink); border-radius:14px; padding:.45rem .4rem .5rem; box-shadow:0 4px 0 rgba(0,0,0,.22); animation:rbPop .35s ease-out both; }
+.rb-spot-card{ display:flex; flex-direction:column; align-items:center; gap:.2rem; min-width:0; background:#fff; color:var(--w-ink); border-radius:14px; padding:.45rem .4rem .5rem; box-shadow:0 4px 0 rgba(0,0,0,.22); animation:rbPop .35s ease-out both; }
 .rb-spot-card:nth-child(3){ animation-delay:.1s; } .rb-spot-card:nth-child(4){ animation-delay:.2s; } .rb-spot-card:nth-child(5){ animation-delay:.3s; } .rb-spot-card:nth-child(6){ animation-delay:.4s; }
 .rb-spot-card .rb-hero{ width:3.4rem; height:3.4rem; }
 .rb-spot-name{ font-weight:800; font-size:.85rem; line-height:1.1; text-align:center; overflow-wrap:anywhere; }
-.rb-spot-what{ font-weight:900; font-size:.8rem; line-height:1.15; text-align:center; background:var(--gold); color:#3b2a00; border-radius:99px; padding:.1rem .5rem; }
+.rb-spot-what{ max-width:100%; font-weight:900; font-size:.8rem; line-height:1.15; text-align:center; background:var(--gold); color:#3b2a00; border-radius:99px; padding:.1rem .5rem; }
 .rb-matchup.wide{ grid-column:1 / -1; flex-wrap:wrap; justify-content:center; }
 .rb-matchup.wide .rb-fighter{ flex:1 1 9.5rem; }
 .rb-matchup.wide .rb-fighter.right{ flex-direction:row; text-align:left; }
@@ -291,7 +342,7 @@ body.rb-full .rb-arena{ min-height:calc(100vh - 2rem); }
 .rp-mini-podium .rb-step-place{ font-size:1.2rem; }
 @media (max-width:40rem){
   .rb-q-top, .rb-res-top{ display:block; }
-  .rb-q-side{ margin-top:.6rem; flex-direction:row; }
+  .rb-q-side{ margin-top:.6rem; flex-direction:row; width:auto; }
   .rp-fighter .rb-hero{ width:6.5rem; height:6.5rem; }
   .rp-vs-word{ font-size:2.4rem; }
 }
@@ -299,6 +350,6 @@ body.rb-full .rb-arena{ min-height:calc(100vh - 2rem); }
   .rb-page *{ animation:none !important; transition:none !important; }
 }
 /* The result badges sit on their own line under the name (2026-10-30). */
-.rb-fighter-text > .rb-ko, .rb-fighter-text > .rb-minus, .rb-fighter-text > .rb-blocked, .rb-fighter-text > .rb-earned{ position:static; align-self:flex-start; width:max-content; margin-top:.2rem; }
+.rb-fighter-text > .rb-ko, .rb-fighter-text > .rb-minus, .rb-fighter-text > .rb-blocked, .rb-fighter-text > .rb-earned{ position:static; align-self:flex-start; width:max-content; max-width:100%; margin-top:.2rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .rb-fighter.right .rb-fighter-text > .rb-ko, .rb-fighter.right .rb-fighter-text > .rb-minus, .rb-fighter.right .rb-fighter-text > .rb-blocked, .rb-fighter.right .rb-fighter-text > .rb-earned{ align-self:flex-end; }
 .rp-res-side.ghost .rb-hero{ filter:grayscale(.6); opacity:.6; }

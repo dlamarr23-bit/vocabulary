@@ -30,7 +30,12 @@
   var TEMPLATE = 'https://docs.google.com/spreadsheets/d/1id9tjF6A5Ua9x3r4QxDGTu7DRMpviwWUOj8LGmud1eU/copy';
   var ws = null, game = null, board = null, leaving = false, retries = 0, pingTimer = null, qrFor = '', skew = null;
 
-  function show(id) { STEPS.forEach(function (s) { $(s).hidden = s !== id; }); }
+  // The body names the step showing, so the game screens can fill the whole screen (royale.css).
+  document.body.classList.add('rb-body');
+  function show(id) {
+    STEPS.forEach(function (s) { $(s).hidden = s !== id; });
+    document.body.setAttribute('data-rb-step', id);
+  }
   function status(text) { $('rbStatus').textContent = text || ''; }
   function mk(tag, cls, text) {
     var n = document.createElement(tag);
@@ -871,7 +876,11 @@
     }
     // The count of answers changes without a new stage.
     var got = $('rbGot');
-    if (got) got.textContent = r.answered + ' of ' + r.of + ' answered';
+    if (got) {
+      got.textContent = '';
+      got.appendChild(mk('strong', '', r.answered + ' of ' + r.of));
+      got.appendChild(document.createTextNode('answered'));
+    }
     clearInterval(tickTimer);
     tickTimer = setInterval(tick, 200);
     tick();
@@ -986,7 +995,10 @@
     if (x.ghost) {
       card.appendChild(mk('span', 'rb-vs-word', 'VS'));
       var g = fill(x.ghost, 'right ghost', true);
-      g.querySelector('.rb-fighter-name').textContent = '👻 Ghost of ' + x.ghost.name;
+      // "Ghost" on its own small line, so the student's name has the room (2026-11-04).
+      var gn = g.querySelector('.rb-fighter-name');
+      gn.textContent = x.ghost.name;
+      gn.parentNode.insertBefore(mk('span', 'rb-ghost-tag', '👻 Ghost'), gn);
       card.appendChild(g);
     }
     return card;

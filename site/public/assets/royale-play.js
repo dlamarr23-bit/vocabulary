@@ -23,7 +23,12 @@
   var COLORS = ['#e8590c', '#1c7ed6', '#2f9e44', '#e03131'];
   var ws = null, code = '', me = null, leaving = false, retries = 0, pingTimer = null, hello = null, view = null, skew = null;
 
-  function show(id) { STEPS.forEach(function (s) { $(s).hidden = s !== id; }); }
+  // The body names the step showing, so the game screens can fill the whole screen (royale.css).
+  document.body.classList.add('rb-body');
+  function show(id) {
+    STEPS.forEach(function (s) { $(s).hidden = s !== id; });
+    document.body.setAttribute('data-rb-step', id);
+  }
   function status(text) { $('rpStatus').textContent = text || ''; }
   function mk(tag, cls, text) {
     var n = document.createElement(tag);
