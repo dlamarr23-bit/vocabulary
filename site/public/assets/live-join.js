@@ -15,7 +15,7 @@
   'use strict';
 
   var $ = function (id) { return document.getElementById(id); };
-  var STEPS = ['jnCode', 'jnName', 'jnWait', 'jnPlay', 'jnBlast', 'jnMatch', 'jnDone', 'jnGone'];
+  var STEPS = ['jnCode', 'jnPass', 'jnName', 'jnWait', 'jnPlay', 'jnBlast', 'jnMatch', 'jnDone', 'jnGone'];
   var CODE = /^[A-HJ-NP-Z2-9]{6}$/;
   var ws = null, code = '', me = null, typedNames = false, leaving = false, retries = 0, pingTimer = null;
   var shownQ = '', shownFeedback = 0, feedbackTimer = null, locked = false, lastTeammates = 0;
@@ -224,6 +224,8 @@
     if (m.t === 'hello') {
       // Battle Royale has a screen of its own (royale/play/).
       if (m.kind === 'royale') { leaving = true; if (ws) try { ws.close(); } catch (e) { /* closed */ } location.replace('../royale/play/#' + code); return; }
+      // So does Surge Showdown (surge/play/).
+      if (m.kind === 'surge') { leaving = true; if (ws) try { ws.close(); } catch (e) { /* closed */ } location.replace('../surge/play/#' + code); return; }
       lastHello = m;
       typedNames = m.typedNames;
       counts = !!m.counts;
@@ -231,9 +233,13 @@
       joinReady();
       if (me && me.id) { send({ t: 'rejoin', id: me.id, secret: me.secret }); return; }
       if (m.phase === 'done') { stop('That game is over. Wait for your teacher to start a new one.', true); return; }
-      // Random names: nothing to type, so join straight away. Signed in with
-      // Class Pass: the game uses the name on the class list.
-      if (!typedNames || passToken()) { send({ t: 'join', name: '', dev: device() }); return; }
+      // Signed in with Class Pass: the game uses the name on the class list.
+      if (passToken()) { send({ t: 'join', name: '', dev: device() }); return; }
+      // Not signed in (Donny, 2026-11-04): sign in first, or, when the
+      // teacher lets guests in, join as a guest with a typed name.
+      if (m.needPass || (m.guests && !asGuest)) { passStep(m); return; }
+      // A game from before: random names need nothing typed.
+      if (!typedNames) { send({ t: 'join', name: '', dev: device() }); return; }
       nameStep(m);
     } else if (m.t === 'me') {
 
@@ -267,12 +273,39 @@
       stop(m.msg, !m.blocked);
     } else if (m.t === 'error') {
       joinReady();
+      // The sign-in ran out, or this game needs one.
+      if (m.code === 'needPass' && lastHello) { passStep(lastHello); return; }
       leaving = true;
       show('jnCode');
       $('jnCodeError').textContent = m.msg;
       if (m.code === 'nogame') { forgetPlayer(); $('jnRejoin').hidden = true; }
     }
   }
+
+  // Sign in with Class Pass to play; "Join as a guest" too when the teacher
+  // lets guests in.
+  var asGuest = false;
+  function passStep(m) {
+    $('jnPassTitle').textContent = m.title || '';
+    $('jnPassError').textContent = '';
+    $('jnGuestBox').hidden = !m.guests;
+    $('jnPassBtn').disabled = false;
+    show('jnPass');
+  }
+  $('jnPassBtn').addEventListener('click', function () {
+    if (!window.IS8Pass) return;
+    var btn = this;
+    btn.disabled = true;
+    $('jnPassError').textContent = '';
+    window.IS8Pass.signIn().then(function () { btn.disabled = false; open(code); }, function (err) {
+      btn.disabled = false;
+      $('jnPassError').textContent = err.message;
+    });
+  });
+  $('jnGuestBtn').addEventListener('click', function () {
+    asGuest = true;
+    if (lastHello) nameStep(lastHello);
+  });
 
   function nameStep(m) {
     $('jnGameTitle').textContent = m.title;

@@ -13,11 +13,12 @@
 <script src="../assets/book.js" defer></script>
 <script src="../assets/pass.js?v=f773610b" defer></script>
 <link rel="stylesheet" href="../assets/flashcards.css?v=4b3a9a09">
-<link rel="stylesheet" href="../assets/live.css?v=b029521d">
+<link rel="stylesheet" href="../assets/live.css?v=f4865542">
 <script src="../assets/editor.js?v=dfb83758" defer></script>
 <script src="../assets/vendor/qrcode.js?v=18ae399f" defer></script>
 <script src="../assets/live-celebrate.js?v=b55c9a9c" defer></script>
-<script src="../assets/live-host.js?v=9a66da1e" defer></script>
+<script src="../assets/live-roster.js?v=647187a7" defer></script>
+<script src="../assets/live-host.js?v=492d1183" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to the page</a><div class="topbar"><div class="topbar-inner">
@@ -88,7 +89,7 @@
 <label class="lv-choice"><input type="radio" name="lvGame" value="surge">
 <span class="lv-choice-art" aria-hidden="true"><svg viewBox="0 0 32 32" aria-hidden="true"><circle class="b" cx="16" cy="16" r="12.5"/><path class="a" d="M18.5 4.5l-9.5 13h6.2l-2.2 10 9.8-13.5h-6.3z"/></svg></span>
 <span class="lv-choice-title">Surge Showdown</span>
-<span class="lv-choice-text">Team battle: earn energy with right answers, then attack, heal and shield. Opens Surge Showdown.</span>
+<span class="lv-choice-text">Team battle: earn energy with right answers, then attack, heal and shield. Power-ups get stronger as the clock runs down.</span>
 </label>
 </div></fieldset>
 
@@ -128,19 +129,22 @@
 </label>
 </div></fieldset>
 
-<fieldset class="lv-group"><legend class="lv-q">What names do students play under?</legend>
+<fieldset class="lv-group lv-who"><legend class="lv-q">Who can join?</legend>
 <div class="lv-choices">
-<label class="lv-choice"><input type="radio" name="lvWho" value="random" checked>
-<span class="lv-choice-art" aria-hidden="true"><svg viewBox="0 0 64 40"><path class="b" d="M49 4l2 5 5 2-5 2-2 5-2-5-5-2 5-2zM13 24l1.5 3.5L18 29l-3.5 1.5L13 34l-1.5-3.5L8 29l3.5-1.5z"/><rect class="a" x="20" y="6" width="26" height="28" rx="6" transform="rotate(-8 33 20)"/><circle class="w" cx="27" cy="14" r="2.6"/><circle class="w" cx="33" cy="20" r="2.6"/><circle class="w" cx="39" cy="26" r="2.6"/></svg></span>
-<span class="lv-choice-title">Random fun names</span>
-<span class="lv-choice-text">Each student gets a name like Speedy Otter. Nothing to type.</span>
+<label class="lv-choice"><input type="radio" name="lvWho" value="pass" checked>
+<span class="lv-choice-art" aria-hidden="true"><svg viewBox="0 0 64 40"><rect class="b" x="10" y="4" width="44" height="32" rx="6"/><circle class="a" cx="24" cy="16" r="6"/><path class="a" d="M14.5 31c0-5.5 4.2-9 9.5-9s9.5 3.5 9.5 9z"/><path class="w" d="M38 15h9M38 21h6"/><path class="as" d="M40 28l3.5 3.5 7-7.5"/></svg></span>
+<span class="lv-choice-title">Class Pass only</span>
+<span class="lv-choice-text">Students sign in with Class Pass. Their names come from your class list and their wins go on the leaderboard.</span>
 </label>
-<label class="lv-choice"><input type="radio" name="lvWho" value="typed">
-<span class="lv-choice-art" aria-hidden="true"><svg viewBox="0 0 64 40"><rect class="b" x="6" y="9" width="52" height="22" rx="6"/><rect class="a" x="13" y="16" width="8" height="8" rx="2"/><rect class="a" x="24" y="16" width="8" height="8" rx="2"/><rect class="a" x="44" y="13" width="3" height="14" rx="1.5"/></svg></span>
-<span class="lv-choice-title">Students type their name</span>
-<span class="lv-choice-text">First name and last initial only, checked for rude words. You can remove anyone or swap their name.</span>
+<label class="lv-choice"><input type="radio" name="lvWho" value="guests">
+<span class="lv-choice-art" aria-hidden="true"><svg viewBox="0 0 64 40"><rect class="b" x="3" y="6" width="34" height="28" rx="6"/><circle class="a" cx="15" cy="16" r="5"/><path class="a" d="M7 30c0-4.5 3.6-7.5 8-7.5s8 3 8 7.5z"/><path class="w" d="M27 15h6M27 20h4"/><circle class="a" cx="50" cy="14" r="6"/><path class="a" d="M40 34c0-6 4.5-10 10-10s10 4 10 10z"/></svg></span>
+<span class="lv-choice-title">Class Pass and guests</span>
+<span class="lv-choice-text">Students on your class list sign in. Anyone else can join as a guest by typing a first name and last initial (checked for rude words). For a class in another room.</span>
 </label>
-</div></fieldset>
+</div>
+<label class="lv-opt lv-period-row"><span><strong>Class period playing</strong><span class="lv-opt-note">The lobby shows who from this period has joined and who has not. The list comes from your Leaderboard page.</span></span>
+<select id="lvPeriod"><option value="">No period: just show who joins</option></select></label>
+</fieldset>
 
 <div class="lv-more">
 <label class="lv-opt" data-for="blast"><span><strong>Time</strong><span class="lv-opt-note">The team with the most right answers when time runs out wins.</span></span>
@@ -210,6 +214,11 @@
 <button type="button" class="btn lv-big" id="lvStartSolo">Start game</button>
 </div>
 </div>
+<div class="lv-roll-pick">
+<label>Who can join <select id="lvLobbyWho"><option value="pass">Class Pass only</option><option value="guests">Class Pass and guests</option></select></label>
+<label>Class period <select id="lvLobbyPeriod"><option value="">No period</option></select></label>
+</div>
+<div class="lv-roll" id="lvRoll" hidden></div>
 <div class="lv-pick" id="lvPick" hidden>
 <div class="lv-pick-bar">
 <strong class="lv-pick-label">Students pick their teams</strong>

@@ -13,11 +13,11 @@
 <script src="../../assets/book.js" defer></script>
 <script src="../../assets/pass.js?v=f773610b" defer></script>
 <link rel="stylesheet" href="../../assets/flashcards.css?v=4b3a9a09">
-<link rel="stylesheet" href="../../assets/live.css?v=b029521d">
-<link rel="stylesheet" href="../../assets/royale.css?v=bdb6fd03">
+<link rel="stylesheet" href="../../assets/live.css?v=f4865542">
+<link rel="stylesheet" href="../../assets/royale.css?v=f444b3fa">
 <script src="../../assets/live-celebrate.js?v=b55c9a9c" defer></script>
 <script src="../../assets/heroes.js?v=eb09730e" defer></script>
-<script src="../../assets/royale-play.js?v=8df3cb90" defer></script>
+<script src="../../assets/royale-play.js?v=fb49b5ac" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to the page</a><div class="topbar"><div class="topbar-inner">
@@ -51,11 +51,27 @@
 <p class="lv-error" id="rpCodeError" role="alert"></p>
 </section>
 
-<section class="lv-step lv-card" id="rpPass" hidden>
-<h1>Battle Royale</h1>
-<p class="lv-lede">Sign in with Class Pass to play. Your name comes from your class list, and your wins go on the class leaderboard.</p>
+<section class="lv-step lv-card lv-pass-step" id="rpPass" hidden>
+<p class="lv-eyebrow" id="rpPassTitle"></p>
+<h1>Sign in to play</h1>
+<p class="lv-lede">Sign in with Class Pass. Your name comes from the class list, and your wins go on the class leaderboard.</p>
 <button type="button" class="btn lv-big" id="rpPassBtn">Sign in with Class Pass</button>
 <p class="lv-error" id="rpPassError" role="alert"></p>
+<div id="rpGuestBox" hidden>
+<p class="lv-pass-or">Not on the class list?</p>
+<button type="button" class="btn secondary" id="rpGuestBtn">Join as a guest</button>
+</div>
+</section>
+
+<section class="lv-step lv-card" id="rpName" hidden>
+<p class="lv-eyebrow">Battle Royale</p>
+<form id="rpNameForm" class="lv-form">
+<label class="lv-q" for="rpNick">Enter your first name and last initial only.</label>
+<input id="rpNick" class="lv-nick-input" type="text" autocomplete="off" spellcheck="false" maxlength="16">
+<p class="lv-small">For example: Maria G.</p>
+<button type="submit" class="btn lv-big" id="rpNameBtn">Join game</button>
+</form>
+<p class="lv-error" id="rpNameError" role="alert"></p>
 </section>
 
 <section class="lv-step" id="rpLobby" hidden>

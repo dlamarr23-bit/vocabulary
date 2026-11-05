@@ -12,6 +12,7 @@ import { esc } from './lib/render.mjs';
 import { renderEditMoved, renderFlashcardIndex, renderOwnSetShell, defaultLibrary, renderDrawTest } from './lib/flashcards.mjs';
 import { renderLiveHost, renderLiveJoin } from './lib/live.mjs';
 import { renderRoyaleHost, renderRoyalePlay } from './lib/royale.mjs';
+import { renderSurgeHost, renderSurgePlay } from './lib/surge.mjs';
 import { renderLeaderboard, renderSignIn, renderBridge } from './lib/leaderboard.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -58,6 +59,9 @@ write('live/index.html', renderLiveHost([], [], {}));
 write('join/index.html', renderLiveJoin([]));
 write('royale/index.html', renderRoyaleHost([]));
 write('royale/play/index.html', renderRoyalePlay([]));
+// Surge Showdown (Donny, 2026-11-04: moved here from its own site).
+write('surge/index.html', renderSurgeHost([]));
+write('surge/play/index.html', renderSurgePlay([]));
 write('leaderboard/index.html', renderLeaderboard());
 write('signin/index.html', renderSignIn());
 write('bridge/index.html', renderBridge());

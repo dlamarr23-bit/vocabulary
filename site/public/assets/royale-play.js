@@ -18,7 +18,7 @@
 
   var $ = function (id) { return document.getElementById(id); };
   var AV = window.SuperAvatars;
-  var STEPS = ['rpCode', 'rpPass', 'rpLobby', 'rpVs', 'rpQ', 'rpResult', 'rpPaused', 'rpDone', 'rpGone'];
+  var STEPS = ['rpCode', 'rpPass', 'rpName', 'rpLobby', 'rpVs', 'rpQ', 'rpResult', 'rpPaused', 'rpDone', 'rpGone'];
   var CODE = /^[A-HJ-NP-Z2-9]{6}$/;
   var COLORS = ['#e8590c', '#1c7ed6', '#2f9e44', '#e03131'];
   var ws = null, code = '', me = null, leaving = false, retries = 0, pingTimer = null, hello = null, view = null, skew = null;
@@ -113,6 +113,29 @@
       $('rpPassError').textContent = err.message;
     });
   });
+  // Sign in, or join as a guest when the teacher lets guests in (Donny,
+  // 2026-11-04): a guest types a first name and last initial.
+  var asGuest = false;
+  function passStep() {
+    $('rpPassTitle').textContent = 'Battle Royale';
+    $('rpGuestBox').hidden = !(hello && hello.guests);
+    show('rpPass');
+  }
+  function nameStep() {
+    $('rpNameError').textContent = '';
+    $('rpNameBtn').disabled = false;
+    $('rpNameBtn').textContent = 'Join game';
+    show('rpName');
+    $('rpNick').focus();
+  }
+  $('rpGuestBtn').addEventListener('click', function () { asGuest = true; nameStep(); });
+  $('rpNameForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    $('rpNameError').textContent = '';
+    $('rpNameBtn').disabled = true;
+    $('rpNameBtn').textContent = 'Checking your name...';
+    send({ t: 'join', dev: device(), hero: readSaved().hero || '', name: $('rpNick').value });
+  });
 
   function start(c) {
     code = c;
@@ -170,7 +193,8 @@
       if (m.kind !== 'royale') { location.replace('../../join/#' + code); return; }
       if (me && me.id) { send({ t: 'rejoin', id: me.id, secret: me.secret }); return; }
       if (m.phase === 'done') { stop('That game is over. Wait for your teacher to start a new one.'); return; }
-      if (m.needPass && !passToken()) { show('rpPass'); return; }
+      if (!passToken() && (m.needPass || (m.guests && !asGuest))) { passStep(); return; }
+      if (!passToken() && m.guests) { nameStep(); return; }
       send({ t: 'join', dev: device(), hero: readSaved().hero || '' });
     } else if (m.t === 'me') {
       me = { id: m.id, secret: m.secret, name: m.name };
@@ -189,8 +213,12 @@
     } else if (m.t === 'removed' || m.t === 'over') {
       keep(function (s) { delete s.player; });
       stop(m.msg);
+    } else if (m.t === 'nameError') {
+      nameStep();
+      $('rpNameError').textContent = m.msg;
+      $('rpNick').select();
     } else if (m.t === 'error') {
-      if (m.code === 'needPass') { show('rpPass'); return; }
+      if (m.code === 'needPass') { passStep(); return; }
       leaving = true;
       show('rpCode');
       $('rpCodeError').textContent = m.msg;

@@ -27,6 +27,7 @@
 import { DurableObject } from 'cloudflare:workers';
 import { cleanName, rudeName, aiSaysRude } from './names.js';
 import { royale } from './royale.js';
+import { SurgeRoom } from './surge.js';
 export { Leaderboard } from './board.js';
 
 const LIFETIME_MS = 3 * 60 * 60 * 1000;
@@ -150,6 +151,15 @@ function powerKinds(list) {
   const k = POWERS.filter((x) => list.includes(x));
   return k.length ? k : POWERS.slice();
 }
+// Who can join (Donny, 2026-11-04; it replaced random and typed names):
+// 'pass', students sign in with Class Pass and play under the name on the
+// class list; 'guests', the same, and anyone not signed in can join as a
+// guest who types a first name and last initial (when the class is in
+// another room). Every game kind keeps it in g.opts.who.
+const whoOf = (o) => (o && o.who === 'guests' ? 'guests' : 'pass');
+// The class period playing, so the host sees who has joined and who has not
+// (just a label, from the roster on the Leaderboard page).
+const periodOf = (v) => String(v == null ? '' : v).replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 20);
 // Who a Class Pass student is, from the header the site adds after checking
 // the sign-in: { email, name }, or null.
 function passStudent(request) {
@@ -203,6 +213,7 @@ export class LiveGame extends DurableObject {
 
   async init(body) {
     if (body && body.kind === 'royale') return this.rInit(body);
+    if (body && body.kind === 'surge') return this.surgeRoom().init(body);
     const old = await this.load();
     if (old && Date.now() - old.created < LIFETIME_MS) return new Response('taken', { status: 409 });
     const o = body.opts || {};
@@ -227,7 +238,10 @@ export class LiveGame extends DurableObject {
         // Blast is always teams, Match always one player each; Blast always
         // shows the definition, since terms are what fit on an asteroid.
         teams: kind === 'blast' ? true : kind === 'match' ? false : o.teams !== false,
-        typedNames: o.typedNames === true,
+        who: whoOf(o),
+        // Guests type their names; a Class Pass student's name comes from the class list.
+        typedNames: whoOf(o) === 'guests',
+        period: periodOf(o.period),
         promptDef: kind === 'blast' ? true : o.promptDef !== false,
         minutes: blastMinutes(o.minutes, 5),
         limit: kind === 'volley' && LIMITS.includes(Number(o.limit)) ? Number(o.limit) : 0,
@@ -277,6 +291,7 @@ export class LiveGame extends DurableObject {
       return;
     }
     if (g.kind === 'royale') return this.rAlarm();
+    if (g.kind === 'surge') return this.surgeRoom().alarm();
     // A Blast round, or a Vocab Live game with a time limit, ends on time;
     // the game itself stays open.
     if (g.phase === 'play' && g.endsAt && now >= g.endsAt - 250) await this.timeUp();
@@ -298,6 +313,7 @@ export class LiveGame extends DurableObject {
   nextAlarm(now) {
     const g = this.game;
     if (g.kind === 'royale') return this.rNextAlarm(now);
+    if (g.kind === 'surge') return this.surgeRoom().nextAt(now);
     let at = Math.min(this.idleAt || now + IDLE_MS, g.created + LIFETIME_MS);
     if (g.phase === 'play' && g.endsAt) at = Math.min(at, g.endsAt);
     // During a game, a look every 15 seconds for students who have gone.
@@ -342,6 +358,8 @@ export class LiveGame extends DurableObject {
       server.close(1000, 'No game');
       return new Response(null, { status: 101, webSocket: client });
     }
+    // Surge Showdown (surge.js) answers its own connections.
+    if (g.kind === 'surge') return this.surgeRoom().connect(url, passStudent(request));
     await this.touch();
     if (key) {
       if (key !== g.hostKey) {
@@ -358,9 +376,16 @@ export class LiveGame extends DurableObject {
       // A student signed in with Class Pass: the site checked the sign-in and
       // says who it is (students can never send this themselves).
       server.serializeAttachment({ role: 'guest', stu: passStudent(request) });
-      server.send(JSON.stringify({ t: 'hello', kind: g.kind, title: g.title, phase: g.phase, typedNames: g.opts.typedNames, counts: !!g.counts && !g.opts.demo, needPass: g.kind === 'royale' && g.opts.pass }));
+      server.send(JSON.stringify({ t: 'hello', kind: g.kind, title: g.title, phase: g.phase, typedNames: g.opts.typedNames, counts: !!g.counts && !g.opts.demo, needPass: this.needPass(), guests: g.opts.who === 'guests' }));
     }
     return new Response(null, { status: 101, webSocket: client });
+  }
+
+  // Class Pass needed to join. A game made before "who can join" existed:
+  // Battle Royale's own switch, and the other games never needed it.
+  needPass() {
+    const o = this.game.opts;
+    return o.who ? o.who === 'pass' : this.game.kind === 'royale' && !!o.pass;
   }
 
   // Open connections only: one that is closing no longer counts as online.
@@ -434,6 +459,8 @@ export class LiveGame extends DurableObject {
 
   async webSocketMessage(ws, raw) {
     const g = await this.load();
+    // Surge Showdown has its own messages (a new question set can be long).
+    if (g && g.kind === 'surge') return this.surgeRoom().message(ws, raw);
     if (!g || typeof raw !== 'string' || raw.length > 2000) return;
     let m;
     try { m = JSON.parse(raw); } catch { return; }
@@ -442,6 +469,17 @@ export class LiveGame extends DurableObject {
     // Aiming is only passed on to teammates: nothing is saved.
     if (m.t === 'aim' && a.pid) return this.aim(a.pid, m);
     await this.touch();
+    // The class period and who can join: the teacher can change them any time.
+    if (a.role === 'host' && (m.t === 'period' || m.t === 'who')) {
+      if (m.t === 'period') g.opts.period = periodOf(m.period);
+      else {
+        g.opts.who = whoOf(m);
+        g.opts.typedNames = g.opts.who === 'guests';
+        if (g.kind === 'royale') g.opts.pass = g.opts.who === 'pass';
+      }
+      await this.save();
+      return this.toHost();
+    }
     if (g.kind === 'royale') return this.rMessage(ws, a, m);
     // A student's screen went to the background, or came back.
     if (a.pid && (m.t === 'away' || m.t === 'back')) {
@@ -478,6 +516,7 @@ export class LiveGame extends DurableObject {
     try { ws.close(1000, 'Bye'); } catch { /* already closed */ }
     const g = await this.load();
     if (!g) return;
+    if (g.kind === 'surge') return this.surgeRoom().wsClosed(ws);
     let a;
     try { a = ws.deserializeAttachment() || {}; } catch { a = {}; }
     if (!a.pid || !g.players[a.pid]) return;
@@ -508,6 +547,36 @@ export class LiveGame extends DurableObject {
     for (let n = 2; n < 200; n++) if (!taken.has((base + ' ' + n).toLowerCase())) return base + ' ' + n;
     return base + ' ' + token().slice(0, 3);
   }
+  // A guest's name: first name and last initial, checked against the word
+  // lists and the AI. Tells the student what is wrong and gives back '' when
+  // it cannot be used, or when the game changed while the AI was checking.
+  // Every game kind joins guests through here (g.players[*].name).
+  async guestName(ws, m) {
+    const g = this.game;
+    const no = (msg) => { this.send(ws, { t: 'nameError', msg }); return ''; };
+    const name = cleanName(m.name);
+    if (name.length < 2) return no('Type your first name and last initial.');
+    const taken = () => Object.values(this.game.players).some((p) => p && !p.kicked && String(p.name).toLowerCase() === name.toLowerCase());
+    if (taken()) return no('Someone already has that name. Add the next letter of your last name.');
+    if (this.checking.has(ws)) return '';
+    this.checking.add(ws);
+    let rude;
+    try {
+      // Look at what they typed too, before symbols were taken out ("b!tch").
+      rude = rudeName(name) || rudeName(String(m.name || '').slice(0, 40)) || (await this.aiCheck(name));
+    } finally {
+      this.checking.delete(ws);
+    }
+    if (rude) return no('That name cannot be used. Type your first name and last initial.');
+    // Other messages may have come in during the AI check.
+    if (ws.readyState !== 1 || !this.game || this.game !== g) return '';
+    try { if ((ws.deserializeAttachment() || {}).pid) return ''; } catch { /* no attachment yet */ }
+    if (g.phase === 'done' || g.status === 'ended') { this.send(ws, { t: 'error', msg: 'This game is over. Wait for your teacher to start a new one.' }); return ''; }
+    if ((g.order || Object.keys(g.players)).length >= MAX_PLAYERS) { this.send(ws, { t: 'error', msg: 'This game is full.' }); return ''; }
+    if (taken()) return no('Someone already has that name. Add the next letter of your last name.');
+    return name;
+  }
+
   // The AI's answer for each name is remembered for the rest of the game.
   async aiCheck(name) {
     const k = name.toLowerCase();
@@ -533,41 +602,25 @@ export class LiveGame extends DurableObject {
       if (this.isBlocked(dev, g.opts.typedNames ? cleanName(m.name) : '')) return this.send(ws, { t: 'error', code: 'blocked', msg: 'Your teacher removed you from this game.' });
       if (g.order.length >= MAX_PLAYERS) return this.send(ws, { t: 'error', msg: 'This game is full.' });
       const stu = a.stu && a.stu.email ? a.stu : null;
+      if (!stu && this.needPass()) return this.send(ws, { t: 'error', code: 'needPass', msg: 'Sign in with Class Pass to play.' });
       // Signed in with Class Pass and already in this game (another tab or
       // device): back in as the same player.
       const again = stu && Object.values(g.players).find((p) => p.stu === stu.email);
       if (again) return this.fromPlayer(ws, a, { t: 'rejoin', id: again.id, secret: again.secret });
       let name;
-      if (stu && g.opts.typedNames) {
+      if (stu) {
         // Their name from the class list, so there is nothing to type or check.
         name = this.uniqueName(cleanName(stu.name) || 'Student');
       } else if (g.opts.typedNames) {
-        name = cleanName(m.name);
-        if (name.length < 2) return this.send(ws, { t: 'nameError', msg: 'Type your first name and last initial.' });
-        const taken = () => Object.values(this.game.players).some((p) => p.name.toLowerCase() === name.toLowerCase());
-        if (taken()) return this.send(ws, { t: 'nameError', msg: 'Someone already has that name. Add the next letter of your last name.' });
-        if (this.checking.has(ws)) return;
-        this.checking.add(ws);
-        let rude;
-        try {
-          // Look at what they typed too, before symbols were taken out ("b!tch").
-          rude = rudeName(name) || rudeName(String(m.name || '').slice(0, 40)) || (await this.aiCheck(name));
-        } finally {
-          this.checking.delete(ws);
-        }
-        if (rude) return this.send(ws, { t: 'nameError', msg: 'That name cannot be used. Type your first name and last initial.' });
-        // Other messages may have come in during the AI check.
-        if (ws.readyState !== 1 || !this.game || this.game !== g) return;
-        try { if ((ws.deserializeAttachment() || {}).pid) return; } catch { /* no attachment yet */ }
-        if (g.phase === 'done') return this.send(ws, { t: 'error', msg: 'This game is over. Wait for your teacher to start a new one.' });
-        if (g.order.length >= MAX_PLAYERS) return this.send(ws, { t: 'error', msg: 'This game is full.' });
-        if (taken()) return this.send(ws, { t: 'nameError', msg: 'Someone already has that name. Add the next letter of your last name.' });
+        name = await this.guestName(ws, m);
+        if (!name) return;
       } else {
         name = this.randomName();
       }
       const pid = token().slice(0, 10);
       g.players[pid] = { id: pid, name, secret: token(), team: null, dev };
       if (stu) g.players[pid].stu = stu.email;
+      else if (g.opts.typedNames) g.players[pid].guest = true;
       g.order.push(pid);
       if (g.phase !== 'lobby') this.placeLatecomer(pid);
       else if (this.picking()) this.pickPlace(pid);
@@ -1441,7 +1494,8 @@ export class LiveGame extends DurableObject {
     let added = 0;
     while (added < n && this.demoCount() < DEMO_STUDENTS && g.order.length < MAX_PLAYERS) {
       let name;
-      if (g.opts.typedNames) {
+      // Named like the class list: every game uses real names now.
+      if (g.opts.typedNames || g.opts.who) {
         const used = new Set(Object.values(g.players).map((p) => p.name));
         const free = DEMO_FIRST.filter((f) => ![...used].some((u) => u.startsWith(f + ' ')));
         name = this.uniqueName(pick(free.length ? free : DEMO_FIRST) + ' ' + 'ABCDEFGHJKLMNPRSTVW'[rand(19)] + '.');
@@ -1793,6 +1847,7 @@ export class LiveGame extends DurableObject {
   board() {
     const g = this.game;
     if (g.kind === 'royale') return this.rBoard();
+    if (g.kind === 'surge') return { t: 'state', state: this.surgeRoom().publicState(true) };
     const missed = Object.keys(g.missed)
       .map((i) => ({ term: g.cards[i].term, def: g.cards[i].def, n: g.missed[i] }))
       .sort((x, y) => y.n - x.n)
@@ -1810,7 +1865,8 @@ export class LiveGame extends DurableObject {
       setId: g.setId,
       cardCount: g.cards.length,
       opts: g.opts,
-      players: g.order.map((pid) => ({ id: pid, name: g.players[pid].name, on: this.online(pid), team: g.players[pid].team, bot: !!g.players[pid].bot, pass: !!g.players[pid].stu })),
+      // email: only the teacher's screen gets this, to tick off the class list.
+      players: g.order.map((pid) => ({ id: pid, name: g.players[pid].name, on: this.online(pid), team: g.players[pid].team, bot: !!g.players[pid].bot, pass: !!g.players[pid].stu, email: g.players[pid].stu || '', guest: !!g.players[pid].guest })),
       counts: !!g.counts && !g.opts.demo,
       teams: g.teamOrder.map((tid) => this.teamSummary(g.teams[tid])),
       pick: this.picking() ? { endsAt: g.pickEndsAt || 0, locked: !!g.pickLocked, cap: this.pickCap() } : null,
@@ -1918,6 +1974,12 @@ export class LiveGame extends DurableObject {
 
 // Battle Royale's own steps (royale.js) run on the same game object.
 Object.assign(LiveGame.prototype, royale);
+// Surge Showdown (surge.js, Donny 2026-11-04) is a helper that works on this
+// game object, made once for each game server copy.
+LiveGame.prototype.surgeRoom = function () {
+  if (!this.surge) this.surge = new SurgeRoom(this);
+  return this.surge;
+};
 
 // This Worker has no pages of its own. The Pages site reaches the games
 // through its LIVE binding.

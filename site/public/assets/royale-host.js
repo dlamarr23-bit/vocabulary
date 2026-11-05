@@ -131,7 +131,7 @@
 
   var qsets = [], flashSets = [];
   var DEFAULT_SELECTS = ['rbEnergy', 'rbSize', 'rbSeconds', 'rbClock'];
-  var DEFAULT_CHECKS = ['rbPass', 'rbComeback', 'rbShield'];
+  var DEFAULT_CHECKS = ['rbComeback', 'rbShield'];
   function setup() {
     show('rbSetup');
     musicFor('');
@@ -141,7 +141,10 @@
       DEFAULT_SELECTS.forEach(function (id) { if (d[id]) $(id).value = d[id]; });
       DEFAULT_CHECKS.forEach(function (id) { if (typeof d[id] === 'boolean') $(id).checked = d[id]; });
       if (d.source) document.querySelector('input[name="rbSource"][value="' + d.source + '"]').checked = true;
+      if (d.who === 'guests') document.querySelector('input[name="rbWho"][value="guests"]').checked = true;
     }
+    // The class periods from the Leaderboard page; the last one picked first.
+    if (window.IS8Roster) window.IS8Roster.fillPeriods($('rbPeriod'), window.IS8Roster.last());
     $('rbSaveDefault').checked = !!d;
     // From the Host a game page: the set picked there.
     var hash = location.hash;
@@ -186,8 +189,10 @@
         sel.appendChild(o);
       });
       if (was && qsets.some(function (s) { return s.id === was; })) sel.value = was;
-      $('rbQsetEdit').disabled = $('rbQsetDelete').disabled = !qsets.length;
-      $('rbQsetNote').textContent = qsets.length ? '' : 'Make your first set with New set. You can import a Wayground quiz or a Google Sheet.';
+      $('rbQsetEdit').disabled = $('rbQsetDelete').disabled = $('rbQsetCsv').disabled = !qsets.length;
+      $('rbQsetMerge').disabled = qsets.length < 2;
+      $('rbQsetNote').textContent = qsets.length ? '' : 'Make your first set with New set. You can import a Wayground, Kahoot, Blooket or Gimkit quiz, or a Google Sheet.';
+      fillAddSets();
     }, function (err) { $('rbQsetNote').textContent = err.message; });
   }
 
@@ -208,6 +213,8 @@
   function rows(text) {
     text = String(text || '').replace(/^﻿/, '').replace(/\r\n?/g, '\n');
     if (text.indexOf('\t') >= 0) return splitQuoted(text, '\t');
+    // A CSV from Download CSV (its top row starts "Question,").
+    if (/^"?question"?,/i.test(text)) return splitQuoted(text, ',');
     if (/ \| /.test(text)) return text.split('\n').map(function (l) { return l.split('|').map(function (c) { return c.trim(); }); });
     if (text.indexOf(',') >= 0) return splitQuoted(text, ',');
     return text.split('\n').map(function (l) { return [l.trim()]; });
@@ -315,7 +322,8 @@
       }
       var hr = headerRoles(r);
       if (hr) { roles = hr; return; }
-      if (/gimkit/i.test(r[0]) || /^(example|instructions?)\b/i.test(r[0])) return;
+      // Gimkit's template has rows of instructions; its picture links say gimkit too, so links do not count.
+      if (/gimkit/i.test(String(r[0]).replace(IMG_TAG, '').replace(/https?:\/\/\S+/g, '')) || /^(example|instructions?)\b/i.test(r[0])) return;
       var x = { q: '', img: '', a: '', ai: '', w: [], wi: [] };
       if (roles) {
         r.forEach(function (cell, j) {
@@ -374,6 +382,7 @@
     $('rbEdLink').value = '';
     $('rbImportHelp').hidden = true;
     $('rbEditor').hidden = false;
+    fillAddSets();
     preview();
     $('rbEditor').scrollIntoView({ behavior: 'smooth', block: 'start' });
     if (!id) { $('rbEdName').focus(); return; }
@@ -424,9 +433,91 @@
     this.value = '';
   });
 
-  // Import from a link: a Wayground quiz or a Google Sheet (the site reads it).
-  // A sheet shared only inside the school is read here instead, with the
-  // Google account signed in to this browser (as Surge Showdown does).
+  /* ---------------- merging and downloading (Donny, 2026-11-04) ---------------- */
+
+  // Questions added to the ones already in the box (an import, or a saved
+  // set), so several links or sets become one set. The same question with the
+  // same right answer is only kept once.
+  function sameKey(x) { return [x.q, x.img, x.a, x.ai].map(function (v) { return String(v || '').trim().toLowerCase(); }).join('|'); }
+  function addQuestions(list, title) {
+    var had = parse($('rbEdText').value).questions;
+    var seen = {};
+    had.forEach(function (x) { seen[sameKey(x)] = true; });
+    var fresh = list.filter(function (x) { var k = sameKey(x); if (seen[k]) return false; seen[k] = true; return true; });
+    $('rbEdText').value = questionRows(had.concat(fresh));
+    if (title && !$('rbEdName').value) $('rbEdName').value = title;
+    preview();
+    var dupes = list.length - fresh.length;
+    return { added: fresh.length, total: had.length + fresh.length, dupes: dupes };
+  }
+  function addedText(r) {
+    return (r.added ? 'Added ' + r.added + (r.added === 1 ? ' question' : ' questions') : 'No new questions') +
+      (r.dupes ? ' (' + r.dupes + ' already in the set)' : '') + '. ' + r.total + (r.total === 1 ? ' question' : ' questions') + ' in the set now.';
+  }
+  function fillAddSets() {
+    var sel = $('rbEdAddSet');
+    sel.textContent = '';
+    if (!qsets.length) { var none = mk('option', '', 'No saved sets yet'); none.value = ''; sel.appendChild(none); }
+    qsets.forEach(function (s) {
+      if (s.id === editing) return;
+      var o = mk('option', '', s.title + ' (' + s.count + ')');
+      o.value = s.id;
+      sel.appendChild(o);
+    });
+    $('rbEdAdd').disabled = !sel.value;
+  }
+  $('rbEdAddSet').addEventListener('change', function () { $('rbEdAdd').disabled = !this.value; });
+  $('rbEdAdd').addEventListener('click', function () {
+    var id = $('rbEdAddSet').value;
+    if (!id) return;
+    var btn = this;
+    btn.disabled = true;
+    call('qsets/' + id).then(function (s) {
+      toast(addedText(addQuestions(s.questions || [], '')) + ' (from "' + s.title + '")');
+    }, function (err) { $('rbEdError').textContent = err.message; }).then(function () { btn.disabled = false; });
+  });
+  // Merge sets: a new set, then add each saved set to it.
+  $('rbQsetMerge').addEventListener('click', function () {
+    openEditor('');
+    $('rbEdName').value = 'Merged set';
+    toast('Pick a saved set and click Add its questions. Add as many as you like, then Save set.');
+    $('rbEdAddSet').focus();
+  });
+
+  // Download as a spreadsheet (CSV) with the template's columns, so it opens
+  // in Google Sheets or Excel, and comes back in with Open a file or Import.
+  var CSV_HEAD = ['Question', 'Question Image', 'Correct Answer', 'Correct Image', 'Wrong Answer 1', 'Wrong 1 Image', 'Wrong Answer 2', 'Wrong 2 Image', 'Wrong Answer 3', 'Wrong 3 Image'];
+  function csvCell(v) { v = String(v == null ? '' : v); return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+  function downloadCsv(title, list) {
+    var lines = [CSV_HEAD].concat(list.map(function (x) {
+      var row = [x.q, x.img, x.a, x.ai];
+      for (var i = 0; i < 3; i++) row.push((x.w || [])[i] || '', (x.wi || [])[i] || '');
+      return row;
+    })).map(function (r) { return r.map(csvCell).join(','); });
+    // The mark at the start tells Excel the file is UTF-8 (accents, symbols).
+    var blob = new Blob(['﻿' + lines.join('\r\n') + '\r\n'], { type: 'text/csv;charset=utf-8' });
+    var a = mk('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = (String(title || 'Question set').replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80) || 'Question set') + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }
+  $('rbEdCsv').addEventListener('click', function () {
+    var r = parse($('rbEdText').value);
+    if (!r.questions.length) { $('rbEdError').textContent = 'There are no questions to download yet.'; return; }
+    downloadCsv($('rbEdName').value.trim(), r.questions);
+  });
+  $('rbQsetCsv').addEventListener('click', function () {
+    var id = $('rbQset').value;
+    if (!id) return;
+    call('qsets/' + id).then(function (s) { downloadCsv(s.title, s.questions || []); toast('Downloaded "' + s.title + '". Change it in Google Sheets or Excel, then Edit, Open a file.'); }, function (err) { toast(err.message); });
+  });
+
+  // Import from a link: a Wayground, Kahoot, Blooket or Gimkit quiz, or a
+  // Google Sheet (the site reads it). A sheet shared only inside the school is
+  // read here instead, with the Google account signed in to this browser (as
+  // Surge Showdown does). What comes in is added to the questions already here.
   $('rbEdImport').addEventListener('click', function () {
     var link = $('rbEdLink').value.trim();
     var help = $('rbImportHelp');
@@ -438,16 +529,17 @@
     btn.textContent = 'Importing...';
     var done = function () { btn.disabled = false; btn.textContent = 'Import'; };
     var put = function (text, title) {
-      $('rbEdText').value = text;
-      if (title && !$('rbEdName').value) $('rbEdName').value = title;
-      var r = preview();
-      toast(r.questions.length ? 'Imported ' + r.questions.length + (r.questions.length === 1 ? ' question.' : ' questions.') + ' Check them, then click Save set.' : 'No questions found in that link.');
+      var got = parse(text).questions;
+      if (!got.length) { toast('No questions found in that link.'); return; }
+      toast(addedText(addQuestions(got, title)) + ' Check them, then click Save set.');
+      $('rbEdLink').value = '';
     };
     call('qsets/import', 'POST', { url: link }).then(function (r) {
       done();
       if (r.kind === 'quiz') {
         put(questionRows(r.questions), r.title);
-        if (r.skipped) $('rbEdCount').textContent += ' ' + r.skipped + (r.skipped === 1 ? ' Wayground question was' : ' Wayground questions were') + ' skipped (not multiple choice).';
+        var from = r.site || 'Wayground';
+        if (r.skipped) $('rbEdCount').textContent += ' ' + r.skipped + ' ' + from + (r.skipped === 1 ? ' question was' : ' questions were') + ' skipped (not multiple choice).';
       } else put(r.text, 'Google Sheet set');
     }, function (err) {
       if (!err.data || !err.data.private) { done(); $('rbEdError').textContent = err.message; return; }
@@ -531,22 +623,29 @@
       size: Number($('rbSize').value),
       seconds: Number($('rbSeconds').value),
       limit: Number($('rbClock').value),
-      pass: $('rbPass').checked,
+      // Who can join (Class Pass only, or guests too) and the period playing.
+      who: whoPicked(),
+      period: $('rbPeriod').value,
       comeback: $('rbComeback').checked,
       shield: $('rbShield').checked,
       demo: $('rbDemo').checked
     };
   }
+  function whoPicked() {
+    var r = document.querySelector('input[name="rbWho"]:checked');
+    return r && r.value === 'guests' ? 'guests' : 'pass';
+  }
   $('rbCreate').addEventListener('click', function () {
     var q = source() === 'qset';
     var body = { kind: 'royale', opts: opts() };
+    if (window.IS8Roster) window.IS8Roster.remember(body.opts.period);
     if (q) body.qsetId = $('rbQset').value; else body.setId = $('rbFlash').value;
     $('rbSetupError').textContent = '';
     if (q && !body.qsetId) { $('rbSetupError').textContent = 'Make a question set first (New set), or pick a flashcard set.'; return; }
     if (!q && !body.setId) { $('rbSetupError').textContent = 'Pick a flashcard set.'; return; }
     keep(function (s) {
       if ($('rbSaveDefault').checked) {
-        var d = { source: source(), qset: $('rbQset').value, flash: $('rbFlash').value };
+        var d = { source: source(), qset: $('rbQset').value, flash: $('rbFlash').value, who: whoPicked() };
         DEFAULT_SELECTS.forEach(function (id) { d[id] = $(id).value; });
         DEFAULT_CHECKS.forEach(function (id) { d[id] = $(id).checked; });
         s.defaults = d;
@@ -668,6 +767,7 @@
       seen[p.id] = true;
       li.appendChild(heroImg(p.hero));
       li.appendChild(mk('span', 'rb-player-name', p.name));
+      if (p.guest) li.appendChild(mk('span', 'lv-guest-tag', 'Guest'));
       if (!p.hero) li.appendChild(mk('span', 'rb-picking', 'picking a hero'));
       var x = mk('button', 'rb-x', '×');
       x.type = 'button';
@@ -683,7 +783,8 @@
   // The choices that can still change while students join.
   function drawLobbyOpts(b) {
     var box = $('rbLobbyOpts');
-    var key = JSON.stringify([b.opts.energy, b.opts.size, b.opts.seconds, b.opts.limit, b.opts.pass, b.opts.comeback, b.opts.shield]);
+    drawRoll(b);
+    var key = JSON.stringify([b.opts.energy, b.opts.size, b.opts.seconds, b.opts.limit, b.opts.comeback, b.opts.shield]);
     if (box.dataset.key === key) return;
     box.dataset.key = key;
     box.textContent = '';
@@ -701,7 +802,7 @@
     row('Face-offs', SIZES, b.opts.size || 2, function (v) { send({ t: 'settings', opts: { size: Number(v) } }); });
     row('Time per question', [[10, '10 seconds'], [15, '15 seconds'], [20, '20 seconds'], [30, '30 seconds'], [45, '45 seconds'], [60, '1 minute']], b.opts.seconds, function (v) { send({ t: 'settings', opts: { seconds: Number(v) } }); });
     row('Game clock', CLOCKS, b.opts.limit, function (v) { send({ t: 'clock', minutes: Number(v) }); });
-    [['pass', 'Class Pass needed'], ['comeback', 'Revives'], ['shield', 'Shield streaks']].forEach(function (x) {
+    [['comeback', 'Revives'], ['shield', 'Shield streaks']].forEach(function (x) {
       var l = mk('label', 'rb-lo fc-switch');
       l.appendChild(mk('span', '', x[1]));
       var cb = mk('input');
@@ -712,6 +813,23 @@
       box.appendChild(l);
     });
   }
+  // Who can join and the class period, changed any time in the lobby, and the
+  // period's class list: who has joined and who has not (assets/live-roster.js).
+  var rollPeriods = false;
+  function drawRoll(b) {
+    var o = b.opts || {};
+    if (document.activeElement !== $('rbLobbyWho')) $('rbLobbyWho').value = o.who || (o.pass === false ? 'guests' : 'pass');
+    var sel = $('rbLobbyPeriod');
+    if (!window.IS8Roster) return;
+    if (!rollPeriods) { rollPeriods = true; window.IS8Roster.fillPeriods(sel, o.period || ''); }
+    else if (document.activeElement !== sel && sel.value !== (o.period || '') && [].some.call(sel.options, function (x) { return x.value === (o.period || ''); })) sel.value = o.period || '';
+    window.IS8Roster.draw($('rbRoll'), o.period || '', b.players);
+  }
+  $('rbLobbyWho').addEventListener('change', function () { send({ t: 'who', who: this.value }); });
+  $('rbLobbyPeriod').addEventListener('change', function () {
+    if (window.IS8Roster) window.IS8Roster.remember(this.value);
+    send({ t: 'period', period: this.value });
+  });
   var CLOCKS = [[0, 'No clock'], [1, '1 minute'], [2, '2 minutes'], [3, '3 minutes'], [4, '4 minutes'], [5, '5 minutes'], [7, '7 minutes'], [10, '10 minutes'], [15, '15 minutes'], [20, '20 minutes'], [30, '30 minutes']];
 
   $('rbStart').addEventListener('click', function () { send({ t: 'start' }); });

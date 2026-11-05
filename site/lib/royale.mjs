@@ -5,12 +5,13 @@
 // (game-server/src/royale.js). assets/heroes.js draws the superhero avatars.
 import { site } from '../content/site.mjs';
 import { head, topbar, drawer, footer, assetVersion } from './render.mjs';
+import { whoChoices, lobbyRoll, passStep } from './live.mjs';
 
 const tag = (up, file) => file.endsWith('.css')
   ? `<link rel="stylesheet" href="${up}assets/${file}?v=${assetVersion(file)}">\n`
   : `<script src="${up}assets/${file}?v=${assetVersion(file)}" defer></script>\n`;
 
-const HOST_FILES = ['flashcards.css', 'live.css', 'royale.css', 'editor.js', 'vendor/qrcode.js', 'live-celebrate.js', 'heroes.js', 'royale-host.js'];
+const HOST_FILES = ['flashcards.css', 'live.css', 'royale.css', 'editor.js', 'vendor/qrcode.js', 'live-celebrate.js', 'heroes.js', 'live-roster.js', 'royale-host.js'];
 const PLAY_FILES = ['flashcards.css', 'live.css', 'royale.css', 'live-celebrate.js', 'heroes.js', 'royale-play.js'];
 
 export function renderRoyaleHost(chapters) {
@@ -60,6 +61,8 @@ const HOST = `<main id="main" class="container lv-page rb-page rb-host">
 <select id="rbQset" aria-label="Question set"></select>
 <button type="button" class="btn secondary fc-small" id="rbQsetNew">New set</button>
 <button type="button" class="btn secondary fc-small" id="rbQsetEdit">Edit</button>
+<button type="button" class="btn secondary fc-small" id="rbQsetMerge" title="Make one new set from two or more of your sets">Merge sets</button>
+<button type="button" class="btn secondary fc-small" id="rbQsetCsv" title="Download this set as a spreadsheet (CSV)">Download CSV</button>
 <button type="button" class="btn secondary fc-small rb-danger" id="rbQsetDelete">Delete</button>
 </div>
 <p class="lv-small" id="rbQsetNote"></p>
@@ -73,18 +76,24 @@ const HOST = `<main id="main" class="container lv-page rb-page rb-host">
 <h2 id="rbEditorTitle">New question set</h2>
 <label class="lv-field"><span class="lv-q">Name</span><input type="text" id="rbEdName" maxlength="120" placeholder="Mass, Acceleration, and Collisions"></label>
 <div class="rb-howto">
-<p><strong>Import from a link:</strong> paste the link to a Wayground quiz or a Google Sheet, then click Import.</p>
+<p><strong>Import from a link:</strong> paste the link to a Wayground, Kahoot, Blooket or Gimkit quiz, or a Google Sheet, then click Import. Each import adds its questions to the set, so you can import several links into one set.</p>
 <p class="lv-small">Start a sheet from the template: <a id="rbTemplate" href="#" target="_blank" rel="noopener">make a copy in Google Sheets</a> (or <a href="../assets/question-template.xlsx" download>download it for Excel</a>). It has a picture column for the question and for every answer: paste a picture link there (a Google Drive link works). Surge Showdown uses the same template. A Wayground or Blooket spreadsheet works too.</p>
 </div>
 <div class="rb-link-import">
-<input type="url" id="rbEdLink" placeholder="https://wayground.com/... or https://docs.google.com/spreadsheets/..." aria-label="Wayground or Google Sheets link">
+<input type="url" id="rbEdLink" placeholder="A Wayground, Kahoot, Blooket, Gimkit or Google Sheets link" aria-label="Wayground, Kahoot, Blooket, Gimkit or Google Sheets link">
 <button type="button" class="btn fc-small" id="rbEdImport">Import</button>
 </div>
 <div class="rb-import-help" id="rbImportHelp" hidden></div>
+<div class="rb-link-import rb-merge-row">
+<label class="lv-small" for="rbEdAddSet"><strong>Add a saved set:</strong></label>
+<select id="rbEdAddSet" aria-label="A saved question set to add"></select>
+<button type="button" class="btn secondary fc-small" id="rbEdAdd">Add its questions</button>
+</div>
 <p class="lv-small"><strong>Or paste rows</strong> straight from a sheet (select them, Ctrl+C, then Ctrl+V in the box), one question per line.</p>
 <textarea id="rbEdText" rows="10" spellcheck="false" placeholder="What is the unit of force?&#9;Newton&#9;Joule&#9;Watt&#9;Meter"></textarea>
 <div class="rb-ed-tools">
 <label class="btn secondary fc-small rb-file">Open a file (.csv or .tsv)<input type="file" id="rbEdFile" accept=".csv,.tsv,.txt,text/csv,text/plain" hidden></label>
+<button type="button" class="btn secondary fc-small" id="rbEdCsv" title="These questions as a spreadsheet, to change in Google Sheets or Excel and open here again">Download CSV</button>
 <span class="lv-small" id="rbEdCount" role="status"></span>
 </div>
 <div class="rb-preview" id="rbEdPreview"></div>
@@ -94,6 +103,8 @@ const HOST = `<main id="main" class="container lv-page rb-page rb-host">
 <button type="button" class="btn secondary" id="rbEdCancel">Cancel</button>
 </div>
 </section>
+
+${whoChoices('rbWho', 'rbPeriod').replace('class="lv-group lv-who"', 'class="lv-group lv-who rb-box"')}
 
 <fieldset class="lv-group rb-box"><legend class="lv-q">How to play</legend>
 <div class="rb-opts">
@@ -107,7 +118,6 @@ const HOST = `<main id="main" class="container lv-page rb-page rb-host">
 <select id="rbClock"><option value="0" selected>No clock</option><option value="1">1 minute</option><option value="2">2 minutes</option><option value="3">3 minutes</option><option value="4">4 minutes</option><option value="5">5 minutes</option><option value="7">7 minutes</option><option value="10">10 minutes</option><option value="15">15 minutes</option><option value="20">20 minutes</option><option value="30">30 minutes</option></select></label>
 <label class="lv-opt fc-switch"><span><strong>Revives</strong><span class="lv-opt-note">A student who is eliminated and gets 3 practice questions right in a row is revived with 1 HP, once a game.</span></span><input type="checkbox" id="rbComeback" checked></label>
 <label class="lv-opt fc-switch"><span><strong>Shield streaks</strong><span class="lv-opt-note">Winning 3 face-offs in a row earns a shield. It blocks the next HP that student would lose.</span></span><input type="checkbox" id="rbShield" checked></label>
-<label class="lv-opt fc-switch"><span><strong>Students sign in with Class Pass</strong><span class="lv-opt-note">Their name comes from your class list and wins go on the leaderboard. Turn off only if Class Pass is not working.</span></span><input type="checkbox" id="rbPass" checked></label>
 <div class="lv-opt"><span><strong>Lobby music</strong><span class="lv-opt-note">Plays on this screen only while students join.</span></span>
 <span class="lv-music-ctl"><select id="rbLobbyMusic" aria-label="Lobby music"></select></span></div>
 <div class="lv-opt"><span><strong>Game music</strong><span class="lv-opt-note">Plays on this screen only during the game.</span></span>
@@ -145,6 +155,7 @@ const HOST = `<main id="main" class="container lv-page rb-page rb-host">
 </div>
 </div>
 <div class="rb-lobby-opts" id="rbLobbyOpts"></div>
+${lobbyRoll('rb')}
 <ul class="rb-players" id="rbPlayers"></ul>
 </section>
 
@@ -219,11 +230,17 @@ const PLAY = `<main id="main" class="container lv-page rb-page rb-play">
 <p class="lv-error" id="rpCodeError" role="alert"></p>
 </section>
 
-<section class="lv-step lv-card" id="rpPass" hidden>
-<h1>Battle Royale</h1>
-<p class="lv-lede">Sign in with Class Pass to play. Your name comes from your class list, and your wins go on the class leaderboard.</p>
-<button type="button" class="btn lv-big" id="rpPassBtn">Sign in with Class Pass</button>
-<p class="lv-error" id="rpPassError" role="alert"></p>
+${passStep('rp')}
+
+<section class="lv-step lv-card" id="rpName" hidden>
+<p class="lv-eyebrow">Battle Royale</p>
+<form id="rpNameForm" class="lv-form">
+<label class="lv-q" for="rpNick">Enter your first name and last initial only.</label>
+<input id="rpNick" class="lv-nick-input" type="text" autocomplete="off" spellcheck="false" maxlength="16">
+<p class="lv-small">For example: Maria G.</p>
+<button type="submit" class="btn lv-big" id="rpNameBtn">Join game</button>
+</form>
+<p class="lv-error" id="rpNameError" role="alert"></p>
 </section>
 
 <section class="lv-step" id="rpLobby" hidden>

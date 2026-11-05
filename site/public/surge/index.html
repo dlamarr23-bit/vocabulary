@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Host Surge Showdown: teams answer questions to power up, attack, heal and shield.">
+<title>Surge Showdown | Vocabulary</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect x=%2720%27 y=%2710%27 width=%2736%27 height=%2728%27 rx=%276%27 fill=%27%239db8f2%27/%3E%3Crect x=%278%27 y=%2724%27 width=%2738%27 height=%2730%27 rx=%276%27 fill=%27%231d4ed8%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/book.css">
+<script>/* dark mode, only inside the physical science site, before the page draws: its page names the mode (?theme=), else the last one it named (book.js keeps it up to date) */(function(){if(window.parent===window)return;var t="";try{t=new URLSearchParams(location.search).get("theme")||""}catch(e){}try{if(t==="dark"||t==="light")localStorage.setItem("vocab-theme",t);else t=localStorage.getItem("vocab-theme")||""}catch(e){}if(t==="dark")document.documentElement.setAttribute("data-theme","dark")})()</script>
+<script src="../assets/icons.js" defer></script>
+<script src="../assets/book.js" defer></script>
+<script src="../assets/pass.js?v=f773610b" defer></script>
+<link rel="stylesheet" href="../assets/flashcards.css?v=4b3a9a09">
+<link rel="stylesheet" href="../assets/live.css?v=f4865542">
+<link rel="stylesheet" href="../assets/surge.css?v=cee8133f">
+<script src="../assets/editor.js?v=dfb83758" defer></script>
+<script src="../assets/vendor/qrcode.js?v=18ae399f" defer></script>
+<script src="../assets/live-roster.js?v=647187a7" defer></script>
+<script src="../assets/surge-common.js?v=f1ee2763" defer></script>
+<script src="../assets/surge-intro.js?v=0c4a197f" defer></script>
+<script src="../assets/surge-host.js?v=929151dd" defer></script>
+<script src="../assets/surge-music.js?v=c62409dd" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to the page</a><div class="topbar"><div class="topbar-inner">
+<a class="brand" href="../index.html">
+<span class="dot" aria-hidden="true"></span>
+<span class="mascot" aria-hidden="true"><svg viewBox="0 0 64 64" role="img" aria-label="Flashcards" xmlns="http://www.w3.org/2000/svg">
+<rect x="20" y="10" width="36" height="28" rx="6" fill="#9db8f2"/>
+<rect x="8" y="24" width="38" height="30" rx="6" fill="#1d4ed8"/>
+<rect x="15" y="34" width="22" height="4" rx="2" fill="#ffffff"/>
+<rect x="15" y="42" width="14" height="4" rx="2" fill="#ffffff"/>
+</svg></span>
+<span>Vocabulary</span>
+</a>
+<nav class="inline-links" aria-label="Site"><a href="../flashcards/">Review</a><a href="../live/" data-teacher-only>Host a game</a><a href="../join/">Join a game</a><a href="../leaderboard/">Leaderboard</a></nav>
+<button class="menu-btn" id="openDrawer" aria-expanded="false" aria-controls="drawer">&#9776; Menu</button>
+</div></div><div class="drawer-backdrop" id="drawerBackdrop"></div>
+<div class="drawer" id="drawer" aria-label="Menu">
+<button class="drawer-close" id="closeDrawer" aria-label="Close the menu">&times;</button>
+<h2 class="drawer-title">Menu</h2>
+<nav class="drawer-links" aria-label="Site"><a href="../flashcards/">Review</a><a href="../live/" data-teacher-only>Host a game</a><a href="../join/">Join a game</a><a href="../leaderboard/">Leaderboard</a></nav>
+
+</div><main id="main" class="container lv-page lv-host sg-page sg-host">
+
+<section class="lv-step" id="sgGate">
+<h1>Surge Showdown</h1>
+<p class="lv-lede" id="sgGateText">Checking the site...</p>
+<div id="sgSignIn"></div>
+</section>
+
+<section class="lv-step" id="sgSetup" hidden>
+<div class="sg-setup-head">
+<span class="sg-bolt" aria-hidden="true">⚡</span>
+<div><h1 id="sgSetupTitle">Surge Showdown</h1>
+<p class="lv-lede">Teams answer questions to earn energy, then spend it to attack other teams, heal and shield their own. As the clock runs down every power-up gets stronger. The top 3 teams go on the podium.</p></div>
+</div>
+<div class="lv-resume" id="sgResume" hidden><span id="sgResumeText"></span> <button type="button" class="btn fc-small" id="sgResumeBtn">Go back to it</button></div>
+
+<fieldset class="lv-group sg-box"><legend class="lv-q">Questions</legend>
+<div class="sg-source">
+<label class="sg-radio"><input type="radio" name="sgSource" value="qset" checked> A question set</label>
+<label class="sg-radio"><input type="radio" name="sgSource" value="flash"> A flashcard set</label>
+</div>
+<div class="sg-pick" id="sgQsetRow"><select id="sgQset" aria-label="Question set"><option value="">Loading your question sets...</option></select>
+<a class="btn secondary fc-small" href="../royale/#new">Make or edit question sets</a></div>
+<p class="lv-small" id="sgQsetNote"></p>
+<div class="sg-pick" id="sgFlashRow" hidden><select id="sgFlash" aria-label="Flashcard set"></select></div>
+<p class="lv-small" id="sgFlashNote" hidden>Students see each definition and pick its term. The wrong answers are other terms from the set.</p>
+</fieldset>
+
+<fieldset class="lv-group lv-who"><legend class="lv-q">Who can join?</legend>
+<div class="lv-choices">
+<label class="lv-choice"><input type="radio" name="sgWho" value="pass" checked>
+<span class="lv-choice-art" aria-hidden="true"><svg viewBox="0 0 64 40"><rect class="b" x="10" y="4" width="44" height="32" rx="6"/><circle class="a" cx="24" cy="16" r="6"/><path class="a" d="M14.5 31c0-5.5 4.2-9 9.5-9s9.5 3.5 9.5 9z"/><path class="w" d="M38 15h9M38 21h6"/><path class="as" d="M40 28l3.5 3.5 7-7.5"/></svg></span>
+<span class="lv-choice-title">Class Pass only</span>
+<span class="lv-choice-text">Students sign in with Class Pass. Their names come from your class list and their wins go on the leaderboard.</span>
+</label>
+<label class="lv-choice"><input type="radio" name="sgWho" value="guests">
+<span class="lv-choice-art" aria-hidden="true"><svg viewBox="0 0 64 40"><rect class="b" x="3" y="6" width="34" height="28" rx="6"/><circle class="a" cx="15" cy="16" r="5"/><path class="a" d="M7 30c0-4.5 3.6-7.5 8-7.5s8 3 8 7.5z"/><path class="w" d="M27 15h6M27 20h4"/><circle class="a" cx="50" cy="14" r="6"/><path class="a" d="M40 34c0-6 4.5-10 10-10s10 4 10 10z"/></svg></span>
+<span class="lv-choice-title">Class Pass and guests</span>
+<span class="lv-choice-text">Students on your class list sign in. Anyone else can join as a guest by typing a first name and last initial (checked for rude words). For a class in another room.</span>
+</label>
+</div>
+<label class="lv-opt lv-period-row"><span><strong>Class period playing</strong><span class="lv-opt-note">The lobby shows who from this period has joined and who has not. The list comes from your Leaderboard page.</span></span>
+<select id="sgPeriod"><option value="">No period: just show who joins</option></select></label>
+</fieldset>
+
+<fieldset class="lv-group sg-box"><legend class="lv-q">Game</legend>
+<label class="lv-opt"><span><strong>Game title</strong><span class="lv-opt-note">Shows at the top of every screen.</span></span><input type="text" id="sgTitle" maxlength="40" class="sg-title-input"></label>
+<div class="sg-rows" data-group="game"></div></fieldset>
+<fieldset class="lv-group sg-box"><legend class="lv-q">Teams</legend>
+<div class="sg-rows" data-group="teams"></div>
+<details class="sg-team-details"><summary>Team names, icons and colors</summary><div class="sg-team-edit" id="sgTeamEdit"></div></details>
+</fieldset>
+<fieldset class="lv-group sg-box"><legend class="lv-q">Battle</legend>
+<div class="sg-rows" data-group="battle"></div></fieldset>
+<fieldset class="lv-group sg-box"><legend class="lv-q">Surge</legend>
+<p class="lv-small">Power-ups get stronger as time runs out, and the increase speeds up near the end.</p>
+<div class="sg-rows" data-group="surge"></div>
+<svg class="sg-curve" id="sgCurve" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true"></svg>
+<div class="sg-curve-labels lv-small"><span>Start</span><span id="sgCurveMid"></span><span>End</span></div>
+</fieldset>
+<fieldset class="lv-group sg-box"><legend class="lv-q">Scoring</legend>
+<p class="lv-small">Team score is everyone's points plus bonuses. The top 3 teams go on the podium.</p>
+<div class="sg-rows" data-group="scoring"></div></fieldset>
+<fieldset class="lv-group sg-box"><legend class="lv-q">Special events</legend>
+<p class="lv-small">Extra twists that keep every team in the game. Turn off any you do not want.</p>
+<div class="sg-rows" data-group="events"></div></fieldset>
+
+<fieldset class="lv-group sg-box"><legend class="lv-q">Music</legend>
+<p class="lv-small">Plays on this screen only, never on students' screens. Change or mute it any time from the music bar.</p>
+<div class="sg-rows">
+<div class="lv-opt"><span><strong>Lobby music</strong><span class="lv-opt-note">Plays while students join. Stops when the game starts.</span></span>
+<span class="sg-mu-ctl"><select id="muLobby" aria-label="Lobby music"></select><button type="button" class="btn secondary fc-small" id="muLobbyTry">Listen</button><input type="range" class="sg-mu-vol" id="muLobbyVol" min="0" max="100" aria-label="Lobby music volume" title="Lobby music volume"></span></div>
+<div class="lv-opt"><span><strong>Game music</strong><span class="lv-opt-note">Plays during the battle. Pauses when you pause the game.</span></span>
+<span class="sg-mu-ctl"><select id="muGame" aria-label="Game music"></select><button type="button" class="btn secondary fc-small" id="muGameTry">Listen</button><input type="range" class="sg-mu-vol" id="muGameVol" min="0" max="100" aria-label="Game music volume" title="Game music volume"></span></div>
+<label class="lv-opt"><span><strong>Winning song</strong><span class="lv-opt-note">Plays once when the podium appears.</span></span>
+<select id="muWin" aria-label="Winning song"><option value="true">Yes</option><option value="false">No</option></select></label>
+</div>
+</fieldset>
+
+<fieldset class="lv-group sg-box"><legend class="lv-q">Power-ups at a glance</legend><p class="lv-small sg-power-info" id="sgPowerInfo"></p></fieldset>
+
+<label class="lv-default lv-demo-pick"><input type="checkbox" id="sgDemo"> <span><strong>Demo mode: 40 pretend students</strong> <span class="lv-opt-note">Try the game on your own. Pretend students join using your settings, play, and get some answers right and some wrong. Real students can still join with the code.</span></span></label>
+<p class="lv-small">Your choices on this screen are kept on this computer for next time.</p>
+<p class="lv-error" id="sgSetupError" role="alert"></p>
+<div class="sg-create-row">
+<button type="button" class="btn secondary" id="sgCancelEdit" hidden>Cancel</button>
+<button type="button" class="btn lv-big" id="sgCreate">Create game</button>
+</div>
+</section>
+
+<section class="lv-step sg sg-arena" id="sgLobby" hidden>
+<div class="panel joinbox">
+<div class="sg-join-text">
+<div class="muted">Go to</div>
+<div class="url" id="sgJoinUrl"></div>
+<div class="muted">and enter this code</div>
+<div class="code" id="sgJoinCode"></div>
+<button type="button" class="sbtn sm good" data-copylink>🔗 Copy join link</button>
+</div>
+<div class="sg-qr" id="sgQr" aria-label="QR code that opens the join page with this code"></div>
+<div class="sg-lobby-side">
+<div class="display sg-count" id="sgCount">0 players</div>
+<button type="button" class="sbtn primary big" id="sgStart">Start game ▶</button>
+<div class="row sg-lobby-tools">
+<button type="button" class="sbtn sm ghost" id="sgEditBtn">⚙️ Settings and questions</button>
+<button type="button" class="sbtn sm ghost" id="sgShuffle" title="Put everyone on new teams at random">🔀 Shuffle teams</button>
+<button type="button" class="sbtn sm ghost" id="sgDemoLobby">🎭 Demo</button>
+<button type="button" class="sbtn sm ghost" id="sgIntroBtn" title="See the how-to-play slides without starting">📖 How to play</button>
+<button type="button" class="sbtn sm ghost" data-fullscreen title="Fill the whole screen, for projecting">Full screen</button>
+<button type="button" class="sbtn sm ghost danger-text" data-close>End game</button>
+</div>
+<div id="sgRemovedLobby"></div>
+</div>
+</div>
+<div class="sg-roll-wrap">
+<div class="lv-roll-pick">
+<label>Who can join <select id="sgLobbyWho"><option value="pass">Class Pass only</option><option value="guests">Class Pass and guests</option></select></label>
+<label>Class period <select id="sgLobbyPeriod"><option value="">No period</option></select></label>
+</div>
+<div class="lv-roll" id="sgRoll" hidden></div>
+</div>
+<div class="teams-grid" id="sgLobbyTeams"></div>
+</section>
+
+<section class="lv-step sg sg-arena" id="sgLive" hidden>
+<header class="sg-live-head">
+<div class="sg-brand"><span class="bolt">⚡</span> <span id="sgBrand">Surge Showdown</span></div>
+<div class="surge" title="Power-up strength. It grows faster and faster as time runs out.">
+<span class="muted">Surge</span><span class="x" id="sgSurgeX">×1.0</span>
+<div class="surge-track"><div class="surge-fill" id="sgSurgeFill"></div></div>
+</div>
+<div class="timer" id="sgTimer">0:00</div>
+<div class="row sg-live-tools">
+<button type="button" class="sbtn sm good" id="sgAddBtn" title="Show the join code so more students can join">➕ Add students</button>
+<button type="button" class="sbtn sm" id="sgMinus" title="Take 1 minute off">-1 min</button>
+<button type="button" class="sbtn sm" id="sgPlus" title="Add 1 minute">+1 min</button>
+<button type="button" class="sbtn sm" id="sgPause">⏸ Pause</button>
+<button type="button" class="sbtn sm ghost" data-fullscreen title="Fill the whole screen, for projecting">Full screen</button>
+<button type="button" class="sbtn sm danger" id="sgEnd">🏁 End game</button>
+</div>
+</header>
+<div id="sgPaused" class="paused-banner hidden">⏸ PAUSED: students cannot answer or attack</div>
+<div class="live">
+<div>
+<div id="sgShowdownBar" class="showdown-bar hidden">⚔️ FINAL SHOWDOWN · Surge ×2 · No healing</div>
+<div id="sgDropBox" class="drop-box hidden"></div>
+<div class="battle" id="sgBattle"></div>
+<div class="panel sg-players-panel">
+<div class="row"><h2>👥 Players</h2><div class="spacer"></div><span class="muted sg-small">Click a column to sort</span></div>
+<div class="sg-table-wrap"><table class="ptable" id="sgPtable"></table></div>
+</div>
+</div>
+<aside class="sidebar">
+<div class="panel sg-feed-panel"><h2>📣 Battle feed</h2><div class="feed" id="sgFeed"></div></div>
+<div class="panel live-join">
+<div class="row sg-live-join-top">
+<div><div class="muted sg-small">Join at <span id="sgLiveUrl"></span></div><div class="live-code" id="sgLiveCode"></div></div>
+<div class="row sg-gap6"><button type="button" class="sbtn sm" data-copylink>🔗 Copy link</button><button type="button" class="sbtn sm" id="sgAddBtn2">Show big</button></div>
+</div>
+<label class="srow"><span class="stxt"><b>New students</b></span><select id="sgLateJoinLive"><option value="true">Can join</option><option value="false">Locked</option></select></label>
+<label class="srow"><span class="stxt"><b>Pretend students</b></span><select id="sgDemoLive"><option value="false">Off</option><option value="true">40 on</option></select></label>
+<div id="sgRemovedLive"></div>
+</div>
+</aside>
+</div>
+</section>
+
+<section class="lv-step sg sg-arena" id="sgResults" hidden>
+<div class="results">
+<h1>🏆 Final Standings</h1>
+<div class="muted sg-end-reason" id="sgEndReason"></div>
+<div id="sgPodium"></div>
+<div class="awards" id="sgAwards"></div>
+<div class="rank-list" id="sgRankList"></div>
+<div class="row sg-done-actions">
+<button type="button" class="sbtn primary big" id="sgRematch">🔁 Play again with the same players</button>
+<button type="button" class="sbtn big ghost" id="sgNew">✨ New game</button>
+<button type="button" class="sbtn big ghost" data-fullscreen>Full screen</button>
+</div>
+</div>
+</section>
+
+<div id="sgMuBar" class="sg mu-bar hidden">
+<button type="button" class="mu-mute" id="muMute" aria-pressed="false"></button>
+<span class="mu-label" id="muLabel">Lobby music</span>
+<select id="muSong" aria-label="Song"></select>
+<input type="range" class="sg-mu-vol" id="muVol" min="0" max="100" aria-label="Music volume" title="Volume">
+</div>
+
+<aside id="sgWatch" class="sg watch-pane hidden" aria-label="Player view">
+<div class="wp-head">
+<div><b>👀 Player view</b><div class="muted sg-small" id="sgWpWho">Joining...</div></div>
+<div class="spacer"></div>
+<select id="sgWpAuto" title="Autoplay"><option value="true">Autoplay on</option><option value="false">I will play</option></select>
+<button type="button" class="sbtn sm ghost" id="sgWpHide" title="Hide the player view">✕</button>
+</div>
+<iframe id="sgWpFrame" title="Player view"></iframe>
+</aside>
+<button type="button" id="sgWpShow" class="sg sbtn sm wp-show hidden">👀 Show player view</button>
+
+<div id="sgCallouts" class="sg callouts" aria-live="polite"></div>
+
+<div id="sgJoinModal" class="sg modal-bg hidden">
+<div class="modal sg-join-modal">
+<div class="row sg-right"><button type="button" class="sbtn sm ghost" id="sgJmClose">Close</button></div>
+<div class="muted sg-jm-label">Go to</div>
+<div class="jm-url" id="sgJmUrl"></div>
+<div class="muted sg-jm-label">and enter this code</div>
+<div class="jm-code" id="sgJmCode"></div>
+<button type="button" class="sbtn good" data-copylink>🔗 Copy join link</button>
+<div class="row sg-center"><span class="muted">New students</span><select id="sgLateJoinModal"><option value="true">Can join</option><option value="false">Locked</option></select></div>
+<p class="muted" id="sgJmNote"></p>
+</div>
+</div>
+<p class="lv-status" id="sgStatus" role="status" aria-live="polite"></p>
+</main><footer><div class="container">Vocabulary &middot; Flashcards and live vocabulary games </div></footer>
+</body>
+</html>

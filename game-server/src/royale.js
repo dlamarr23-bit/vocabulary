@@ -29,8 +29,10 @@
 // the round being played finishes and the game ends: most HP left wins, then
 // most wins, then most right answers, then the fastest average.
 //
-// Students must be signed in with Class Pass (unless the teacher turns that
-// off), so their name comes from the class list and nothing is typed. Each
+// Students must be signed in with Class Pass, so their name comes from the
+// class list and nothing is typed. When the teacher lets guests in too
+// (g.opts.who 'guests', Donny 2026-11-04), anyone not signed in types a first
+// name and last initial, checked like the other games (index.js guestName). Each
 // picks a hero avatar from one list of 50 (Donny: not split into boys and
 // girls); a hero is one student's at a time until all 50 are taken.
 //
@@ -155,8 +157,11 @@ export const royale = {
         seconds: pickFrom(SECONDS, 20, o.seconds),
         limit: pickFrom(CLOCK, 0, o.limit),
         size: pickFrom(SIZES, 2, o.size),
-        // Class Pass is needed to play unless the teacher switches it off.
-        pass: o.pass !== false,
+        // Who can join (index.js whoOf): Class Pass only, or guests too, who type a name.
+        who: o.who === 'guests' ? 'guests' : 'pass',
+        pass: o.who !== 'guests',
+        typedNames: o.who === 'guests',
+        period: String(o.period == null ? '' : o.period).replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 20),
         comeback: o.comeback !== false,
         shield: o.shield !== false,
         demo: o.demo === true
@@ -275,16 +280,23 @@ export const royale = {
       if (a.pid) return;
       if (g.phase === 'done') return this.send(ws, { t: 'error', msg: 'This game is over. Wait for your teacher to start a new one.' });
       const dev = String(m.dev || '').replace(/[^0-9a-f]/g, '').slice(0, 32);
-      if (this.isBlocked(dev, '')) return this.send(ws, { t: 'error', code: 'blocked', msg: 'Your teacher removed you from this game.' });
       const stu = a.stu && a.stu.email ? a.stu : null;
-      if (g.opts.pass && !stu) return this.send(ws, { t: 'error', code: 'needPass', msg: 'Sign in with Class Pass to play.' });
+      if (this.isBlocked(dev, !stu && g.opts.typedNames ? cleanName(m.name) : '')) return this.send(ws, { t: 'error', code: 'blocked', msg: 'Your teacher removed you from this game.' });
+      if (this.needPass() && !stu) return this.send(ws, { t: 'error', code: 'needPass', msg: 'Sign in with Class Pass to play.' });
       const again = stu && Object.values(g.players).find((p) => p.stu === stu.email);
       if (again) return this.rPlayer(ws, a, { t: 'rejoin', id: again.id, secret: again.secret });
       if (g.order.length >= MAX_PLAYERS) return this.send(ws, { t: 'error', msg: 'This game is full.' });
-      const name = stu ? this.uniqueName(cleanName(stu.name) || 'Student') : this.randomName();
+      let name;
+      if (stu) name = this.uniqueName(cleanName(stu.name) || 'Student');
+      else if (g.opts.typedNames) {
+        // A guest: first name and last initial, checked for rude words.
+        name = await this.guestName(ws, m);
+        if (!name) return;
+      } else name = this.randomName();
       const pid = token().slice(0, 10);
       const p = { id: pid, name, secret: token(), dev, hero: '', ...fresh(g) };
       if (stu) p.stu = stu.email;
+      else if (g.opts.typedNames) p.guest = true;
       // Joining once the game is on: in from the next round, with as much
       // HP as whoever has least, so a late arrival is not ahead.
       if (g.phase === 'play') {
@@ -696,7 +708,7 @@ export const royale = {
           g.opts.energy = pickFrom(ENERGY, g.opts.energy, o.energy);
           g.order.forEach((pid) => { g.players[pid].energy = g.opts.energy; });
         }
-        if (typeof o.pass === 'boolean') g.opts.pass = o.pass;
+        if (typeof o.pass === 'boolean') { g.opts.pass = o.pass; g.opts.who = o.pass ? 'pass' : 'guests'; g.opts.typedNames = !o.pass; }
       }
       if (o.seconds !== undefined && g.phase !== 'done') g.opts.seconds = pickFrom(SECONDS, g.opts.seconds, o.seconds);
       // The group size can change any time; it counts from the next round.
@@ -772,7 +784,7 @@ export const royale = {
       const pid = String(m.id || '');
       const p = g.players[pid];
       if (!p) return;
-      if (m.block) g.blocked = (g.blocked || []).concat([{ id: token().slice(0, 8), name: p.name, dev: p.dev || '', typed: false }]).slice(-60);
+      if (m.block) g.blocked = (g.blocked || []).concat([{ id: token().slice(0, 8), name: p.name, dev: p.dev || '', typed: !!p.guest }]).slice(-60);
       delete g.players[pid];
       g.order = g.order.filter((x) => x !== pid);
       this.sockets((a) => a.pid === pid).forEach((ws) => {
@@ -863,7 +875,7 @@ export const royale = {
       pausedLeft: g.paused ? g.pausedLeft || 0 : 0,
       players: g.order.map((pid) => {
         const p = g.players[pid];
-        return { id: pid, name: p.name, hero: p.hero, on: this.online(pid), bot: !!p.bot, pass: !!p.stu, energy: p.energy, wins: p.wins, right: p.right, out: p.out, late: !!p.late, place: p.place || 0, shield: !!p.shield, back: p.back || 0 };
+        return { id: pid, name: p.name, hero: p.hero, on: this.online(pid), bot: !!p.bot, pass: !!p.stu, email: p.stu || '', guest: !!p.guest, energy: p.energy, wins: p.wins, right: p.right, out: p.out, late: !!p.late, place: p.place || 0, shield: !!p.shield, back: p.back || 0 };
       }),
       round: g.phase === 'lobby' ? null : this.rRoundView(),
       // The last round's highlights, shown beside the game until the next ones.

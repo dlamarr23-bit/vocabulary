@@ -849,8 +849,10 @@ async function liveCreate(request, env, url) {
   let body;
   try { body = await request.json(); } catch { body = null; }
   const kind = String((body && body.kind) || 'volley');
-  // Battle Royale can play a multiple choice question set instead of flashcards.
-  if (kind === 'royale' && body && body.qsetId) {
+  // Battle Royale and Surge Showdown (Donny, 2026-11-04: moved onto this site)
+  // can play a multiple choice question set instead of flashcards. With a
+  // flashcard set, the game server makes each card a multiple choice question.
+  if ((kind === 'royale' || kind === 'surge') && body && body.qsetId) {
     const qid = String(body.qsetId);
     const set = QSET_ID.test(qid) ? await env.FLASHCARDS.get('qset:' + qid, 'json') : null;
     if (!set) return json({ error: 'Pick a question set first.' }, 400);
@@ -994,7 +996,109 @@ async function qsetImport(request) {
     }
     return json({ kind: 'quiz', title: quizText(info.name).slice(0, 120), questions: cleanQuestions(questions), skipped });
   }
-  return json({ error: 'Paste a link to a Wayground quiz or a Google Sheet.' }, 400);
+  // Kahoot, Blooket and Gimkit (Donny, 2026-11-04): a public quiz, read the
+  // way each site's own page for it reads it. Multiple choice only.
+  const kahoot = link.match(/kahoot\.(?:it|com)\/\S*?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+  const blooket = link.match(/blooket\.com\/\S*?([0-9a-f]{24})/i);
+  const gimkit = link.match(/gimkit\.com\/\S*?([0-9a-f]{24})/i);
+  if (kahoot || blooket || gimkit) {
+    const site = kahoot ? 'Kahoot' : blooket ? 'Blooket' : 'Gimkit';
+    let set = null;
+    try {
+      const res = await fetch(kahoot ? `https://create.kahoot.it/rest/kahoots/${kahoot[1]}/card/?includeKahoot=true`
+        : blooket ? `https://dashboard.blooket.com/set/${blooket[1]}`
+          : `https://www.gimkit.com/api/games/fetch/${gimkit[1]}`,
+      { headers: { accept: blooket ? 'text/html' : 'application/json', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36' } });
+      if (res.ok) set = kahoot ? kahootSet(await res.json()) : blooket ? blooketSet(await res.text()) : gimkitSet(await res.json());
+    } catch { set = null; }
+    if (!set) {
+      const how = kahoot ? 'In Kahoot, the kahoot must be public (Visible to: Everyone).'
+        : blooket ? 'In Blooket, the set must be public (not private).'
+          : 'In Gimkit, the kit must be shareable (open it, then use its Share link).';
+      return json({ error: `${site} did not send that ${kahoot ? 'kahoot' : blooket ? 'set' : 'kit'}. ${how} Or download its spreadsheet and open it with "Open a file".` }, 400);
+    }
+    return json({ kind: 'quiz', site, title: set.title.slice(0, 120), questions: cleanQuestions(set.questions), skipped: set.skipped });
+  }
+  return json({ error: 'Paste a link to a Wayground, Kahoot, Blooket or Gimkit quiz, or a Google Sheet.' }, 400);
+}
+
+// One multiple choice question from its answers [{ t, img, right }]: the
+// first right one, and up to 3 wrong ones. null when it is not one.
+const webPic = (u) => (/^https:\/\/[^\s"'<>]+$/.test(String(u || '')) ? String(u) : '');
+function fromChoices(q, img, choices) {
+  const right = choices.filter((c) => c.right && (c.t || c.img));
+  const wrong = choices.filter((c) => !c.right && (c.t || c.img));
+  q = q || (img ? 'Look at the picture.' : '');
+  if (!q || !right.length || !wrong.length) return null;
+  return { q, img, a: right[0].t, ai: right[0].img, w: wrong.slice(0, 3).map((c) => c.t), wi: wrong.slice(0, 3).map((c) => c.img) };
+}
+// A kahoot: { kahoot: { title, questions: [{ type, question, image, choices: [{ answer, correct, image }] }] } }.
+function kahootSet(data) {
+  const k = data && (data.kahoot || data);
+  if (!k || !Array.isArray(k.questions)) return null;
+  const pic = (x) => webPic(x && typeof x === 'object' ? (x.id ? 'https://media.kahoot.it/' + x.id : '') : x);
+  const questions = [];
+  let skipped = 0;
+  for (const x of k.questions) {
+    if (!x || !['quiz', 'multiple_select_quiz'].includes(x.type)) { skipped++; continue; }
+    const img = webPic(x.image) || pic(x.imageMetadata);
+    const one = fromChoices(quizText(x.question), img, (x.choices || []).map((c) => ({ t: quizText(c && c.answer), img: pic(c && c.image), right: !!(c && c.correct) })));
+    if (one) questions.push(one); else skipped++;
+  }
+  return { title: quizText(k.title), questions, skipped };
+}
+// A Gimkit kit: { kit: { title, questions: [{ type: 'mc', text, image, answers: [{ text, correct }] }] } }.
+function gimkitSet(data) {
+  const k = data && (data.kit || data);
+  if (!k || !Array.isArray(k.questions)) return null;
+  const questions = [];
+  let skipped = 0;
+  for (const x of k.questions) {
+    if (!x || x.isActive === false) continue;
+    if (x.type !== 'mc') { skipped++; continue; }
+    const one = fromChoices(quizText(x.text), webPic(x.image), (x.answers || []).map((c) => ({ t: quizText(c && c.text), img: '', right: !!(c && c.correct) })));
+    if (one) questions.push(one); else skipped++;
+  }
+  return { title: quizText(k.title), questions, skipped };
+}
+// A Blooket set's page carries its questions in the data the page is drawn
+// from (pieces of text in self.__next_f.push([1, "..."])): "questions":
+// [{ question, image, answers: [...], correctAnswers: [...], answerTypes, qType }].
+function blooketSet(html) {
+  let text = '';
+  for (const m of String(html).matchAll(/self\.__next_f\.push\(\[1,("(?:[^"\\]|\\.)*")\]\)/g)) { try { text += JSON.parse(m[1]); } catch { /* not text */ } }
+  const at = text.indexOf('"questions":[');
+  if (at < 0) return null;
+  const list = jsonAt(text, at + '"questions":'.length);
+  if (!Array.isArray(list)) return null;
+  const titles = [...text.slice(0, at).matchAll(/"title":("(?:[^"\\]|\\.)*")/g)];
+  let title = '';
+  try { title = titles.length ? JSON.parse(titles[titles.length - 1][1]) : ''; } catch { title = ''; }
+  const questions = [];
+  let skipped = 0;
+  for (const x of list) {
+    if (!x || (x.qType && x.qType !== 'mc')) { skipped++; continue; }
+    const right = (x.correctAnswers || []).map((t) => String(t));
+    const types = Array.isArray(x.answerTypes) ? x.answerTypes : [];
+    const one = fromChoices(quizText(x.question), webPic(x.image), (x.answers || []).map((t, i) => {
+      const isPic = types[i] === 'image' || (/^https:\/\/\S+$/.test(String(t)) && /\.(png|jpe?g|gif|webp)|blooket|imgur|googleusercontent/i.test(String(t)));
+      return { t: isPic ? '' : quizText(t), img: isPic ? webPic(t) : '', right: right.includes(String(t)) };
+    }));
+    if (one) questions.push(one); else skipped++;
+  }
+  return { title: quizText(title), questions, skipped };
+}
+// The JSON array or object that starts at text[at].
+function jsonAt(text, at) {
+  let depth = 0, inStr = false;
+  for (let i = at; i < text.length; i++) {
+    const ch = text[i];
+    if (inStr) { if (ch === '\\') i++; else if (ch === '"') inStr = false; continue; }
+    if (ch === '"') inStr = true;
+    else if (ch === '[' || ch === '{') depth++;
+    else if (ch === ']' || ch === '}') { depth--; if (!depth) { try { return JSON.parse(text.slice(at, i + 1)); } catch { return null; } } }
+  }
+  return null;
 }
 
 async function qsetsApi(request, env, id) {

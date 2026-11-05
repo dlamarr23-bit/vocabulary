@@ -884,6 +884,31 @@ html:has(.lv-page){ font-size:16px; }
 .lv-other{ background:var(--accent-tint); border-radius:var(--radius); padding:1rem 1.25rem; margin:0 0 1rem; }
 .lv-other p{ margin:0; }
 
+/* Who can join and the class period (Donny, 2026-11-04), on every game's
+   setup, and the period's class list in the lobby (assets/live-roster.js). */
+.lv-period-row{ margin-top:0.875rem; }
+.lv-period-row select{ min-width:14rem; }
+.lv-roll{ margin:1rem 0 0; padding:0.875rem 1.125rem; border:1.5px solid var(--line); border-radius:var(--radius); background:var(--card); }
+.lv-roll-head{ margin:0 0 0.5rem; font-size:1.05rem; }
+.lv-roll-cols{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:0.5rem 1.25rem; }
+@media (max-width:600px){ .lv-roll-cols{ grid-template-columns:1fr; } }
+.lv-roll-title{ font-size:0.95rem; margin:0 0 0.375rem; }
+.lv-roll-col.missing .lv-roll-title{ color:#b54708; }
+.lv-roll-col.joined .lv-roll-title{ color:var(--good); }
+.lv-roll-list{ list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:0.375rem; }
+.lv-roll-name{ border-radius:62.4375rem; padding:0.1875rem 0.625rem; font-weight:700; font-size:0.92rem; border:1.5px solid var(--line); }
+.lv-roll-col.missing .lv-roll-name{ background:#fff4e5; border-color:#f5c27a; color:#7a3e00; }
+.lv-roll-col.joined .lv-roll-name{ background:color-mix(in srgb, var(--good) 12%, var(--card)); border-color:color-mix(in srgb, var(--good) 45%, var(--card)); }
+.lv-roll-others{ margin:0.625rem 0 0; }
+.lv-roll-pick{ display:flex; flex-wrap:wrap; align-items:center; gap:0.5rem; margin:0.75rem 0 0; font-weight:700; }
+.lv-guest-tag{ font-size:0.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.04em; background:#eef1f6; color:#4a5568; border-radius:6px; padding:0.0625rem 0.375rem; margin-left:4px; }
+.lv-pass-step{ text-align:center; }
+.lv-pass-step .lv-big{ margin-top:0.5rem; }
+.lv-pass-or{ margin:1.25rem 0 0.25rem; }
+html[data-theme="dark"] .lv-roll-col.missing .lv-roll-name{ background:#3a2a12; border-color:#8a5a14; color:#ffd8a8; }
+html[data-theme="dark"] .lv-roll-col.missing .lv-roll-title{ color:#ffb35c; }
+html[data-theme="dark"] .lv-guest-tag{ background:#2b3040; color:#c7cdd8; }
+
 /* ---- dark mode inside the physical science site (book.css html[data-theme="dark"]): the few colors set here ---- */
 html[data-theme="dark"] .lv-toast, html[data-theme="dark"] .lv-big-clock:not(.soon):not(.urgent){ background:#2b3040; }
 html[data-theme="dark"] .lv-resume, html[data-theme="dark"] .lv-demo-pick, html[data-theme="dark"] .lv-pu-vote{ background:#2b2512; border-color:#6b5a1e; }

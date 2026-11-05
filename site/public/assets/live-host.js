@@ -81,6 +81,8 @@
     // The question sets come from the site; the saved pick waits for them.
     $('lvQset').dataset.want = (defaults && defaults.lvQset) || '';
     loadQsets();
+    // The class periods from the Leaderboard page; the last one picked here first.
+    if (window.IS8Roster) window.IS8Roster.fillPeriods($('lvPeriod'), window.IS8Roster.last());
     syncOptions();
     // Players per team follows the game unless his default is for this game.
     if (defaults && defaults.lvGame === (picked('lvGame') || 'volley') && defaults.lvSize) $('lvSize').value = defaults.lvSize;
@@ -132,7 +134,7 @@
   // goes on to that screen with the set picked here.
   var OTHER = {
     royale: { text: 'Battle Royale has its own setup screen: HP, group size, time per question and the game clock. It plays the question set picked above, or the flashcard set when no question set is picked.', button: 'Next: Battle Royale settings' },
-    surge: { text: 'Surge Showdown opens in a new tab with the question set picked above already loaded (or the flashcard set, made into multiple choice). Set up the teams there and create the game.', button: 'Open Surge Showdown' }
+    surge: { text: 'Surge Showdown has its own setup screen: teams, game length, power-ups and special events. It plays the question set picked above, or the flashcard set (made into multiple choice) when no question set is picked.', button: 'Next: Surge Showdown settings' }
   };
   function syncOther(kind) {
     var other = OTHER[kind];
@@ -184,42 +186,6 @@
   document.querySelectorAll('input[name="lvTeams"], input[name="lvGame"]').forEach(function (r) { r.addEventListener('change', syncOptions); });
   $('lvPowers').addEventListener('change', syncOptions);
 
-  // Surge Showdown's own site; its host screen reads a set sent as #qs=.
-  var SURGE = 'https://surge-showdown.pages.dev/surge/host';
-  // A flashcard set as multiple choice: the definition, then pick the term
-  // (wrong answers are three other terms from the set), as Battle Royale does.
-  function cardsToQuestions(cards) {
-    var terms = [];
-    cards.forEach(function (c) { if (c.term && terms.indexOf(c.term) < 0) terms.push(c.term); });
-    return cards.filter(function (c) { return c.term && c.def; }).map(function (c) {
-      var others = terms.filter(function (t) { return t.toLowerCase() !== c.term.toLowerCase(); });
-      for (var i = others.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = others[i]; others[i] = others[j]; others[j] = t; }
-      return { q: c.def, img: '', a: c.term, ai: '', w: others.slice(0, 3), wi: [] };
-    }).filter(function (q) { return q.w.length; });
-  }
-  function openSurge() {
-    var qid = $('lvQset').value;
-    // Opened now, while the click still counts, so no pop-up blocker stops it.
-    var win = window.open('', '_blank');
-    var got = qid
-      ? fetch('/api/qsets/' + encodeURIComponent(qid), { headers: { 'X-IS8-Editor': '1' }, credentials: 'same-origin' }).then(function (r) { return r.json(); })
-        .then(function (s) { if (!s.questions) throw new Error(s.error || 'That question set did not open.'); return { name: s.title, questions: s.questions }; })
-      : ED.getSet($('lvSet').value).then(function (s) {
-        var title = (sets.filter(function (x) { return x.id === $('lvSet').value; })[0] || {}).title || (s && s.title) || 'Flashcard set';
-        return { name: title, questions: cardsToQuestions((s && s.cards) || []) };
-      });
-    got.then(function (set) {
-      // Surge Showdown's question shape: correct, wrong, and pictures cImg, wImg.
-      var qs = set.questions.map(function (x) { return { q: x.q, img: x.img || '', correct: x.a, cImg: x.ai || '', wrong: x.w, wImg: x.wi || [] }; });
-      var json = JSON.stringify({ name: set.name, questions: qs });
-      var b64 = btoa(unescape(encodeURIComponent(json))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-      if (win) win.location.href = SURGE + '#qs=' + b64;
-      else location.href = SURGE + '#qs=' + b64;
-    }).catch(function (err) {
-      if (win) win.close();
-      $('lvSetupError').textContent = err.message;
-    });
-  }
 
   $('lvCreate').addEventListener('click', function () {
     var btn = this;
@@ -228,11 +194,9 @@
     var kind0 = picked('lvGame');
     if (kind0 === 'royale' || kind0 === 'surge') {
       if ($('lvSaveDefault').checked) { var sd0 = readSaved(); sd0.defaults = collectDefaults(); writeSaved(sd0); }
-      if (kind0 === 'royale') {
-        location.href = '../royale/' + ($('lvQset').value ? '#qset=' + encodeURIComponent($('lvQset').value) : '#set=' + encodeURIComponent($('lvSet').value));
-        return;
-      }
-      openSurge();
+      // Both have their own setup screen on this site (Surge Showdown moved
+      // here from its own site, Donny 2026-11-04).
+      location.href = '../' + kind0 + '/' + ($('lvQset').value ? '#qset=' + encodeURIComponent($('lvQset').value) : '#set=' + encodeURIComponent($('lvSet').value));
       return;
     }
     btn.disabled = true;
@@ -243,7 +207,9 @@
       pick: picked('lvTeams') === 'pick',
       pickTeams: Number($('lvPickTeams').value),
       promptDef: picked('lvPrompt') === 'def',
-      typedNames: picked('lvWho') === 'typed',
+      // Who can join (Class Pass only, or guests too) and the period playing.
+      who: picked('lvWho') === 'guests' ? 'guests' : 'pass',
+      period: $('lvPeriod').value,
       fast: $('lvFast').checked,
       pause: Number($('lvPause').value),
       target: Number($('lvTarget').value),
@@ -259,6 +225,7 @@
       demo: $('lvDemo').checked
     };
     stopTrying();
+    if (window.IS8Roster) window.IS8Roster.remember(opts.period);
     if ($('lvSaveDefault').checked) { var sd = readSaved(); sd.defaults = collectDefaults(); writeSaved(sd); }
     else { var sn = readSaved(); delete sn.defaults; writeSaved(sn); }
     ED.liveCreate($('lvSet').value, opts, picked('lvGame') || 'volley').then(function (r) {
@@ -936,7 +903,27 @@
     if (picking) drawPick(b);
     b.players.forEach(function (p) { if (!picking || !p.team) list.appendChild(playerChip(p)); });
     drawSettings(b);
+    drawRoll(b);
   }
+
+  // Who can join and the class period, changed any time in the lobby, and the
+  // period's class list: who has joined and who has not (assets/live-roster.js).
+  var rollPeriods = false;
+  function drawRoll(b) {
+    var o = b.opts || {};
+    var who = o.who || (o.typedNames ? 'guests' : 'pass');
+    if (document.activeElement !== $('lvLobbyWho')) $('lvLobbyWho').value = who;
+    var sel = $('lvLobbyPeriod');
+    if (!window.IS8Roster) return;
+    if (!rollPeriods) { rollPeriods = true; window.IS8Roster.fillPeriods(sel, o.period || ''); }
+    else if (document.activeElement !== sel && sel.value !== (o.period || '') && [].some.call(sel.options, function (x) { return x.value === (o.period || ''); })) sel.value = o.period || '';
+    window.IS8Roster.draw($('lvRoll'), o.period || '', b.players);
+  }
+  $('lvLobbyWho').addEventListener('change', function () { send({ t: 'who', who: this.value }); });
+  $('lvLobbyPeriod').addEventListener('change', function () {
+    if (window.IS8Roster) window.IS8Roster.remember(this.value);
+    send({ t: 'period', period: this.value });
+  });
 
   // A student's name with remove and random name buttons. Removing takes a
   // second press so a slip of the mouse cannot do it.
@@ -947,6 +934,7 @@
     li.appendChild(mk('span', 'lv-dot'));
     li.appendChild(mk('span', '', p.name));
     if (p.pass) { var ok = mk('span', 'lv-pass-tick', '\u2713'); ok.title = 'Signed in with Class Pass'; li.appendChild(ok); }
+    else if (p.guest) li.appendChild(mk('span', 'lv-guest-tag', 'Guest'));
     li.appendChild(controls(p));
     return li;
   }

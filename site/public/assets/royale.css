@@ -190,6 +190,8 @@ body.rb-full .rb-arena{ min-height:calc(100vh - 2rem); }
 .rb-back-chip .rb-hero{ width:2rem; height:2rem; }
 .rb-link-import{ display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; margin:.6rem 0; }
 .rb-link-import input{ flex:1 1 20rem; min-width:0; font:inherit; padding:.5rem .7rem; border:1px solid var(--line); border-radius:var(--radius-sm); }
+/* Add a saved set to the one being made (merging, Donny 2026-11-04). */
+.rb-merge-row select{ flex:1 1 16rem; min-width:0; font:inherit; font-weight:600; padding:.5rem .7rem; border:1px solid var(--line); border-radius:var(--radius-sm); background:var(--card, #fff); color:inherit; }
 .rb-import-help{ background:#fff7e0; border-radius:var(--radius-sm); padding:.5rem .8rem; margin:.2rem 0 .6rem; font-size:.92rem; }
 .rb-import-help ol{ margin:.3rem 0 0; padding-left:1.3rem; }
 .rp-pick-msg{ margin:0 0 .4rem; font-weight:700; color:var(--bad-ink); min-height:1.2em; }

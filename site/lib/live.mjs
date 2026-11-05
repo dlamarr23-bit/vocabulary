@@ -33,8 +33,9 @@ const ART = {
   solo: '<svg viewBox="0 0 64 40"><circle class="b" cx="32" cy="21" r="18"/><circle class="a" cx="32" cy="15" r="6.5"/><path class="a" d="M20 35c0-7 5-12 12-12s12 5 12 12z"/></svg>',
   defFirst: '<svg viewBox="0 0 64 40"><rect class="a" x="8" y="2" width="48" height="15" rx="4"/><rect class="w" x="14" y="7.5" width="26" height="4" rx="2"/><rect class="b" x="8" y="21" width="22" height="7.5" rx="3"/><rect class="b" x="34" y="21" width="22" height="7.5" rx="3"/><rect class="b" x="8" y="31" width="22" height="7.5" rx="3"/><rect class="b" x="34" y="31" width="22" height="7.5" rx="3"/></svg>',
   termFirst: '<svg viewBox="0 0 64 40"><rect class="a" x="20" y="2" width="24" height="10" rx="4"/><rect class="b" x="6" y="16" width="52" height="10" rx="3"/><rect class="w" x="11" y="19.5" width="30" height="3" rx="1.5"/><rect class="b" x="6" y="29" width="52" height="10" rx="3"/><rect class="w" x="11" y="32.5" width="22" height="3" rx="1.5"/></svg>',
-  random: '<svg viewBox="0 0 64 40"><path class="b" d="M49 4l2 5 5 2-5 2-2 5-2-5-5-2 5-2zM13 24l1.5 3.5L18 29l-3.5 1.5L13 34l-1.5-3.5L8 29l3.5-1.5z"/><rect class="a" x="20" y="6" width="26" height="28" rx="6" transform="rotate(-8 33 20)"/><circle class="w" cx="27" cy="14" r="2.6"/><circle class="w" cx="33" cy="20" r="2.6"/><circle class="w" cx="39" cy="26" r="2.6"/></svg>',
-  typed: '<svg viewBox="0 0 64 40"><rect class="b" x="6" y="9" width="52" height="22" rx="6"/><rect class="a" x="13" y="16" width="8" height="8" rx="2"/><rect class="a" x="24" y="16" width="8" height="8" rx="2"/><rect class="a" x="44" y="13" width="3" height="14" rx="1.5"/></svg>',
+  // A Class Pass card with a tick, and the same card with a guest beside it.
+  pass: '<svg viewBox="0 0 64 40"><rect class="b" x="10" y="4" width="44" height="32" rx="6"/><circle class="a" cx="24" cy="16" r="6"/><path class="a" d="M14.5 31c0-5.5 4.2-9 9.5-9s9.5 3.5 9.5 9z"/><path class="w" d="M38 15h9M38 21h6"/><path class="as" d="M40 28l3.5 3.5 7-7.5"/></svg>',
+  guests: '<svg viewBox="0 0 64 40"><rect class="b" x="3" y="6" width="34" height="28" rx="6"/><circle class="a" cx="15" cy="16" r="5"/><path class="a" d="M7 30c0-4.5 3.6-7.5 8-7.5s8 3 8 7.5z"/><path class="w" d="M27 15h6M27 20h4"/><circle class="a" cx="50" cy="14" r="6"/><path class="a" d="M40 34c0-6 4.5-10 10-10s10 4 10 10z"/></svg>',
   volley: TILE.volley,
   blast: TILE.blast,
   match: TILE.mmatch,
@@ -42,6 +43,49 @@ const ART = {
   royale: '<svg viewBox="0 0 32 32" aria-hidden="true"><rect class="b" x="2" y="10" width="11" height="12" rx="3"/><circle class="w" cx="5.5" cy="15" r="1.4"/><circle class="w" cx="9.5" cy="15" r="1.4"/><rect class="a" x="19" y="10" width="11" height="12" rx="3"/><circle class="w" cx="22.5" cy="15" r="1.4"/><circle class="w" cx="26.5" cy="15" r="1.4"/><path class="a" d="M16.8 6l-3.2 8.5h2.7l-1.7 8.5 4.6-10.5h-2.8l2-6.5z"/></svg>',
   surge: '<svg viewBox="0 0 32 32" aria-hidden="true"><circle class="b" cx="16" cy="16" r="12.5"/><path class="a" d="M18.5 4.5l-9.5 13h6.2l-2.2 10 9.8-13.5h-6.3z"/></svg>'
 };
+
+// Who can join, and the class period playing (Donny, 2026-11-04: students
+// always sign in with Class Pass; guests only when he allows them). Every
+// game's setup uses this (live/, royale/, surge/); assets/live-roster.js
+// fills the period menu from the Leaderboard page's class list.
+export function whoChoices(name, periodId) {
+  return `<fieldset class="lv-group lv-who"><legend class="lv-q">Who can join?</legend>
+<div class="lv-choices">
+${choiceCard(name, 'pass', 'Class Pass only', 'Students sign in with Class Pass. Their names come from your class list and their wins go on the leaderboard.', ART.pass, true)}
+${choiceCard(name, 'guests', 'Class Pass and guests', 'Students on your class list sign in. Anyone else can join as a guest by typing a first name and last initial (checked for rude words). For a class in another room.', ART.guests, false)}
+</div>
+<label class="lv-opt lv-period-row"><span><strong>Class period playing</strong><span class="lv-opt-note">The lobby shows who from this period has joined and who has not. The list comes from your Leaderboard page.</span></span>
+<select id="${periodId}"><option value="">No period: just show who joins</option></select></label>
+</fieldset>`;
+}
+
+// In the lobby: who can join and the class period, changed any time, and
+// the period's class list (who has joined and who has not). Ids: <p>Who,
+// <p>LobbyPeriod, <p>Roll.
+export function lobbyRoll(p) {
+  return `<div class="lv-roll-pick">
+<label>Who can join <select id="${p}LobbyWho"><option value="pass">Class Pass only</option><option value="guests">Class Pass and guests</option></select></label>
+<label>Class period <select id="${p}LobbyPeriod"><option value="">No period</option></select></label>
+</div>
+<div class="lv-roll" id="${p}Roll" hidden></div>`;
+}
+
+// A student's screen when the game needs Class Pass: sign in, or join as a
+// guest when the teacher lets guests in. Ids: <p>Pass, <p>PassTitle,
+// <p>PassBtn, <p>PassError, <p>GuestBox, <p>GuestBtn.
+export function passStep(p) {
+  return `<section class="lv-step lv-card lv-pass-step" id="${p}Pass" hidden>
+<p class="lv-eyebrow" id="${p}PassTitle"></p>
+<h1>Sign in to play</h1>
+<p class="lv-lede">Sign in with Class Pass. Your name comes from the class list, and your wins go on the class leaderboard.</p>
+<button type="button" class="btn lv-big" id="${p}PassBtn">Sign in with Class Pass</button>
+<p class="lv-error" id="${p}PassError" role="alert"></p>
+<div id="${p}GuestBox" hidden>
+<p class="lv-pass-or">Not on the class list?</p>
+<button type="button" class="btn secondary" id="${p}GuestBtn">Join as a guest</button>
+</div>
+</section>`;
+}
 
 // The music bar's mute button picture (a speaker).
 const MUSIC_ICON = {
@@ -61,7 +105,7 @@ export function renderLiveHost(chapters, units, sets) {
     description: 'Host Vocab Live, Blast or Match for the class with any flashcard set.',
     unitId: null,
     depth,
-    extraHead: `<link rel="stylesheet" href="${asset('flashcards.css')}">\n<link rel="stylesheet" href="${asset('live.css')}">\n<script src="${asset('editor.js')}" defer></script>\n<script src="${asset('vendor/qrcode.js')}" defer></script>\n<script src="${asset('live-celebrate.js')}" defer></script>\n<script src="${asset('live-host.js')}" defer></script>\n`
+    extraHead: `<link rel="stylesheet" href="${asset('flashcards.css')}">\n<link rel="stylesheet" href="${asset('live.css')}">\n<script src="${asset('editor.js')}" defer></script>\n<script src="${asset('vendor/qrcode.js')}" defer></script>\n<script src="${asset('live-celebrate.js')}" defer></script>\n<script src="${asset('live-roster.js')}" defer></script>\n<script src="${asset('live-host.js')}" defer></script>\n`
   }) +
     topbar(depth, null) +
     drawer(depth, chapters, null, null) +
@@ -95,7 +139,7 @@ ${choiceCard('lvGame', 'volley', 'Vocab Live', 'Teams race to answer in a row. E
 ${choiceCard('lvGame', 'blast', 'Blast', 'Teams of up to 4 blast the asteroid with the right term before time runs out.', ART.blast, false)}
 ${choiceCard('lvGame', 'match', 'Match', 'Everyone races to match every term to its definition. First done wins.', ART.match, false)}
 ${choiceCard('lvGame', 'royale', 'Battle Royale', 'Students face off with superhero avatars. A wrong or slower answer costs 1 HP. Last hero standing wins.', ART.royale, false)}
-${choiceCard('lvGame', 'surge', 'Surge Showdown', 'Team battle: earn energy with right answers, then attack, heal and shield. Opens Surge Showdown.', ART.surge, false)}
+${choiceCard('lvGame', 'surge', 'Surge Showdown', 'Team battle: earn energy with right answers, then attack, heal and shield. Power-ups get stronger as the clock runs down.', ART.surge, false)}
 </div></fieldset>
 
 <div class="lv-other" id="lvOther" hidden><p id="lvOtherText"></p></div>
@@ -114,11 +158,7 @@ ${choiceCard('lvPrompt', 'def', 'Definition, then term', 'Students see the defin
 ${choiceCard('lvPrompt', 'term', 'Term, then definition', 'Students see the term and pick the definition.', ART.termFirst, false)}
 </div></fieldset>
 
-<fieldset class="lv-group"><legend class="lv-q">What names do students play under?</legend>
-<div class="lv-choices">
-${choiceCard('lvWho', 'random', 'Random fun names', 'Each student gets a name like Speedy Otter. Nothing to type.', ART.random, true)}
-${choiceCard('lvWho', 'typed', 'Students type their name', 'First name and last initial only, checked for rude words. You can remove anyone or swap their name.', ART.typed, false)}
-</div></fieldset>
+${whoChoices('lvWho', 'lvPeriod')}
 
 <div class="lv-more">
 <label class="lv-opt" data-for="blast"><span><strong>Time</strong><span class="lv-opt-note">The team with the most right answers when time runs out wins.</span></span>
@@ -188,6 +228,7 @@ ${choiceCard('lvWho', 'typed', 'Students type their name', 'First name and last 
 <button type="button" class="btn lv-big" id="lvStartSolo">Start game</button>
 </div>
 </div>
+${lobbyRoll('lv')}
 <div class="lv-pick" id="lvPick" hidden>
 <div class="lv-pick-bar">
 <strong class="lv-pick-label">Students pick their teams</strong>
@@ -319,6 +360,8 @@ export function renderLiveJoin(chapters) {
 <p class="lv-error" id="jnCodeError" role="alert"></p>
 <button type="button" class="linkbtn lv-rejoin" id="jnRejoin" hidden>Rejoin the game I was in</button>
 </section>
+
+${passStep('jn')}
 
 <section class="lv-step lv-card" id="jnName" hidden>
 <p class="lv-eyebrow" id="jnGameTitle"></p>

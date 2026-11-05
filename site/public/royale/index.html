@@ -13,13 +13,14 @@
 <script src="../assets/book.js" defer></script>
 <script src="../assets/pass.js?v=f773610b" defer></script>
 <link rel="stylesheet" href="../assets/flashcards.css?v=4b3a9a09">
-<link rel="stylesheet" href="../assets/live.css?v=b029521d">
-<link rel="stylesheet" href="../assets/royale.css?v=bdb6fd03">
+<link rel="stylesheet" href="../assets/live.css?v=f4865542">
+<link rel="stylesheet" href="../assets/royale.css?v=f444b3fa">
 <script src="../assets/editor.js?v=dfb83758" defer></script>
 <script src="../assets/vendor/qrcode.js?v=18ae399f" defer></script>
 <script src="../assets/live-celebrate.js?v=b55c9a9c" defer></script>
 <script src="../assets/heroes.js?v=eb09730e" defer></script>
-<script src="../assets/royale-host.js?v=9b2eb120" defer></script>
+<script src="../assets/live-roster.js?v=647187a7" defer></script>
+<script src="../assets/royale-host.js?v=b9eed523" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to the page</a><div class="topbar"><div class="topbar-inner">
@@ -66,6 +67,8 @@
 <select id="rbQset" aria-label="Question set"></select>
 <button type="button" class="btn secondary fc-small" id="rbQsetNew">New set</button>
 <button type="button" class="btn secondary fc-small" id="rbQsetEdit">Edit</button>
+<button type="button" class="btn secondary fc-small" id="rbQsetMerge" title="Make one new set from two or more of your sets">Merge sets</button>
+<button type="button" class="btn secondary fc-small" id="rbQsetCsv" title="Download this set as a spreadsheet (CSV)">Download CSV</button>
 <button type="button" class="btn secondary fc-small rb-danger" id="rbQsetDelete">Delete</button>
 </div>
 <p class="lv-small" id="rbQsetNote"></p>
@@ -79,18 +82,24 @@
 <h2 id="rbEditorTitle">New question set</h2>
 <label class="lv-field"><span class="lv-q">Name</span><input type="text" id="rbEdName" maxlength="120" placeholder="Mass, Acceleration, and Collisions"></label>
 <div class="rb-howto">
-<p><strong>Import from a link:</strong> paste the link to a Wayground quiz or a Google Sheet, then click Import.</p>
+<p><strong>Import from a link:</strong> paste the link to a Wayground, Kahoot, Blooket or Gimkit quiz, or a Google Sheet, then click Import. Each import adds its questions to the set, so you can import several links into one set.</p>
 <p class="lv-small">Start a sheet from the template: <a id="rbTemplate" href="#" target="_blank" rel="noopener">make a copy in Google Sheets</a> (or <a href="../assets/question-template.xlsx" download>download it for Excel</a>). It has a picture column for the question and for every answer: paste a picture link there (a Google Drive link works). Surge Showdown uses the same template. A Wayground or Blooket spreadsheet works too.</p>
 </div>
 <div class="rb-link-import">
-<input type="url" id="rbEdLink" placeholder="https://wayground.com/... or https://docs.google.com/spreadsheets/..." aria-label="Wayground or Google Sheets link">
+<input type="url" id="rbEdLink" placeholder="A Wayground, Kahoot, Blooket, Gimkit or Google Sheets link" aria-label="Wayground, Kahoot, Blooket, Gimkit or Google Sheets link">
 <button type="button" class="btn fc-small" id="rbEdImport">Import</button>
 </div>
 <div class="rb-import-help" id="rbImportHelp" hidden></div>
+<div class="rb-link-import rb-merge-row">
+<label class="lv-small" for="rbEdAddSet"><strong>Add a saved set:</strong></label>
+<select id="rbEdAddSet" aria-label="A saved question set to add"></select>
+<button type="button" class="btn secondary fc-small" id="rbEdAdd">Add its questions</button>
+</div>
 <p class="lv-small"><strong>Or paste rows</strong> straight from a sheet (select them, Ctrl+C, then Ctrl+V in the box), one question per line.</p>
 <textarea id="rbEdText" rows="10" spellcheck="false" placeholder="What is the unit of force?&#9;Newton&#9;Joule&#9;Watt&#9;Meter"></textarea>
 <div class="rb-ed-tools">
 <label class="btn secondary fc-small rb-file">Open a file (.csv or .tsv)<input type="file" id="rbEdFile" accept=".csv,.tsv,.txt,text/csv,text/plain" hidden></label>
+<button type="button" class="btn secondary fc-small" id="rbEdCsv" title="These questions as a spreadsheet, to change in Google Sheets or Excel and open here again">Download CSV</button>
 <span class="lv-small" id="rbEdCount" role="status"></span>
 </div>
 <div class="rb-preview" id="rbEdPreview"></div>
@@ -100,6 +109,23 @@
 <button type="button" class="btn secondary" id="rbEdCancel">Cancel</button>
 </div>
 </section>
+
+<fieldset class="lv-group lv-who rb-box"><legend class="lv-q">Who can join?</legend>
+<div class="lv-choices">
+<label class="lv-choice"><input type="radio" name="rbWho" value="pass" checked>
+<span class="lv-choice-art" aria-hidden="true"><svg viewBox="0 0 64 40"><rect class="b" x="10" y="4" width="44" height="32" rx="6"/><circle class="a" cx="24" cy="16" r="6"/><path class="a" d="M14.5 31c0-5.5 4.2-9 9.5-9s9.5 3.5 9.5 9z"/><path class="w" d="M38 15h9M38 21h6"/><path class="as" d="M40 28l3.5 3.5 7-7.5"/></svg></span>
+<span class="lv-choice-title">Class Pass only</span>
+<span class="lv-choice-text">Students sign in with Class Pass. Their names come from your class list and their wins go on the leaderboard.</span>
+</label>
+<label class="lv-choice"><input type="radio" name="rbWho" value="guests">
+<span class="lv-choice-art" aria-hidden="true"><svg viewBox="0 0 64 40"><rect class="b" x="3" y="6" width="34" height="28" rx="6"/><circle class="a" cx="15" cy="16" r="5"/><path class="a" d="M7 30c0-4.5 3.6-7.5 8-7.5s8 3 8 7.5z"/><path class="w" d="M27 15h6M27 20h4"/><circle class="a" cx="50" cy="14" r="6"/><path class="a" d="M40 34c0-6 4.5-10 10-10s10 4 10 10z"/></svg></span>
+<span class="lv-choice-title">Class Pass and guests</span>
+<span class="lv-choice-text">Students on your class list sign in. Anyone else can join as a guest by typing a first name and last initial (checked for rude words). For a class in another room.</span>
+</label>
+</div>
+<label class="lv-opt lv-period-row"><span><strong>Class period playing</strong><span class="lv-opt-note">The lobby shows who from this period has joined and who has not. The list comes from your Leaderboard page.</span></span>
+<select id="rbPeriod"><option value="">No period: just show who joins</option></select></label>
+</fieldset>
 
 <fieldset class="lv-group rb-box"><legend class="lv-q">How to play</legend>
 <div class="rb-opts">
@@ -113,7 +139,6 @@
 <select id="rbClock"><option value="0" selected>No clock</option><option value="1">1 minute</option><option value="2">2 minutes</option><option value="3">3 minutes</option><option value="4">4 minutes</option><option value="5">5 minutes</option><option value="7">7 minutes</option><option value="10">10 minutes</option><option value="15">15 minutes</option><option value="20">20 minutes</option><option value="30">30 minutes</option></select></label>
 <label class="lv-opt fc-switch"><span><strong>Revives</strong><span class="lv-opt-note">A student who is eliminated and gets 3 practice questions right in a row is revived with 1 HP, once a game.</span></span><input type="checkbox" id="rbComeback" checked></label>
 <label class="lv-opt fc-switch"><span><strong>Shield streaks</strong><span class="lv-opt-note">Winning 3 face-offs in a row earns a shield. It blocks the next HP that student would lose.</span></span><input type="checkbox" id="rbShield" checked></label>
-<label class="lv-opt fc-switch"><span><strong>Students sign in with Class Pass</strong><span class="lv-opt-note">Their name comes from your class list and wins go on the leaderboard. Turn off only if Class Pass is not working.</span></span><input type="checkbox" id="rbPass" checked></label>
 <div class="lv-opt"><span><strong>Lobby music</strong><span class="lv-opt-note">Plays on this screen only while students join.</span></span>
 <span class="lv-music-ctl"><select id="rbLobbyMusic" aria-label="Lobby music"></select></span></div>
 <div class="lv-opt"><span><strong>Game music</strong><span class="lv-opt-note">Plays on this screen only during the game.</span></span>
@@ -151,6 +176,11 @@
 </div>
 </div>
 <div class="rb-lobby-opts" id="rbLobbyOpts"></div>
+<div class="lv-roll-pick">
+<label>Who can join <select id="rbLobbyWho"><option value="pass">Class Pass only</option><option value="guests">Class Pass and guests</option></select></label>
+<label>Class period <select id="rbLobbyPeriod"><option value="">No period</option></select></label>
+</div>
+<div class="lv-roll" id="rbRoll" hidden></div>
 <ul class="rb-players" id="rbPlayers"></ul>
 </section>
 
