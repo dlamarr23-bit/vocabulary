@@ -865,6 +865,8 @@
     banner.textContent = say;
     banner.classList.toggle('rb-banner-time', !!b.timeUp && !b.paused);
     var key = [r.n, r.stage, b.paused].join('|');
+    // A picture open full screen closes when its question is over.
+    if (window.rbZoom && r.stage !== 'question') rbZoom.close();
     var stage = $('rbStage');
     if (stage.dataset.key !== key) {
       stage.dataset.key = key;
@@ -907,6 +909,7 @@
     var to = r.stage === 'vs' ? r.qAt : r.stage === 'question' ? r.endsAt : r.stage === 'results' ? r.nextAt : 0;
     var n = Math.max(0, Math.ceil((local(to) - now) / 1000));
     cd.textContent = String(n);
+    if (window.rbZoom) rbZoom.clock(r.stage === 'question' ? n : '', n <= 5);
     var bar = $('rbTimeBar');
     if (bar && r.stage === 'question') bar.style.width = Math.max(0, Math.min(100, (local(r.endsAt) - now) / (r.seconds * 10))) + '%';
   }
@@ -1022,8 +1025,14 @@
     if (img) { var i = mk('img', 'rb-tile-img'); i.alt = ''; i.src = img; i.referrerPolicy = 'no-referrer'; box.appendChild(i); }
     if (text) box.appendChild(mk('span', 'rb-tile-text', text));
   }
+  // Big answer words, a bit smaller when an answer is long so all four still fit (Donny, 2026-11-05).
+  function answerFit(opts) {
+    var n = Math.max.apply(null, (opts || []).map(function (o) { return String(o || '').length; }).concat([0]));
+    return n <= 24 ? 1 : n <= 40 ? 0.85 : n <= 64 ? 0.75 : n <= 100 ? 0.65 : 0.55;
+  }
   function answerTiles(r, settled) {
     var box = mk('div', 'rb-tiles');
+    box.style.setProperty('--fit', String(answerFit(r.q.opts)));
     var most = settled && r.counts ? Math.max.apply(null, r.counts.concat([1])) : 1;
     r.q.opts.forEach(function (o, i) {
       var tile = mk('div', 'rb-tile' + (settled ? (i === r.c ? ' right' : ' wrong') : '') + ((r.q.imgs || [])[i] ? ' has-img' : ''));
@@ -1046,7 +1055,11 @@
     var top = mk('div', 'rb-q-top');
     var qbox = mk('div', 'rb-q');
     qbox.appendChild(mk('p', 'rb-q-text', r.q.text));
-    if (r.q.img) { var img = mk('img', 'rb-q-img'); img.alt = ''; img.src = r.q.img; img.referrerPolicy = 'no-referrer'; qbox.appendChild(img); }
+    if (r.q.img) {
+      var img = mk('img', 'rb-q-img'); img.alt = ''; img.src = r.q.img; img.referrerPolicy = 'no-referrer';
+      qbox.appendChild(img);
+      if (window.rbZoom) rbZoom.wrap(img);
+    }
     top.appendChild(qbox);
     var side = mk('div', 'rb-q-side');
     var cd = mk('span', 'rb-countdown rb-countdown-q');

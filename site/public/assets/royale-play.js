@@ -237,6 +237,8 @@
     var was = view;
     view = v;
     clearInterval(tickTimer);
+    // A picture open full screen closes when its question is over (or the game pauses).
+    if (window.rbZoom && (v.phase !== 'play' || v.paused || !v.round || v.round.stage !== 'question')) rbZoom.close();
     if (v.phase === 'lobby') { show('rpLobby'); drawLobby(v); return; }
     if (v.phase === 'done') { show('rpDone'); drawDone(v, was); return; }
     if (v.paused) { show('rpPaused'); return; }
@@ -260,6 +262,7 @@
       $('rpTimer').textContent = n;
       $('rpTimer').classList.toggle('low', n <= 5);
     }
+    if (window.rbZoom) rbZoom.clock(r.stage === 'question' ? n : '', n <= 5);
   }
 
   /* -------- picking a hero -------- */
@@ -342,6 +345,15 @@
   }
 
   var shownQ = '';
+  // Tap the question's picture to see it full screen; the X goes back (royale-zoom.js).
+  $('rpQZoom').addEventListener('click', function () {
+    if (window.rbZoom) rbZoom.open($('rpQImg').currentSrc || $('rpQImg').src, $('rpQZoom'));
+  });
+  // Big answer words, a bit smaller when an answer is long so all four still fit (Donny, 2026-11-05).
+  function answerFit(opts) {
+    var n = Math.max.apply(null, (opts || []).map(function (o) { return String(o || '').length; }).concat([0]));
+    return n <= 24 ? 1 : n <= 40 ? 0.85 : n <= 64 ? 0.75 : n <= 100 ? 0.65 : 0.55;
+  }
   function drawQuestion(v, r) {
     show('rpQ');
     $('rpQTag').textContent = r.role === 'practice' ? 'Practice'
@@ -353,10 +365,11 @@
       shownQ = key;
       $('rpQText').textContent = r.q.text;
       var img = $('rpQImg');
-      img.hidden = !r.q.img;
+      $('rpQZoom').hidden = !r.q.img;
       if (r.q.img) img.src = r.q.img; else img.removeAttribute('src');
       var box = $('rpAnswers');
       box.textContent = '';
+      box.style.setProperty('--fit', String(answerFit(r.q.opts)));
       r.q.opts.forEach(function (o, i) {
         var pic = (r.q.imgs || [])[i];
         var b = mk('button', 'rp-answer' + (pic ? ' has-img' : ''));

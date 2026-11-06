@@ -11,8 +11,8 @@ const tag = (up, file) => file.endsWith('.css')
   ? `<link rel="stylesheet" href="${up}assets/${file}?v=${assetVersion(file)}">\n`
   : `<script src="${up}assets/${file}?v=${assetVersion(file)}" defer></script>\n`;
 
-const HOST_FILES = ['flashcards.css', 'live.css', 'royale.css', 'editor.js', 'vendor/qrcode.js', 'live-celebrate.js', 'heroes.js', 'live-roster.js', 'royale-host.js'];
-const PLAY_FILES = ['flashcards.css', 'live.css', 'royale.css', 'live-celebrate.js', 'heroes.js', 'royale-play.js'];
+const HOST_FILES = ['flashcards.css', 'live.css', 'royale.css', 'editor.js', 'vendor/qrcode.js', 'live-celebrate.js', 'heroes.js', 'live-roster.js', 'royale-zoom.js', 'royale-host.js'];
+const PLAY_FILES = ['flashcards.css', 'live.css', 'royale.css', 'live-celebrate.js', 'heroes.js', 'royale-zoom.js', 'royale-play.js'];
 
 export function renderRoyaleHost(chapters) {
   const depth = 1;
@@ -278,7 +278,7 @@ ${passStep('rp')}
 </div>
 <div class="rp-question">
 <p class="rp-qtext" id="rpQText"></p>
-<img class="rp-qimg" id="rpQImg" alt="" hidden>
+<button type="button" class="rb-zoom" id="rpQZoom" aria-label="Show the picture full screen" title="Tap to make the picture bigger" hidden><img class="rp-qimg" id="rpQImg" alt=""><span class="rb-zoom-badge" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22"><circle cx="10" cy="10" r="6.5" fill="none" stroke="currentColor" stroke-width="2.6"/><path d="M15 15l5.5 5.5M10 7v6M7 10h6" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg></span></button>
 </div>
 <div class="rp-answers" id="rpAnswers"></div>
 <div class="rp-sent" id="rpSent" hidden><strong>Answer sent!</strong><span id="rpSentNote">Waiting for the others...</span></div>

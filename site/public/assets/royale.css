@@ -135,7 +135,7 @@
 .rb-timebar{ height:.6rem; background:rgba(0,0,0,.25); border-radius:99px; margin:.8rem 0; overflow:hidden; }
 .rb-timebar span{ display:block; height:100%; width:100%; background:var(--gold); border-radius:99px; transition:width .2s linear; }
 .rb-tiles{ display:grid; grid-template-columns:1fr 1fr; gap:.6rem; }
-.rb-tile{ position:relative; overflow:hidden; background:var(--tile); color:#fff; border-radius:14px; padding:1rem 1.2rem; min-height:4.5rem; display:flex; align-items:center; justify-content:space-between; gap:.75rem; font-size:clamp(1.1rem, 2.2vw, 1.6rem); font-weight:800; box-shadow:0 5px 0 rgba(0,0,0,.25); }
+.rb-tile{ position:relative; overflow:hidden; background:var(--tile); color:#fff; border-radius:14px; padding:1rem 1.2rem; min-height:4.5rem; display:flex; align-items:center; justify-content:center; text-align:center; gap:.75rem; font-size:clamp(1.1rem, 2.2vw, 1.6rem); font-weight:800; box-shadow:0 5px 0 rgba(0,0,0,.25); }
 .rb-tile-text{ position:relative; z-index:1; overflow-wrap:anywhere; }
 /* Wrong answers fade to a muted color, but their words stay solid white so they can still be read. */
 .rb-tile.wrong{ background:color-mix(in srgb, var(--tile) 35%, #3f2a63); box-shadow:0 5px 0 rgba(0,0,0,.2); }
@@ -206,6 +206,9 @@ body[data-rb-step="rpVs"] > footer, body[data-rb-step="rpQ"] > footer, body[data
 .rb-stage{ display:flex; flex-direction:column; min-width:0; }
 .rb-stage-question .rb-q-top{ flex:1 1 auto; }
 .rb-stage-question .rb-tiles{ flex:1.25 1 auto; grid-auto-rows:minmax(4.5rem, 1fr); }
+/* Answers centered and about twice as big as before, a bit smaller for long answers
+   (royale-host.js sets --fit from the longest answer) (Donny, 2026-11-05). */
+.rb-stage-question .rb-tile{ font-size:calc(var(--fit, 1) * clamp(1.6rem, min(4vw, 7vh), 3.2rem)); line-height:1.15; padding:.8rem 1rem; }
 .rb-stage-question .rb-timebar{ flex:none; }
 
 /* Full screen for projecting: the site's top bar steps aside. */
@@ -271,7 +274,7 @@ html[data-theme="dark"] .rp-pick.mine{ background:#3a3216; }
 .rp-qtext{ margin:0; font-size:clamp(1.15rem, 2.6vw, 2.1rem); font-weight:800; line-height:1.25; overflow-wrap:anywhere; }
 .rp-qimg{ max-width:100%; max-height:28vh; border-radius:10px; margin-top:.6rem; }
 .rp-answers{ display:grid; grid-template-columns:1fr 1fr; gap:.6rem; margin-top:.9rem; }
-.rp-answer{ font:inherit; font-weight:800; font-size:clamp(1rem, 2.2vw, 1.75rem); color:#fff; background:var(--tile); border:0; border-radius:14px; min-height:5.5rem; padding:.8rem; cursor:pointer; box-shadow:0 5px 0 rgba(0,0,0,.25); overflow-wrap:anywhere; }
+.rp-answer{ font:inherit; font-weight:800; font-size:calc(var(--fit, 1) * clamp(1.4rem, min(4vw, 6.5vh), 3rem)); line-height:1.15; color:#fff; background:var(--tile); border:0; border-radius:14px; min-height:5.5rem; padding:.8rem; cursor:pointer; box-shadow:0 5px 0 rgba(0,0,0,.25); overflow-wrap:anywhere; }
 .rp-answer:active:not(:disabled){ transform:translateY(3px); box-shadow:0 2px 0 rgba(0,0,0,.25); }
 /* After answering, the other answers turn a muted color; their words stay solid white so they can be read. */
 .rp-answer:disabled{ cursor:default; background:color-mix(in srgb, var(--tile) 35%, #3f2a63); box-shadow:0 5px 0 rgba(0,0,0,.2); }
@@ -319,7 +322,7 @@ html[data-theme="dark"] .rp-pick.mine{ background:#3a3216; }
 .rb-size-note{ margin:-.4rem 0 .8rem; text-align:center; font-weight:800; }
 .rb-size-now{ display:flex; align-items:center; gap:.4rem; font-weight:800; color:#fff; }
 .rb-size-now select{ font:inherit; font-weight:700; border:0; border-radius:10px; padding:.4rem .5rem; }
-.rb-tile-body{ position:relative; z-index:1; display:flex; flex-direction:column; align-items:flex-start; gap:.35rem; min-width:0; }
+.rb-tile-body{ position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; gap:.35rem; min-width:0; }
 .rb-tile-img{ max-height:7rem; max-width:100%; border-radius:8px; background:#fff; }
 .rb-res-top .rb-tile-img{ max-height:3.5rem; }
 .rb-pq-img{ height:2.4rem; max-width:5rem; object-fit:contain; vertical-align:middle; margin-left:.35rem; border-radius:4px; border:1px solid var(--line); background:#fff; }
@@ -353,3 +356,25 @@ html[data-theme="dark"] .rp-pick.mine{ background:#3a3216; }
 .rb-fighter-text > .rb-ko, .rb-fighter-text > .rb-minus, .rb-fighter-text > .rb-blocked, .rb-fighter-text > .rb-earned{ position:static; align-self:flex-start; width:max-content; max-width:100%; margin-top:.2rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .rb-fighter.right .rb-fighter-text > .rb-ko, .rb-fighter.right .rb-fighter-text > .rb-minus, .rb-fighter.right .rb-fighter-text > .rb-blocked, .rb-fighter.right .rb-fighter-text > .rb-earned{ align-self:flex-end; }
 .rp-res-side.ghost .rb-hero{ filter:grayscale(.6); opacity:.6; }
+
+/* ---------- a question's picture, full screen (Donny, 2026-11-05) ----------
+   Tap the picture (teacher's screen or a student's) to fill the screen with it; the X, Esc or a tap on the
+   dark space goes back to the game. royale-zoom.js builds it; it closes by itself when the question ends. */
+.rb-zoom{ position:relative; display:inline-block; max-width:100%; margin:.6rem auto 0; padding:0; border:0; border-radius:10px; background:none; font:inherit; line-height:0; cursor:zoom-in; }
+.rb-zoom[hidden]{ display:none; }
+.rb-zoom > img{ display:block; margin:0; }
+.rb-zoom:focus-visible{ outline:3px solid #f2b705; outline-offset:3px; }
+.rb-zoom-badge{ position:absolute; right:.4rem; bottom:.4rem; display:grid; place-items:center; width:2.4rem; height:2.4rem; border-radius:50%; background:rgba(27,31,42,.82); color:#fff; box-shadow:0 2px 6px rgba(0,0,0,.3); pointer-events:none; transition:transform .12s, background .12s; }
+.rb-zoom:hover .rb-zoom-badge{ background:#6741d9; transform:scale(1.1); }
+html.rb-zoom-on, html.rb-zoom-on body{ overflow:hidden; }
+.rb-zoom-layer{ position:fixed; inset:0; z-index:1000; display:flex; align-items:center; justify-content:center; padding:4.5rem 1rem 1rem; background:rgba(16,10,30,.92); cursor:zoom-out; animation:rbZoomIn .18s ease-out; }
+.rb-zoom-layer[hidden]{ display:none; }
+.rb-zoom-img{ display:block; box-sizing:border-box; width:min(100%, calc((100vh - 6.7rem) * var(--ar, 1.5) + 1.2rem)); height:auto; max-height:100%; object-fit:contain; padding:.6rem; background:#fff; border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.5); cursor:default; }
+.rb-zoom-x{ position:absolute; top:.75rem; right:.75rem; display:grid; place-items:center; width:3.25rem; height:3.25rem; padding:0; border:0; border-radius:50%; background:#fff; color:#1b1f2a; font:inherit; font-size:1.7rem; font-weight:900; line-height:1; cursor:pointer; box-shadow:0 4px 0 rgba(0,0,0,.35); }
+.rb-zoom-x:hover{ background:#f2b705; }
+.rb-zoom-x:focus-visible{ outline:3px solid #f2b705; outline-offset:3px; }
+.rb-zoom-clock{ position:absolute; top:.75rem; left:.75rem; display:grid; place-items:center; width:3.25rem; height:3.25rem; border-radius:50%; background:#f2b705; color:#3b2a00; font-weight:900; font-size:1.5rem; font-variant-numeric:tabular-nums; }
+.rb-zoom-clock[hidden]{ display:none; }
+.rb-zoom-clock.low{ background:#e03131; color:#fff; }
+@keyframes rbZoomIn{ from{ opacity:0; } to{ opacity:1; } }
+@media (prefers-reduced-motion:reduce){ .rb-zoom-layer{ animation:none; } }

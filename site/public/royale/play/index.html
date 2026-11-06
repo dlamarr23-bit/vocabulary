@@ -14,10 +14,11 @@
 <script src="../../assets/pass.js?v=f773610b" defer></script>
 <link rel="stylesheet" href="../../assets/flashcards.css?v=4b3a9a09">
 <link rel="stylesheet" href="../../assets/live.css?v=ba45389c">
-<link rel="stylesheet" href="../../assets/royale.css?v=8a7439e4">
+<link rel="stylesheet" href="../../assets/royale.css?v=25d98cba">
 <script src="../../assets/live-celebrate.js?v=b55c9a9c" defer></script>
 <script src="../../assets/heroes.js?v=eb09730e" defer></script>
-<script src="../../assets/royale-play.js?v=284e155c" defer></script>
+<script src="../../assets/royale-zoom.js?v=d62e9324" defer></script>
+<script src="../../assets/royale-play.js?v=719ee956" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to the page</a><div class="topbar"><div class="topbar-inner">
@@ -109,7 +110,7 @@
 </div>
 <div class="rp-question">
 <p class="rp-qtext" id="rpQText"></p>
-<img class="rp-qimg" id="rpQImg" alt="" hidden>
+<button type="button" class="rb-zoom" id="rpQZoom" aria-label="Show the picture full screen" title="Tap to make the picture bigger" hidden><img class="rp-qimg" id="rpQImg" alt=""><span class="rb-zoom-badge" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22"><circle cx="10" cy="10" r="6.5" fill="none" stroke="currentColor" stroke-width="2.6"/><path d="M15 15l5.5 5.5M10 7v6M7 10h6" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg></span></button>
 </div>
 <div class="rp-answers" id="rpAnswers"></div>
 <div class="rp-sent" id="rpSent" hidden><strong>Answer sent!</strong><span id="rpSentNote">Waiting for the others...</span></div>
