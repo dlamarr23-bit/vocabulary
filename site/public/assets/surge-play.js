@@ -28,11 +28,16 @@
   const tokenKey = (c) => (EMBED ? 'is8-surge-w-' : 'is8-surge-p-') + c;
   function passToken() { return window.IS8Pass ? window.IS8Pass.token() : ''; }
 
+  // The body names the step showing, so the game fills the whole screen like
+  // Battle Royale (surge.css, Donny 2026-11-07).
+  document.body.classList.add('sg-body');
   function showStep(id) {
     STEPS.forEach((s) => { $('#' + s).hidden = s !== id; });
     const inArena = VIEWS.includes(id);
     $('#spArena').hidden = !inArena;
     VIEWS.forEach((v) => $('#' + v).classList.toggle('hidden', v !== id));
+    document.body.setAttribute('data-sg-view', id);
+    if (id !== 'vGame') closeSide();
     if (!inArena) $('#targetModal').classList.add('hidden');
   }
   function status(text) { $('#spStatus').textContent = text || ''; }
@@ -260,15 +265,71 @@
     if (me.gamble) $('#gambleBanner').textContent = `🎲 DOUBLE OR NOTHING! Get this one right for about +${gambleAmt()} team health. Wrong costs the same.`;
     $('#pausedBanner').classList.toggle('hidden', S.status !== 'paused');
     $('#streakTxt').innerHTML = me.streak > 1 ? `<span class="streak">🔥 ${me.streak} in a row</span>` : `✓ ${me.correct} correct`;
-    $('#miniTeams').innerHTML = S.teams.filter((x) => x.active).map((x) => `<div class="mini ${x.alive ? '' : 'fallen'} ${x.id === t.id ? 'mine' : ''}" style="--tc:${x.color}">${esc(x.icon)} ${esc(x.name)}${S.bounty === x.id ? ' <span class="tgt" title="Bounty: hit this team for bonus energy">🎯</span>' : ''} <span class="muted mini-score">${x.score.toLocaleString()}</span>${hpBar(x)}</div>`).join('');
-    $('#ticker').innerHTML = S.feed.slice(-4).reverse().map((e) => `<div class="ev ${esc(e.kind)}">${esc(e.text)}</div>`).join('');
+    $('#sideEnergy').textContent = '⚡ ' + me.energy.toLocaleString();
+    renderStandings(t);
+    renderFeed(t);
     if (!curQ && !locked) $('#qtext').textContent = S.status === 'paused' ? 'Paused' : 'Loading...';
     buildShop();
     updateShop();
   }
 
+  /* ---------------- the panel on the right ----------------
+     Shop and power-ups, and Teams and battle feed, open in a panel on the
+     right over the question; Questions, Hide, Esc or a tap outside closes it
+     (Donny, 2026-11-07: they used to sit under the question). */
+
+  function openSide(which) {
+    tab = which;
+    document.querySelectorAll('[data-tab]').forEach((b) => {
+      const on = b.dataset.tab === which;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', String(on));
+    });
+    const open = which !== 'q';
+    $('#spSide').classList.toggle('hidden', !open);
+    $('#sideBack').classList.toggle('hidden', !open);
+    if (!open) return;
+    $('#sideTitle').textContent = which === 'shop' ? 'Shop and power-ups' : 'Teams and battle feed';
+    $('#sideShop').classList.toggle('hidden', which !== 'shop');
+    $('#sideTeams').classList.toggle('hidden', which !== 'teams');
+    $('#sideEnergy').classList.toggle('hidden', which !== 'shop');
+    $('#sideBody').scrollTop = 0;
+  }
+  function closeSide() { if (tab !== 'q') openSide('q'); }
+
+  // Teams in order of points, the same order as the final standings.
+  const ordinal = (n) => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th');
+  function renderStandings(t) {
+    const list = S.teams.filter((x) => x.active).sort((a, b) => b.score - a.score || b.hp - a.hp || a.id - b.id);
+    $('#standings').innerHTML = list.map((x, i) => `<div class="st-row${x.id === t.id ? ' mine' : ''}${x.alive ? '' : ' fallen'}" style="--tc:${x.color}">
+      <span class="st-rank">${ordinal(i + 1)}</span>
+      <div class="st-main">
+        <div class="st-top"><span class="st-name">${esc(x.icon)} ${esc(x.name)}</span>${x.id === t.id ? '<span class="st-you">YOU</span>' : ''}${S.bounty === x.id ? '<span class="tgt" title="Bounty: hit this team for bonus energy">🎯</span>' : ''}<span class="st-pts">${x.score.toLocaleString()} ${x.score === 1 ? 'point' : 'points'}</span></div>
+        <div class="st-hp">${hpBar(x)}<span class="st-hpn">${x.alive ? `❤️ ${x.hp}${x.shield ? `  🛡️ ${x.shield}` : ''}` : '💀 Fallen'}</span></div>
+      </div>
+    </div>`).join('');
+  }
+  // Newest first. Attacks on your team are red; only new lines slide in.
+  const seenFeed = new Set();
+  function renderFeed(t) {
+    const tag = `${t.icon} ${t.name}`;
+    const atMe = (e) => e.kind === 'strike' || e.kind === 'siphon' ? e.text.includes(` on ${tag} for `) : e.kind === 'barrage' && !e.text.includes(tag);
+    const first = !seenFeed.size;
+    $('#sideFeed').innerHTML = S.feed.slice().reverse().map((e) => {
+      const fresh = !first && !seenFeed.has(e.id);
+      seenFeed.add(e.id);
+      return `<div class="ev ${esc(e.kind)}${atMe(e) ? ' at-me' : ''}${fresh ? ' new' : ''}">${esc(e.text)}</div>`;
+    }).join('') || '<p class="muted sg-small">Nothing has happened yet.</p>';
+  }
+
   /* ---------------- questions ---------------- */
 
+  // Big answer words like Battle Royale's, a bit smaller when an answer is
+  // long so all four still fit (Donny, 2026-11-07).
+  function answerFit(opts) {
+    const n = Math.max(0, ...(opts || []).map((o) => String((o && o.t) || '').length));
+    return n <= 24 ? 1 : n <= 40 ? 0.85 : n <= 64 ? 0.75 : n <= 100 ? 0.65 : 0.55;
+  }
   function renderQ() {
     if (!curQ) return;
     $('#qimg').innerHTML = imgTag(curQ.img, 'qimg');
@@ -276,7 +337,7 @@
     $('#qtext').classList.toggle('short', !curQ.text);
     $('#fb').textContent = '';
     $('#fb').className = 'feedback';
-    $('#answerArea').innerHTML = `<div class="opts">${curQ.options.map((o, i) => `<button type="button" class="opt" data-i="${i}">${imgTag(o.img)}${o.t ? `<span>${esc(o.t)}</span>` : ''}</button>`).join('')}</div>`;
+    $('#answerArea').innerHTML = `<div class="opts" style="--fit:${answerFit(curQ.options)}">${curQ.options.map((o, i) => `<button type="button" class="opt" data-i="${i}">${imgTag(o.img)}${o.t ? `<span>${esc(o.t)}</span>` : ''}</button>`).join('')}</div>`;
   }
   function answer(val, btn) {
     if (locked || !curQ) return;
@@ -355,26 +416,23 @@
     if (shopBuilt || !RULES) return;
     shopBuilt = true;
     const G = RULES.gamble;
+    // One row each in the panel: icon, name and what it does, then the cost.
     $('#powers').innerHTML = (S.settings.gamble && G ? `
       <button type="button" class="item gamble-item" data-gamble="1">
-        <div class="it-top"><span class="it-ic">${G.icon}</span>${G.name}</div>
-        <div class="it-d">${G.desc}</div>
-        <div class="it-amt" id="gambleAmt"></div>
-        <div class="it-cost">⚡ ${G.cost}</div>
+        <span class="it-ic">${G.icon}</span>
+        <span class="it-body"><span class="it-top">${G.name}</span><span class="it-d">${G.desc}</span><span class="it-amt" id="gambleAmt"></span></span>
+        <span class="it-cost">⚡ ${G.cost}</span>
       </button>` : '') + Object.entries(RULES.powers).map(([k, p]) => `
       <button type="button" class="item" data-power="${k}">
-        <div class="it-top"><span class="it-ic">${p.icon}</span>${p.name}</div>
-        <div class="it-d">${p.desc}</div>
-        <div class="it-amt" data-amt="${k}"></div>
-        <div class="it-cost">⚡ ${p.cost}</div>
+        <span class="it-ic">${p.icon}</span>
+        <span class="it-body"><span class="it-top">${p.name}</span><span class="it-d">${p.desc}</span><span class="it-amt" data-amt="${k}"></span></span>
+        <span class="it-cost">⚡ ${p.cost}</span>
       </button>`).join('');
     $('#upgrades').innerHTML = Object.entries(RULES.upgrades).map(([k, u]) => `
       <button type="button" class="item" data-upg="${k}">
-        <div class="it-top">${k === 'gain' ? '💰' : '🔥'} ${u.name}</div>
-        <div class="it-d">${u.desc}</div>
-        <div class="lvl" data-lvl="${k}"></div>
-        <div class="it-amt" data-uamt="${k}"></div>
-        <div class="it-cost" data-ucost="${k}"></div>
+        <span class="it-ic">${k === 'gain' ? '💰' : '🔥'}</span>
+        <span class="it-body"><span class="it-top">${u.name}</span><span class="it-d">${u.desc}</span><span class="lvl" data-lvl="${k}"></span><span class="it-amt" data-uamt="${k}"></span></span>
+        <span class="it-cost" data-ucost="${k}"></span>
       </button>`).join('');
   }
   function powerAmt(k) { return Math.round(RULES.powers[k].base * S.settings.powerScale * timing(S, conn.offset).surge * (myTeam().boost || 1)); }
@@ -439,13 +497,8 @@
     const o = e.target.closest('.opt');
     if (o) { answer(+o.dataset.i, o); return; }
     const tb = e.target.closest('[data-tab]');
-    if (tb) {
-      tab = tb.dataset.tab;
-      document.querySelectorAll('[data-tab]').forEach((b) => b.classList.toggle('on', b === tb));
-      $('#tabQ').classList.toggle('hidden', tab !== 'q');
-      $('#tabShop').classList.toggle('hidden', tab !== 'shop');
-      return;
-    }
+    if (tb) { openSide(tb.dataset.tab === tab ? 'q' : tb.dataset.tab); return; }
+    if (e.target.closest('#sideHide') || e.target.id === 'sideBack') { closeSide(); return; }
     const gb = e.target.closest('[data-gamble]');
     if (gb && !gb.disabled) { conn.send({ t: 'gamble' }); return; }
     const pw = e.target.closest('[data-power]');
@@ -456,8 +509,13 @@
     if (tg) { conn.send({ t: 'power', key: pendingPower, target: +tg.dataset.target }); $('#targetModal').classList.add('hidden'); return; }
     if (e.target.id === 'tmClose' || e.target.id === 'targetModal') $('#targetModal').classList.add('hidden');
   });
-  // Number keys 1 to 4 answer, on a computer.
+  // Number keys 1 to 4 answer, on a computer. Esc closes a pop-up or the panel.
   document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (!$('#targetModal').classList.contains('hidden')) $('#targetModal').classList.add('hidden');
+      else closeSide();
+      return;
+    }
     if (tab !== 'q' || !curQ || $('#vGame').classList.contains('hidden') || document.activeElement.tagName === 'INPUT') return;
     const n = parseInt(e.key, 10);
     if (n >= 1 && n <= curQ.options.length) answer(n - 1, document.querySelectorAll('.opt')[n - 1]);

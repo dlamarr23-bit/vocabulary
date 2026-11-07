@@ -289,38 +289,42 @@ body.sg-showdown .sg .timer{ color:var(--sg-bad); }
 .sg .p-head .energy{ font-weight:800; font-size:26px; color:var(--sg-accent); display:flex; align-items:center; gap:6px; }
 .sg .p-head .ptimer{ font-weight:800; font-size:24px; font-variant-numeric:tabular-nums; }
 .sg .p-head .ptimer.low{ color:var(--sg-bad); }
-.sg .tabs{ display:flex; gap:8px; margin:14px 0; }
+.sg .tabs{ display:flex; gap:8px; margin:10px 0; }
 .sg .tabs button{ flex:1; border:0; padding:12px; border-radius:12px; background:var(--sg-panel); color:var(--sg-muted); font:inherit; font-weight:700; font-size:16px; cursor:pointer; }
 .sg .tabs button.on{ background:var(--sg-accent); color:var(--sg-accent-ink); }
-.sg .qcard{ background:var(--sg-panel); border-radius:var(--sg-radius); padding:22px; text-align:center; border:1px solid var(--sg-line); }
-.sg .qtext{ font-size:clamp(20px, 3vw, 28px); font-weight:600; line-height:1.3; min-height:80px; display:flex; align-items:center; justify-content:center; }
+.sg .qcard{ background:var(--sg-panel); border-radius:var(--sg-radius); padding:16px 20px; text-align:center; border:1px solid var(--sg-line); }
+.sg .qtext{ font-size:clamp(1.25rem, 2.6vw, 2.1rem); font-weight:700; line-height:1.25; min-height:80px; display:flex; align-items:center; justify-content:center; overflow-wrap:anywhere; }
 .sg .qtext.short{ min-height:0; }
 .sg .qimg{ display:block; max-width:100%; max-height:34vh; margin:0 auto 10px; border-radius:12px; background:#fff; object-fit:contain; }
-.sg .opts{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:20px; }
-.sg .opt{ border:0; border-radius:14px; padding:18px 14px; font:inherit; font-size:19px; font-weight:600; color:#fff; box-shadow:0 5px 0 rgba(0,0,0,.35); transition:transform .06s, filter .15s; min-height:84px; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; }
+.sg .opts{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px; }
+/* Answer words as big as Battle Royale's (about twice the old size), a bit
+   smaller when an answer is long (surge-play.js sets --fit) (Donny, 2026-11-07). */
+.sg .opt{ border:0; border-radius:14px; padding:.8rem 1rem; font:inherit; font-size:calc(var(--fit, 1) * clamp(1.4rem, min(4vw, 6.5vh), 3rem)); font-weight:800; line-height:1.15; overflow-wrap:anywhere; color:#fff; box-shadow:0 5px 0 rgba(0,0,0,.35); transition:transform .06s, filter .15s; min-height:5.5rem; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; }
 .sg .opt:hover{ filter:brightness(1.1); }
 .sg .opt:active{ transform:translateY(3px); box-shadow:0 2px 0 rgba(0,0,0,.35); }
 .sg .opt:nth-child(1){ background:#2563eb; } .sg .opt:nth-child(2){ background:#db2777; } .sg .opt:nth-child(3){ background:#059669; } .sg .opt:nth-child(4){ background:#c2410c; }
 .sg .opt.right{ outline:5px solid #fff; background:#10b981 !important; }
 .sg .opt.wrong{ background:#7f1d1d !important; opacity:.8; }
 .sg .opt img{ max-width:100%; max-height:22vh; border-radius:10px; background:#fff; object-fit:contain; pointer-events:none; }
-.sg .feedback{ font-weight:800; font-size:28px; margin-top:14px; min-height:40px; }
+.sg .feedback{ font-weight:800; font-size:28px; margin-top:8px; min-height:40px; }
 .sg .feedback.good{ color:var(--sg-good); } .sg .feedback.bad{ color:var(--sg-bad); }
 .sg .sg-gamble-lost{ font-size:20px; }
 .sg .sg-read-next{ font-size:18px; font-weight:700; opacity:.9; margin-top:4px; }
 .sg .sg-read-next:empty{ display:none; }
 .sg .streak{ color:var(--sg-accent); font-weight:700; }
-.sg .shop h3{ font-size:19px; margin:18px 0 10px; }
-.sg .shop-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(210px, 1fr)); gap:12px; }
-.sg .item{ background:var(--sg-panel); border:2px solid var(--sg-line); border-radius:14px; padding:14px; display:flex; flex-direction:column; gap:6px; text-align:left; color:var(--sg-ink); font:inherit; cursor:pointer; }
+/* The shop: one row per item in the panel on the right. */
+.sg .shop-list{ display:flex; flex-direction:column; gap:8px; }
+.sg .item{ width:100%; background:var(--sg-panel); border:2px solid var(--sg-line); border-radius:14px; padding:10px 12px; display:grid; grid-template-columns:2.5rem minmax(0, 1fr) auto; align-items:center; gap:10px; text-align:left; color:var(--sg-ink); font:inherit; cursor:pointer; }
 .sg .item:not(:disabled):hover{ border-color:var(--sg-accent); }
 .sg .item:disabled{ opacity:.5; cursor:not-allowed; }
-.sg .item .it-top{ display:flex; align-items:center; gap:8px; font-weight:800; font-size:18px; }
-.sg .item .it-ic{ font-size:26px; }
-.sg .item .it-d{ font-size:14px; color:var(--sg-muted); }
-.sg .item .it-amt{ font-weight:700; color:var(--sg-good); }
-.sg .item .it-cost{ margin-top:auto; font-weight:700; color:var(--sg-accent); }
+.sg .item .it-ic{ font-size:28px; line-height:1; text-align:center; }
+.sg .item .it-body{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+.sg .item .it-top{ font-weight:800; font-size:17px; }
+.sg .item .it-d{ font-size:13px; line-height:1.3; color:var(--sg-muted); }
+.sg .item .it-amt{ font-weight:700; font-size:14px; color:var(--sg-good); }
+.sg .item .it-cost{ font-weight:800; color:var(--sg-accent); background:#ffd23f1f; border-radius:99px; padding:4px 10px; white-space:nowrap; }
 .sg .item.gamble-item{ border-color:#7c3aed; }
+.sg .item .lvl{ margin:3px 0 1px; }
 .sg .lvl{ display:flex; gap:4px; }
 .sg .lvl i{ width:18px; height:6px; border-radius:3px; background:var(--sg-line); }
 .sg .lvl i.on{ background:var(--sg-accent); }
@@ -335,27 +339,69 @@ body.sg-showdown .sg .timer{ color:var(--sg-bad); }
 .sg .ev-strip.sd{ background:#5c0d0d; border:2px solid var(--sg-bad); justify-content:center; font-weight:800; font-size:19px; }
 .sg .ev-strip .cb-bar{ flex:1 1 120px; min-width:120px; }
 .sg .gamble-banner{ margin:0 0 10px; padding:10px 14px; border-radius:12px; background:linear-gradient(90deg, #4c1d95, #7c3aed); color:#fff; font-weight:700; text-align:center; }
-.sg .mini-teams{ display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:8px; margin-top:14px; }
-.sg .mini{ background:var(--sg-panel); border-radius:10px; padding:8px 10px; border-left:5px solid var(--tc); font-size:14px; font-weight:600; }
-.sg .mini.mine{ outline:2px solid var(--tc); }
-.sg .mini .mini-score{ float:right; }
-.sg .mini .hpbar{ height:8px; margin-top:5px; }
-.sg .mini .tgt{ color:#ff6b6b; font-weight:700; }
 .sg .wait{ text-align:center; padding:36px 10px; }
 .sg .wait .big-ic{ font-size:84px; }
 .sg .sg-wait-title{ font-size:36px; }
 .sg .sg-wait-text{ font-size:18px; }
 .sg .sg-wait-foot{ margin-top:24px; }
-.sg .ticker{ margin-top:14px; }
-.sg .ticker .ev{ font-size:13px; }
 .sg .sg-my-stats{ max-width:640px; margin:16px auto; }
 .sg .sg-my-place{ font-size:24px; }
 .sg .sg-my-line{ margin-top:10px; gap:22px; font-weight:600; }
 @media (max-width:560px){
   .sg .opts{ grid-template-columns:1fr; }
+  .sg .tabs .tab-more{ display:none; }
+  .sg .tabs button{ padding:10px 6px; font-size:15px; }
   .sg .p-head .energy{ font-size:22px; }
   .sg .joinbox .code{ letter-spacing:4px; }
 }
+
+/* ---------- a student's game fills the screen, like Battle Royale (Donny, 2026-11-07: the class plays on Chromebooks) ----------
+   surge-play.js puts sg-body on <body> and names the step showing in data-sg-view.
+   The question and its answers grow to fill the window; the footer steps aside. */
+body.sg-body{ min-height:100vh; min-height:100dvh; display:flex; flex-direction:column; }
+body.sg-body > main.sg-play{ flex:1 0 auto; width:100%; display:flex; flex-direction:column; }
+body.sg-body > main.sg-play > .lv-status:empty{ display:none; }
+body[data-sg-view="vGame"] > main.sg-play.container{ max-width:none; padding:.6rem .75rem; }
+body[data-sg-view="vGame"] > footer{ display:none; }
+body[data-sg-view="vGame"] #spArena{ flex:1 0 auto; display:flex; flex-direction:column; }
+.sg #vGame.p-wrap{ max-width:none; width:100%; flex:1 0 auto; display:flex; flex-direction:column; }
+#vGame > #tabQ{ flex:1 0 auto; display:flex; flex-direction:column; }
+#tabQ > .qcard{ flex:1 0 auto; display:flex; flex-direction:column; }
+#answerArea{ flex:1 0 auto; display:flex; flex-direction:column; }
+#answerArea > .opts{ flex:1 0 auto; grid-auto-rows:minmax(5.5rem, 1fr); }
+.sg .tabs button:focus-visible, .sg .side .sbtn:focus-visible{ outline:3px solid #fff; outline-offset:2px; }
+
+/* The panel on the right: Shop and power-ups, or Teams and battle feed. */
+.sg .side-back{ position:fixed; inset:0; z-index:55; background:rgba(5,7,18,.55); }
+.sg .side{ position:fixed; top:0; right:0; bottom:0; z-index:56; width:min(440px, 100%); display:flex; flex-direction:column; background:var(--sg-bg2); border-left:4px solid var(--tc, var(--sg-accent)); box-shadow:-18px 0 40px rgba(0,0,0,.5); animation:sgSideIn .22s ease-out; }
+@keyframes sgSideIn{ from{ opacity:0; transform:translateX(40px); } }
+.sg .side-head{ display:flex; align-items:center; gap:10px; padding:12px 14px; border-bottom:1px solid var(--sg-line); background:var(--sg-panel); }
+.sg .side-head h2{ flex:1; min-width:0; font-size:20px; }
+.sg .side-energy{ font-weight:800; font-size:22px; color:var(--sg-accent); white-space:nowrap; }
+.sg .side-body{ flex:1; min-height:0; overflow:auto; overscroll-behavior:contain; padding:12px 14px 20px; }
+.sg .side h3{ font-size:17px; margin:16px 0 8px; }
+.sg .side-body > div > h3:first-child{ margin-top:2px; }
+.sg .side .side-note{ margin:-4px 0 8px; }
+.sg .side-box{ background:var(--sg-panel); border:1px solid var(--sg-line); border-radius:14px; padding:10px; }
+.sg .side-box + .side-box{ margin-top:12px; }
+.sg .side-box h3{ margin:2px 2px 8px; }
+.sg .standings{ display:flex; flex-direction:column; gap:4px; }
+.sg .st-row{ display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:12px; border:2px solid transparent; }
+.sg .st-row.mine{ background:color-mix(in srgb, var(--tc) 30%, var(--sg-panel)); border-color:var(--tc); }
+.sg .st-rank{ flex:none; width:2.3em; font-weight:800; font-size:15px; color:var(--sg-muted); }
+.sg .st-row.mine .st-rank{ color:var(--sg-ink); }
+.sg .st-main{ flex:1; min-width:0; }
+.sg .st-top{ display:flex; align-items:center; gap:6px; font-weight:700; font-size:16px; }
+.sg .st-name{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sg .st-you{ flex:none; font-size:11px; font-weight:800; letter-spacing:.05em; color:#111; background:#fff; border-radius:99px; padding:1px 7px; }
+.sg .st-top .tgt{ flex:none; }
+.sg .st-pts{ margin-left:auto; flex:none; white-space:nowrap; font-weight:800; }
+.sg .st-hp{ display:flex; align-items:center; gap:8px; margin-top:6px; }
+.sg .st-hp .hpbar{ flex:1; height:12px; }
+.sg .st-hpn{ flex:none; font-size:13px; font-weight:700; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.sg .side .feed .ev{ animation:none; }
+.sg .side .feed .ev.new{ animation:sgSlide .3s; }
+.sg .feed .ev.at-me{ border-color:var(--sg-bad); color:#ffc2c2; font-weight:700; }
 
 /* The teacher's own player view in demo mode: no site menus inside it. */
 html.sg-embed .topbar, html.sg-embed footer, html.sg-embed .drawer, html.sg-embed .drawer-backdrop, html.sg-embed .skip{ display:none !important; }

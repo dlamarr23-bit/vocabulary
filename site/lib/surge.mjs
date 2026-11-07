@@ -291,9 +291,10 @@ ${passStep('sp')}
 <div id="pausedBanner" class="fallen-banner paused hidden">⏸ The teacher paused the game</div>
 <div id="sdStrip" class="ev-strip sd hidden">⚔️ FINAL SHOWDOWN · Surge ×2 · No healing</div>
 <div id="dropStrip" class="ev-strip drop hidden"></div>
-<div class="tabs" role="tablist">
-<button type="button" data-tab="q" class="on">❓ Questions</button>
-<button type="button" data-tab="shop">🛒 Shop and power-ups</button>
+<div class="tabs">
+<button type="button" data-tab="q" class="on" aria-pressed="true">❓ Questions</button>
+<button type="button" data-tab="shop" aria-pressed="false" aria-controls="spSide">🛒 Shop<span class="tab-more"> and power-ups</span></button>
+<button type="button" data-tab="teams" aria-pressed="false" aria-controls="spSide">🏆 Teams<span class="tab-more"> and battle feed</span></button>
 </div>
 <div id="tabQ">
 <div class="qcard">
@@ -304,15 +305,28 @@ ${passStep('sp')}
 <div id="answerArea"></div>
 <div class="feedback" id="fb" role="status" aria-live="polite"></div>
 </div>
-<div class="mini-teams" id="miniTeams"></div>
-<div class="feed ticker" id="ticker"></div>
 </div>
-<div id="tabShop" class="hidden shop">
-<h3>⚔️ Power-ups <span class="muted sg-small">The surge makes these stronger as time runs out.</span></h3>
-<div class="shop-grid" id="powers"></div>
+<div class="side-back hidden" id="sideBack"></div>
+<aside class="side hidden" id="spSide" aria-labelledby="sideTitle">
+<div class="side-head">
+<h2 id="sideTitle">Shop and power-ups</h2>
+<span class="side-energy" id="sideEnergy" title="Energy you can spend"></span>
+<button type="button" class="sbtn sm ghost" id="sideHide">Hide ✕</button>
+</div>
+<div class="side-body" id="sideBody">
+<div id="sideShop">
+<h3>⚔️ Power-ups</h3>
+<p class="muted sg-small side-note">The surge makes these stronger as time runs out.</p>
+<div class="shop-list" id="powers"></div>
 <h3>⬆️ Upgrades</h3>
-<div class="shop-grid" id="upgrades"></div>
+<div class="shop-list" id="upgrades"></div>
 </div>
+<div id="sideTeams" class="hidden">
+<div class="side-box"><div class="standings" id="standings"></div></div>
+<div class="side-box"><h3>📣 Battle feed</h3><div class="feed" id="sideFeed"></div></div>
+</div>
+</div>
+</aside>
 </section>
 
 <section id="vEnd" class="hidden results">
