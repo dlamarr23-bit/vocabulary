@@ -32,7 +32,19 @@
 //             picture kept apart (so a save of the words alone doesn't send it
 //             again), and done_id, the id of the form last turned in, so an
 //             old copy of it on another computer isn't picked up again.
+//   feedback  "Report bugs & feedback" on the physical science site (Donny,
+//             2026-11-11): one row per report or idea, with who sent it (a
+//             Class Pass student, a guest, the teacher or nobody signed in),
+//             the page it came from and a screenshot if they took one. The
+//             teacher reads them on that site's Feedback inbox page.
 import { DurableObject } from 'cloudflare:workers';
+
+// Special permission (Donny, 2026-11-11): accounts that are not on the class list but may sign in with Class
+// Pass anyway to use the physical science site. They never show on a leaderboard (only the roster does), and a
+// class list sync does not sign them out. To let someone else in, add a line here and publish the game server.
+const SPECIAL = [
+  { email: 'gennaro.defelice@simivalleyusd.org', first: 'Gennaro', last: 'DeFelice' }
+];
 
 const SESSION_DAYS = 120;
 const HANDOFF_MS = 10 * 60 * 1000;
@@ -48,6 +60,9 @@ async function sha(text) {
   return hex(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)));
 }
 const clean = (v, max) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, max);
+// the same, keeping line breaks (at most one empty line in a row)
+const cleanLines = (v, max) => String(v == null ? '' : v).replace(/\r\n?/g, '\n').replace(/[^\S\n]+/g, ' ')
+  .replace(/ *\n */g, '\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, max);
 const int = (v, lo, hi) => {
   const n = Math.round(Number(v));
   return Number.isFinite(n) && n >= lo && n <= hi ? n : null;
@@ -62,6 +77,15 @@ const DRAFT_MAX = 200000;
 const DRAFT_PICTURE_MAX = 1800000; // a SQLite value holds up to 2 MB
 const DRAFT_SAVES_PER_HOUR = 900;
 const DRAFT_ID = /^[a-z0-9]{6,40}$/;
+// Feedback: what a report can hold, how many one person (or everyone not signed in, together) can send in an
+// hour, and how many are kept (the oldest finished ones go first).
+const FEEDBACK_TEXT_MAX = 4000;
+const FEEDBACK_PICTURE_MAX = 1500000;
+const FEEDBACK_PER_HOUR = 12;
+const FEEDBACK_ANON_PER_HOUR = 30;
+const FEEDBACK_KEEP = 400;
+const FEEDBACK_KINDS = ['bug', 'idea'];
+const FEEDBACK_FINISHED = ['yes', 'hard', 'no'];
 // Surge Showdown moved onto this site on 2026-11-04 (Donny), so its games count too.
 const GAMES = ['volley', 'blast', 'match', 'royale', 'surge'];
 // The day in California, for "once a day" counting.
@@ -109,6 +133,8 @@ export class Leaderboard extends DurableObject {
     this.sql.exec(`CREATE TABLE IF NOT EXISTS past (email TEXT PRIMARY KEY, first TEXT, last TEXT, period TEXT, left INTEGER)`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS drafts (email TEXT, form TEXT, id TEXT, data TEXT, picture TEXT, saved INTEGER,
       done_id TEXT, done INTEGER, saves INTEGER, hour INTEGER, PRIMARY KEY (email, form))`);
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS feedback (id INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER, kind TEXT, task TEXT, finished TEXT,
+      text TEXT, page TEXT, title TEXT, browser TEXT, screen TEXT, who TEXT, email TEXT, name TEXT, period TEXT, picture TEXT, done INTEGER)`);
     this.sql.exec(`CREATE INDEX IF NOT EXISTS events_email ON events (email)`);
     this.sql.exec(`CREATE INDEX IF NOT EXISTS events_at ON events (at)`);
     this.sql.exec(`CREATE INDEX IF NOT EXISTS sessions_email ON sessions (email)`);
@@ -146,6 +172,11 @@ export class Leaderboard extends DurableObject {
       case 'draft-get': return this.draftGet(b);
       case 'draft-put': return this.draftPut(b);
       case 'draft-done': return this.draftDone(b);
+      case 'feedback-put': return this.feedbackPut(b);
+      case 'feedback-list': return this.feedbackList();
+      case 'feedback-picture': return this.feedbackPicture(b);
+      case 'feedback-done': return this.feedbackDone(b);
+      case 'feedback-delete': return this.feedbackDelete(b);
       default: throw Object.assign(new Error('Not found.'), { status: 404 });
     }
   }
@@ -187,8 +218,9 @@ export class Leaderboard extends DurableObject {
       }
       rows.forEach((r) => this.sql.exec(`INSERT INTO roster (email, first, last, period, added) VALUES (?, ?, ?, ?, ?)
         ON CONFLICT(email) DO UPDATE SET first = excluded.first, last = excluded.last, period = excluded.period`, r.email, r.first, r.last, r.period, now));
-      // Anyone no longer on the roster is signed out; anyone on it is not a past student.
-      this.sql.exec('DELETE FROM sessions WHERE email NOT IN (SELECT email FROM roster)');
+      // Anyone no longer on the roster is signed out (but not the special permission accounts); anyone on it is not a past student.
+      const keep = SPECIAL.map((s) => s.email);
+      this.sql.exec('DELETE FROM sessions WHERE email NOT IN (SELECT email FROM roster)' + (keep.length ? ' AND email NOT IN (' + keep.map(() => '?').join(', ') + ')' : ''), ...keep);
       this.sql.exec('DELETE FROM past WHERE email IN (SELECT email FROM roster)');
     });
     return { saved: rows.length, ...this.roster() };
@@ -243,12 +275,21 @@ export class Leaderboard extends DurableObject {
 
   /* ---------------- Class Pass sign-in ---------------- */
 
+  // A student on the roster, or a special permission account (SPECIAL, with no period), or undefined.
+  person(email) {
+    const row = this.all('SELECT email, first, last, period FROM roster WHERE email = ?', email)[0];
+    if (row) return row;
+    const s = SPECIAL.find((x) => x.email === email);
+    return s ? { email: s.email, first: s.first, last: s.last, period: '', special: true } : undefined;
+  }
+
   // The site has already had Google confirm who signed in (and that the
-  // sign-in was made for this site). The student must be on the roster.
+  // sign-in was made for this site). The student must be on the roster
+  // (or have special permission).
   async signIn(b) {
     const email = clean(b.email, 120).toLowerCase();
     const nonce = clean(b.nonce, 100);
-    const row = this.all('SELECT email, first, last, period FROM roster WHERE email = ?', email)[0];
+    const row = this.person(email);
     if (!row) {
       const err = new Error(email + ' is not on the class list for this site. Check that you picked your school account. If you did, ask your teacher to add you.');
       err.status = 403;
@@ -276,7 +317,7 @@ export class Leaderboard extends DurableObject {
   }
 
   meOf(row) {
-    const names = displayNames(this.rosterRows());
+    const names = row.special ? displayNames([row]) : displayNames(this.rosterRows());
     return { email: row.email, name: names[row.email] || row.first, first: row.first, period: row.period };
   }
 
@@ -287,7 +328,7 @@ export class Leaderboard extends DurableObject {
     const now = Date.now();
     const s = this.all('SELECT email, expires FROM sessions WHERE key = ?', key)[0];
     if (!s || s.expires < now) return null;
-    const row = this.all('SELECT email, first, last, period FROM roster WHERE email = ?', s.email)[0];
+    const row = this.person(s.email);
     if (!row) return null;
     if (s.expires - now < (SESSION_DAYS - 1) * 86400000) this.sql.exec('UPDATE sessions SET expires = ? WHERE key = ?', now + SESSION_DAYS * 86400000, key);
     return this.meOf(row);
@@ -353,6 +394,71 @@ export class Leaderboard extends DurableObject {
       ON CONFLICT (email, form) DO UPDATE SET data = NULL, picture = NULL, saved = excluded.saved, done_id = excluded.done_id, done = excluded.done`,
     email, form, id, now, id, now);
     return { ok: true };
+  }
+
+  /* ---------------- feedback (Report bugs & feedback on the physical science site) ---------------- */
+
+  // b: { token (a student's Class Pass key, if signed in), teacher, guest (the site checked both), kind ('bug' |
+  // 'idea'), task, finished, text, page, title, browser, screen, picture (a data: address, or left out) }
+  async feedbackPut(b) {
+    const kind = FEEDBACK_KINDS.includes(b.kind) ? b.kind : '';
+    const text = cleanLines(b.text, FEEDBACK_TEXT_MAX);
+    if (!kind) throw Object.assign(new Error('Pick Something is wrong or I have an idea.'), { status: 400 });
+    if (text.length < 3) throw Object.assign(new Error(kind === 'idea' ? 'Tell us your idea first.' : 'Tell us what happened first.'), { status: 400 });
+    let picture = null;
+    if (b.picture != null && b.picture !== '') {
+      picture = String(b.picture);
+      if (!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+=*$/.test(picture)) throw Object.assign(new Error('That screenshot could not be sent. Remove it and send again.'), { status: 400 });
+      if (picture.length > FEEDBACK_PICTURE_MAX) throw Object.assign(new Error('That screenshot is too big to send. Remove it and send again.'), { status: 413 });
+    }
+    const me = b.teacher ? null : await this.check(b.token);
+    const row = me && this.person(me.email);
+    const who = b.teacher ? 'teacher' : row ? (row.special ? 'special' : 'student') : b.guest ? 'guest' : 'none';
+    const email = row ? row.email : '';
+    const now = Date.now();
+    // A runaway page or a prank stops here, not a student with one more thing to say.
+    const sent = email
+      ? this.all('SELECT COUNT(*) AS n FROM feedback WHERE email = ? AND at > ?', email, now - 3600000)[0].n
+      : this.all("SELECT COUNT(*) AS n FROM feedback WHERE email = '' AND who != 'teacher' AND at > ?", now - 3600000)[0].n;
+    if (who !== 'teacher' && sent >= (email ? FEEDBACK_PER_HOUR : FEEDBACK_ANON_PER_HOUR)) {
+      throw Object.assign(new Error('Lots of reports came in this hour, so this one did not send. Try again later.'), { status: 429 });
+    }
+    this.sql.exec(`INSERT INTO feedback (at, kind, task, finished, text, page, title, browser, screen, who, email, name, period, picture, done)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+    now, kind, clean(b.task, 80), FEEDBACK_FINISHED.includes(b.finished) ? b.finished : '', text, clean(b.page, 300), clean(b.title, 200),
+    clean(b.browser, 300), clean(b.screen, 40), who, email, row ? clean(row.first + ' ' + row.last, 100) : '', row ? clean(row.period, 20) : '', picture);
+    // Keep the newest FEEDBACK_KEEP: the oldest finished ones go first, then the oldest.
+    const extra = this.all('SELECT COUNT(*) AS n FROM feedback')[0].n - FEEDBACK_KEEP;
+    if (extra > 0) {
+      this.sql.exec('DELETE FROM feedback WHERE id IN (SELECT id FROM feedback ORDER BY done DESC, id ASC LIMIT ?)', extra);
+    }
+    return { ok: true };
+  }
+
+  // For the teacher: every report, newest first, without the screenshots (feedbackPicture gets one).
+  feedbackList() {
+    const reports = this.all(`SELECT id, at, kind, task, finished, text, page, title, browser, screen, who, email, name, period, done,
+      CASE WHEN picture IS NULL THEN 0 ELSE 1 END AS pic FROM feedback ORDER BY id DESC`);
+    return { reports: reports.map((r) => ({ ...r, done: Boolean(r.done), pic: Boolean(r.pic) })) };
+  }
+
+  feedbackPicture(b) {
+    const id = int(b.id, 1, Number.MAX_SAFE_INTEGER);
+    const r = id && this.all('SELECT picture FROM feedback WHERE id = ?', id)[0];
+    if (!r) throw Object.assign(new Error('That report is gone. Reload the page.'), { status: 404 });
+    return { picture: r.picture || '' };
+  }
+
+  feedbackDone(b) {
+    const id = int(b.id, 1, Number.MAX_SAFE_INTEGER);
+    if (id) this.sql.exec('UPDATE feedback SET done = ? WHERE id = ?', b.done ? 1 : 0, id);
+    return this.feedbackList();
+  }
+
+  feedbackDelete(b) {
+    const id = int(b.id, 1, Number.MAX_SAFE_INTEGER);
+    if (id) this.sql.exec('DELETE FROM feedback WHERE id = ?', id);
+    return this.feedbackList();
   }
 
   /* ---------------- results ---------------- */

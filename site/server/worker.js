@@ -22,6 +22,8 @@
 //     (/api/classlist/sync, with the Class list key; /api/classlist for the teacher)
 //   - keeps the guest code that lets a teacher from another school into that
 //     site without Class Pass (/api/guest, /api/guest/code for the teacher)
+//   - takes that site's bug reports and ideas (/api/pass/feedback, anyone)
+//     for the teacher's Feedback inbox there (/api/feedback, teacher only)
 //   - keeps the multiple choice question sets Battle Royale plays
 //     (/api/qsets), which only the teacher can see
 //
@@ -555,6 +557,7 @@ async function api(request, env, url) {
   if (a === 'launchpad' && !b && method === 'PUT') return putLaunchpad(request, env);
   if (a === 'guest' && b === 'code' && !c) return guestCodeApi(request, env);
   if (a === 'roster') return rosterApi(request, env, url, b);
+  if (a === 'feedback' && !c) return feedbackApi(request, env, url, b);
   if (a === 'board' && b === 'unit' && !c && method === 'PUT') return putBoardUnit(request, env, url);
   if (a === 'review' && b === 'key' && !c && method === 'GET') return json({ key: await reviewKey(env) });
   if (a === 'classlist' && !b && method === 'GET') return classListGet(env);
@@ -1200,6 +1203,8 @@ async function passApi(request, env, url, b) {
     return boardJSON(await board(env, 'draft-put', out));
   }
   if (b === 'draft-done' && method === 'POST') return boardJSON(await board(env, 'draft-done', { token: passToken(request), form: String(body.form || ''), id: String(body.id || '') }));
+  // Report bugs & feedback on the physical science site (Donny, 2026-11-11): anyone may send one, signed in or not.
+  if (b === 'feedback' && method === 'POST') return passFeedback(request, env, body);
   if (b === 'report' && method === 'POST') {
     const setId = String(body.setId || '');
     const lib = await library(env, url);
@@ -1207,6 +1212,40 @@ async function passApi(request, env, url, b) {
     if (!meta) return json({ counted: false });
     return boardJSON(await board(env, 'report', { ...body, setId, cards: meta.count || 0, token: passToken(request) }));
   }
+  return json({ error: 'Not found.' }, 404);
+}
+
+// A bug report or an idea from the physical science site's "Report bugs & feedback" panel, sent through the
+// bridge. Who sent it comes from here, not the page: the student's Class Pass key (X-Pass), the teacher
+// password's cookie, or the guest key (X-Guest). The teacher reads them on that site's Feedback inbox page
+// (/api/feedback, teacher only).
+async function passFeedback(request, env, body) {
+  const teacher = await isEditor(request, env);
+  let guest = false;
+  const key = String(request.headers.get('X-Guest') || '');
+  if (!teacher && /^[0-9a-f]{64}$/.test(key) && env.FLASHCARDS) {
+    const saved = await env.FLASHCARDS.get('guest-pass', 'json');
+    guest = Boolean(saved && same(key, saved.key));
+  }
+  const pick = (k) => (typeof body[k] === 'string' ? body[k] : '');
+  return boardJSON(await board(env, 'feedback-put', {
+    token: passToken(request), teacher, guest,
+    kind: pick('kind'), task: pick('task'), finished: pick('finished'), text: pick('text'),
+    page: pick('page'), title: pick('title'), browser: String(request.headers.get('user-agent') || '').slice(0, 300), screen: pick('screen'),
+    picture: typeof body.picture === 'string' && body.picture ? body.picture : null
+  }));
+}
+
+// The teacher's Feedback inbox: GET the list, GET picture?id=, POST done { id, done } or delete { id }.
+async function feedbackApi(request, env, url, b) {
+  if (!env.LIVE) return needLive();
+  const method = request.method;
+  let body = {};
+  if (method !== 'GET') { try { body = (await request.json()) || {}; } catch { body = {}; } }
+  if (!b && method === 'GET') return boardJSON(await board(env, 'feedback-list'));
+  if (b === 'picture' && method === 'GET') return boardJSON(await board(env, 'feedback-picture', { id: Number(url.searchParams.get('id')) }));
+  if (b === 'done' && method === 'POST') return boardJSON(await board(env, 'feedback-done', { id: Number(body.id), done: Boolean(body.done) }));
+  if (b === 'delete' && method === 'POST') return boardJSON(await board(env, 'feedback-delete', { id: Number(body.id) }));
   return json({ error: 'Not found.' }, 404);
 }
 

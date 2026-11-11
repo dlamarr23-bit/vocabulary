@@ -29,6 +29,12 @@
      (/api/pass/draft), so they can finish it on another computer:
      formDraft, saveFormDraft, formDone.
 
+   - "Report bugs & feedback" on that site (Donny 2026-11-11): sendFeedback
+     sends a report or an idea with whoever is signed in here (a student's
+     Class Pass key, the guest key, the teacher's cookie) to
+     /api/pass/feedback. The teacher's Feedback inbox page reads them:
+     feedbackList, feedbackPicture, feedbackDone, feedbackDelete.
+
    The state also says whether this frame can keep a sign-in at all (kept):
    some browsers block a framed site's storage, and then the page around it
    keeps its own record.
@@ -120,6 +126,29 @@
   }
   var FORM = /^[a-z0-9-]{1,40}$/;
 
+  // a bug report or an idea: anyone may send one, so whoever is signed in goes with it (or nobody)
+  function sendFeedback(m) {
+    var headers = { 'X-Pass-Client': '1', 'content-type': 'application/json' };
+    var token = window.IS8Pass.token();
+    if (token) headers['X-Pass'] = token;
+    var g = guestKey();
+    if (g) headers['X-Guest'] = g;
+    var s = function (v, max) { return typeof v === 'string' ? v.slice(0, max) : ''; };
+    var body = {
+      kind: s(m.kind, 10), task: s(m.task, 80), finished: s(m.finished, 10), text: s(m.text, 4000),
+      page: s(m.page, 300), title: s(m.title, 200), screen: s(m.screen, 40),
+      picture: s(m.picture, 1600000)
+    };
+    return fetch('/api/pass/feedback', {
+      method: 'POST', cache: 'no-store', credentials: 'same-origin', headers: headers, body: JSON.stringify(body)
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (d) {
+        if (!r.ok) { var err = new Error(d.error || 'That did not send. Try again in a minute.'); err.status = r.status; throw err; }
+        return d;
+      });
+    });
+  }
+
   window.addEventListener('message', function (e) {
     if (e.origin !== BOOK_SITE || e.source !== window.parent) return;
     var m = e.data && e.data.vocabBridge;
@@ -164,6 +193,12 @@
         if (!FORM.test(String(m.form || ''))) { reply(Promise.reject(new Error('Not found.'))); break; }
         reply(passCall('POST', 'draft-done', { form: m.form, id: String(m.draftId || '') }));
         break;
+      // Report bugs & feedback, and the teacher's Feedback inbox
+      case 'sendFeedback': reply(sendFeedback(m)); break;
+      case 'feedbackList': reply(call('GET', 'feedback').catch(signedOut)); break;
+      case 'feedbackPicture': reply(call('GET', 'feedback/picture?id=' + encodeURIComponent(String(Number(m.reportId) || 0))).catch(signedOut)); break;
+      case 'feedbackDone': reply(call('POST', 'feedback/done', { id: Number(m.reportId) || 0, done: Boolean(m.done) }).catch(signedOut)); break;
+      case 'feedbackDelete': reply(call('POST', 'feedback/delete', { id: Number(m.reportId) || 0 }).catch(signedOut)); break;
       // a guest: the code gives a key; signing out forgets it
       case 'guest':
         reply(call('POST', 'guest', { code: String(m.code || '') }).then(function (d) {
