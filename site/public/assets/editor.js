@@ -36,13 +36,25 @@
   }
   var sendJSON = function (path, method, value) { return call(path, { method: method, type: 'application/json', body: JSON.stringify(value) }); };
 
+  // Student view (Donny, 2026-11-10): inside the physical science site the teacher can look at every page the
+  // way a student does (that site's Class Pass menu). Its page opens this one with ?sv=1, which the line in the
+  // page's <head> keeps in vocab-student-view; then session() says editor: false (and studentView: true), so no
+  // teacher tool shows. Nothing is signed out: leaving student view (?sv=0) brings the tools back.
+  function studentView() {
+    if (window.parent === window) return false;
+    try { return localStorage.getItem('vocab-student-view') === '1'; } catch (e) { return /[?&]sv=1(?:&|$)/.test(location.search); }
+  }
+
   var session = null;
   var E = {
     session: function () {
       if (!session) {
         // Opened from a file on disk there is no site to talk to.
         session = /^https?:$/.test(location.protocol)
-          ? call('session').then(function (s) { return { cloud: !!s.cloud, editor: !!s.editor, live: !!s.live, draw: !!s.draw }; }, function () { return { cloud: false, editor: false, live: false, draw: false }; })
+          ? call('session').then(function (s) {
+              var sv = !!s.editor && studentView();
+              return { cloud: !!s.cloud, editor: !!s.editor && !sv, live: !!s.live, draw: !!s.draw, studentView: sv };
+            }, function () { return { cloud: false, editor: false, live: false, draw: false }; })
           : Promise.resolve({ cloud: false, editor: false });
       }
       return session;
@@ -205,5 +217,9 @@
   E.signedInHint = function () { return drafts()._teacher === 1; };
   // The top bar's teacher-only links (book.js) follow the note.
   E.rememberHint = function () { var all = drafts(); all._teacher = 1; keepDrafts(all); document.documentElement.classList.add('is-teacher'); };
-  E.forgetHint = function () { var all = drafts(); delete all._teacher; keepDrafts(all); document.documentElement.classList.remove('is-teacher'); };
+  E.forgetHint = function () {
+    document.documentElement.classList.remove('is-teacher');
+    if (studentView()) return;   // only looking the way a student does: still the teacher afterwards
+    var all = drafts(); delete all._teacher; keepDrafts(all);
+  };
 })();

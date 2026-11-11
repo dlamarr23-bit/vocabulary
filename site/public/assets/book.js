@@ -10,8 +10,10 @@
   // "Host a game" shows only where the teacher has signed in with the teacher
   // password: editor.js keeps a note of that in this browser (_teacher in the
   // flashcard key). The host page and the server still check the password.
+  // Not in student view (the physical science site's menu: the teacher looking the way a student does, see editor.js).
   try {
-    if ((JSON.parse(localStorage.getItem('is8-flashcards-v1')) || {})._teacher === 1) document.documentElement.classList.add('is-teacher');
+    var asStudent = window.parent !== window && localStorage.getItem('vocab-student-view') === '1';
+    if (!asStudent && (JSON.parse(localStorage.getItem('is8-flashcards-v1')) || {})._teacher === 1) document.documentElement.classList.add('is-teacher');
   } catch (e) { /* storage blocked: the links stay hidden */ }
 
   /* ---------- icons ---------- */

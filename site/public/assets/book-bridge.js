@@ -15,7 +15,9 @@
      bar, and saves the words changed on a page of that site
      (/api/book-text/<page>);
    - the teacher's Assignment Launchpad on that site (/launchpad) gets and
-     saves its list of assignments (/api/launchpad, teacher only);
+     saves its list of assignments (/api/launchpad, teacher only), and asks
+     about the Class List sheet (/api/classlist, teacher only): its web app
+     updates assignment sheets' code (Update now);
    - a guest (a teacher from another school, Donny 2026-11-03) types the
      guest code on that site's sign-in screen; the key it gives is kept on
      this device (is8-guest-v1) and checked each time a page opens, so a new
@@ -120,6 +122,8 @@
       // the teacher's Assignment Launchpad (/launchpad on that site): the list, and saving it
       case 'launchpad': reply(call('GET', 'launchpad').catch(signedOut)); break;
       case 'saveLaunchpad': reply(call('PUT', 'launchpad', { items: m.items || [], base: m.base || 0 }).catch(signedOut)); break;
+      // the Class List sheet (2026-11-10): is it sending the class list, its web app (the Launchpad's helper for Update now) and the key it needs
+      case 'classList': reply(call('GET', 'classlist').catch(signedOut)); break;
       case 'refresh': session(); break;
       // a guest: the code gives a key; signing out forgets it
       case 'guest':

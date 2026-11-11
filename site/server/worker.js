@@ -18,6 +18,8 @@
 //     pages (/api/book-text/<page>), which those pages ask for as they open
 //   - keeps the teacher's Assignment Launchpad list for that site's
 //     /launchpad page (/api/launchpad), which only the teacher can see
+//   - takes the class list from the teacher's Class List Google Sheet
+//     (/api/classlist/sync, with the Class list key; /api/classlist for the teacher)
 //   - keeps the guest code that lets a teacher from another school into that
 //     site without Class Pass (/api/guest, /api/guest/code for the teacher)
 //   - keeps the multiple choice question sets Battle Royale plays
@@ -530,6 +532,8 @@ async function api(request, env, url) {
   if (a === 'book-text' && b && !c && method === 'GET') return getBookText(env, b);
   // A review game's Google Sheet sends its students' points (with the key from the teacher's Leaderboard page).
   if (a === 'review' && b === 'results' && !c && method === 'POST') return reviewResults(request, env);
+  // The teacher's Class List Google Sheet sends the class list (with the Class list key from the Leaderboard page).
+  if (a === 'classlist' && b === 'sync' && !c && method === 'POST') return classListSync(request, env);
 
   if (!cloudReady(env)) return json({ error: 'Saving to the site is not switched on yet.' }, 503);
   // A page on another site can post a form here but cannot add this header,
@@ -552,6 +556,7 @@ async function api(request, env, url) {
   if (a === 'guest' && b === 'code' && !c) return guestCodeApi(request, env);
   if (a === 'roster') return rosterApi(request, env, url, b);
   if (a === 'review' && b === 'key' && !c && method === 'GET') return json({ key: await reviewKey(env) });
+  if (a === 'classlist' && !b && method === 'GET') return classListGet(env);
   if (a === 'suggest' && !b && method === 'GET') return suggest(env, url);
   if (a === 'images' && b === 'search' && !c && method === 'GET') return imageSearch(url, env);
   if (a === 'sets' && !b && method === 'GET') return listSets(env, url);
@@ -642,6 +647,8 @@ const LP_ID = /^[a-z0-9]{6,20}$/;
 const LP_LINK = /^https:\/\/[^\s"'<>]{1,1000}$/;
 const LP_SHEET = /^[A-Za-z0-9_-]{20,100}$/;
 const LP_DATE = /^\d{4}-\d{2}-\d{2}$/;
+// A card may keep its sheet's Script ID (2026-11-10), for Update now on a sheet whose code is too old to say it.
+const LP_SCRIPT = /^[\w-]{20,100}$/;
 
 async function getLaunchpad(env) {
   const saved = await env.FLASHCARDS.get('launchpad', 'json');
@@ -662,9 +669,10 @@ async function putLaunchpad(request, env) {
   const ids = new Set();
   for (const g of given) {
     if (!g || typeof g !== 'object') return json({ error: 'One of the assignments could not be saved.' }, 400);
-    const it = { id: text(g.id, 40), title: text(g.title, 200), kind: text(g.kind, 40), unit: text(g.unit, 60), link: text(g.link, 1100), sheet: text(g.sheet, 110), date: text(g.date, 12) };
+    const it = { id: text(g.id, 40), title: text(g.title, 200), kind: text(g.kind, 40), unit: text(g.unit, 60), link: text(g.link, 1100), sheet: text(g.sheet, 110), date: text(g.date, 12), script: text(g.script, 110) };
+    if (!it.script) delete it.script;
     if (!LP_ID.test(it.id) || ids.has(it.id) || !it.title) return json({ error: 'One of the assignments could not be saved.' }, 400);
-    if ((it.link && !LP_LINK.test(it.link)) || (it.sheet && !LP_SHEET.test(it.sheet)) || (it.date && !LP_DATE.test(it.date))) {
+    if ((it.link && !LP_LINK.test(it.link)) || (it.sheet && !LP_SHEET.test(it.sheet)) || (it.date && !LP_DATE.test(it.date)) || (it.script && !LP_SCRIPT.test(it.script))) {
       return json({ error: `"${it.title}" could not be saved. Check its links.` }, 400);
     }
     ids.add(it.id);
@@ -1309,6 +1317,73 @@ async function reviewResults(request, env) {
   if (!game) return json({ error: 'The sheet did not say which game this is.' }, 400);
   const title = String((body.game && body.game.title) || '').slice(0, 200);
   return boardJSON(await board(env, 'review', { game, title, rows: Array.isArray(body.rows) ? body.rows.slice(0, 500) : [] }));
+}
+
+/* ---------------- the Class List sheet (Donny, 2026-11-10) ---------------- */
+
+// The class list lives in a Google Sheet now (class-tools/class-list): its Classes tab picks which Google
+// Classroom classes are on the site, and it sends the students here (replacing the roster pasted on the
+// Leaderboard page) when it changes, at least once a day. It proves it is the teacher's with the Class list
+// key (made from the teacher password, like the review game key), which the teacher copies from the
+// Leaderboard page into the sheet's Settings tab. The sheet is also deployed as a web app, the Assignment
+// Launchpad's helper (it updates assignment sheets' code), so it sends its address too. KV class-list
+// keeps what the teacher pages show: the classes, how many students, when, and the helper's address.
+// A list that would take more than half of a roster of 10 or more off the site needs force (the sheet asks first).
+const CL_HELPER = /^https:\/\/script\.google\.com\/macros\/s\/AKfycb[\w-]{20,200}\/exec$/;
+const CL_EMAIL = /^[^@\s]{1,80}@[^@\s]{1,80}$/;
+
+async function classListKey(env) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(String(env.EDIT_PASSWORD).trim()), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return hex(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode('is8-class-list-v1')));
+}
+
+async function classListSync(request, env) {
+  if (!env.LIVE) return needLive();
+  if (!env.EDIT_PASSWORD || !env.FLASHCARDS) return json({ error: 'This site has no teacher password or storage yet (README, step 3).' }, 503);
+  const buf = await readLimited(request, 1024 * 1024);
+  if (!buf) return json({ error: 'That class list is too long.' }, 413);
+  let body = null;
+  try { body = JSON.parse(new TextDecoder().decode(buf)); } catch { body = null; }
+  const given = String((body && body.key) || '').trim().toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(given) || !same(given, await classListKey(env))) {
+    await new Promise((r) => setTimeout(r, 700));
+    return json({ error: 'That Site key is not right. Copy it again from the website’s Leaderboard page (Class list), into the sheet’s Settings tab.' }, 401);
+  }
+  const text = (v, max) => (typeof v === 'string' || typeof v === 'number' ? String(v).trim().slice(0, max) : '');
+  const list = Array.isArray(body.students) ? body.students : [];
+  if (list.length > 2000) return json({ error: 'That is more than 2,000 students.' }, 413);
+  const rows = [], seen = new Set();
+  for (const s of list) {
+    const email = text(s && s.email, 120).toLowerCase();
+    if (!CL_EMAIL.test(email) || seen.has(email)) continue;
+    seen.add(email);
+    rows.push({ email, first: text(s.first, 40), last: text(s.last, 60), period: text(s.period, 20) });
+  }
+  if (!rows.length) return json({ error: 'The class list has no students, so nothing was changed.' }, 400);
+  const now = await board(env, 'roster');
+  if (now.status !== 200) return boardJSON(now);
+  const have = new Set((now.data.students || []).map((s) => s.email));
+  const removed = [...have].filter((e) => !seen.has(e)).length, added = rows.filter((r) => !have.has(r.email)).length;
+  if (!body.force && have.size >= 10 && removed > have.size / 2) {
+    return json({ error: `This list would take ${removed} of the ${have.size} students on the site off it (they could not sign in; their results are kept).` }, 409);
+  }
+  const r = await board(env, 'roster-put', { students: rows, mode: 'replace' });
+  if (r.status !== 200) return boardJSON(r);
+  const classes = (Array.isArray(body.classes) ? body.classes : []).slice(0, 200).filter((c) => c && typeof c === 'object').map((c) => ({
+    name: text(c.name, 120), showsAs: text(c.showsAs, 20), show: c.show === true, count: Math.max(0, Math.min(5000, Number(c.count) || 0))
+  }));
+  const h = body.helper && typeof body.helper === 'object' ? body.helper : {};
+  const url = CL_HELPER.test(String(h.url || '')) ? String(h.url) : '';
+  const version = /^\d{4}\.\d{2}\.\d{2}[a-z]?$/.test(String(h.version || '')) ? String(h.version) : '';
+  await env.FLASHCARDS.put('class-list', JSON.stringify({ classes, students: rows.length, synced: Date.now(), url, version, added, removed }));
+  return json({ ok: true, saved: r.data.saved, added, removed });
+}
+
+// The teacher pages (Leaderboard, Launchpad): is a Class List sheet sending the list, and the key it needs.
+async function classListGet(env) {
+  if (!env.EDIT_PASSWORD) return json({ error: 'This site has no teacher password yet (README, step 3).' }, 503);
+  const saved = await env.FLASHCARDS.get('class-list', 'json');
+  return json({ connected: Boolean(saved && saved.synced), ...(saved || {}), key: await classListKey(env) });
 }
 
 /* ---------------- suggested definitions ---------------- */

@@ -10,6 +10,12 @@
    The teacher also gets the roster: paste the class list (email, first name,
    last name, period), see who has signed in, and take a student off or clear
    their results. Only students on the roster can sign in with Class Pass.
+   Since 2026-11-10 the class list can come from the teacher's Class List
+   Google Sheet instead (it sends it to /api/classlist/sync): once it has,
+   this page shows the sheet's classes and the students read-only (Clear
+   results still works) with Sync now, and the Class list key box under it.
+   Student view (the physical science site's menu, 2026-11-10): the teacher
+   sees the page the way a student does (IS8Editor.session says studentView).
    ============================================================ */
 (function () {
   'use strict';
@@ -18,6 +24,8 @@
   var ED = window.IS8Editor;
   var PASS = window.IS8Pass;
   var teacher = false;
+  var studentView = false;   // the teacher, looking the way a student does
+  var classList = null;      // /api/classlist: the Class List sheet's status (teacher only)
   var data = null;
   var loading = 0;
   var MEDALS = ['', 'gold', 'silver', 'bronze'];
@@ -193,6 +201,8 @@
       var hi = mk('p', 'lb-hello');
       hi.textContent = 'Signed in as ' + data.me.name + (data.me.period ? ', period ' + data.me.period : '') + '. Your row is highlighted.';
       box.appendChild(hi);
+    } else if (studentView) {
+      box.appendChild(mk('p', 'lb-hello', 'Student view: this is the leaderboard the way students see it (a student\u2019s own row is highlighted for them).'));
     } else if (teacher) {
       box.appendChild(mk('p', 'lb-hello', 'You are signed in as the teacher: each leaderboard shows its top 10, and hovering a name shows the email.'));
     }
@@ -346,9 +356,15 @@
     sec.hidden = false;
     sec.textContent = '';
     var details = mk('details', 'lb-roster-box');
-    var sum = mk('summary', null, 'Class roster (' + plural(list.students.length, 'student') + ')');
+    var fromSheet = !!(classList && classList.connected);
+    var sum = mk('summary', null, (fromSheet ? 'Class list (' : 'Class roster (') + plural(list.students.length, 'student') + (fromSheet ? ', from your Class List sheet)' : ')'));
     details.appendChild(sum);
     if (!list.students.length) details.open = true;
+    var msg = mk('p', 'lb-small lb-ok');
+    msg.id = 'lbRosterMsg';
+    msg.setAttribute('role', 'status');
+    if (fromSheet) sheetPart(details, msg);
+    else {
     details.appendChild(mk('p', 'lb-small', 'Only students on this list can sign in with Class Pass. Paste rows of email, first name, last name and period, in any order, straight from a spreadsheet. A Self-Check sheet’s Roster tab (Period, Name, Email) works as it is.'));
 
     var ta = mk('textarea', 'lb-paste');
@@ -401,9 +417,7 @@
       }, function (err) { saveBtn.disabled = false; preview.textContent = err.message; });
     });
     details.appendChild(saveBtn);
-    var msg = mk('p', 'lb-small lb-ok');
-    msg.id = 'lbRosterMsg';
-    msg.setAttribute('role', 'status');
+    }
     details.appendChild(msg);
 
     if (list.students.length) {
@@ -427,12 +441,12 @@
         tr.appendChild(mk('td', null, s.signedIn ? 'Yes' : ''));
         tr.appendChild(mk('td', null, String(s.results)));
         var tools = mk('td', 'lb-tools');
-        tools.appendChild(btn('Edit', 'linkbtn', function () { editRow(tr, s); }));
+        if (!fromSheet) tools.appendChild(btn('Edit', 'linkbtn', function () { editRow(tr, s); }));
         tools.appendChild(btn('Clear results', 'linkbtn', function () {
           if (!window.confirm('Clear every result for ' + s.first + ' ' + s.last + '? This cannot be undone.')) return;
           rosterCall('POST', 'reset', { email: s.email }).then(function (d) { drawRoster(d); $('lbRoster').querySelector('details').open = true; load(); }, function (err) { msg.textContent = err.message; });
         }));
-        tools.appendChild(btn('Remove', 'linkbtn', function () {
+        if (!fromSheet) tools.appendChild(btn('Remove', 'linkbtn', function () {
           if (!window.confirm('Take ' + s.first + ' ' + s.last + ' off the roster? They are signed out and no longer shown. Their results are kept in case you add them back.')) return;
           rosterCall('POST', 'remove', { email: s.email }).then(function (d) { drawRoster(d); $('lbRoster').querySelector('details').open = true; load(); }, function (err) { msg.textContent = err.message; });
         }));
@@ -509,7 +523,114 @@
       details.appendChild(wrap);
     }
     sec.appendChild(details);
+    sec.appendChild(classListBox());
     sec.appendChild(reviewKeyBox());
+  }
+
+  /* ---------------- the Class List sheet (Donny, 2026-11-10) ---------------- */
+
+  function ago(ms) {
+    var m = Math.round((Date.now() - ms) / 60000);
+    if (m < 1) return 'just now';
+    if (m < 60) return plural(m, 'minute') + ' ago';
+    var h = Math.round(m / 60);
+    if (h < 48) return plural(h, 'hour') + ' ago';
+    return new Date(ms).toLocaleDateString();
+  }
+  // Asks the Class List sheet's web app (its helper) to do something; it checks the key.
+  function askSheet(fn) {
+    return fetch(classList.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ fn: fn, key: classList.key }) })
+      .then(function (r) { return r.text(); })
+      .then(function (text) {
+        var d = null;
+        try { d = JSON.parse(text); } catch (e) { d = null; }
+        if (!d) throw new Error('The Class List sheet did not answer. Open it and run Class List > Set up once.');
+        if (!d.ok) throw new Error(d.error || 'The Class List sheet said no.');
+        return d.result;
+      });
+  }
+  // The class list comes from the sheet: which classes, when it last came, and Sync now.
+  function sheetPart(details, msg) {
+    var c = classList;
+    details.appendChild(mk('p', 'lb-small', 'Your class list comes from your Class List Google Sheet: tick classes in its Classes tab, and add anyone else in its Added by hand tab. ' +
+      'It sends the list here every hour when it changes. Last sent ' + ago(c.synced) + ': ' + plural(c.students || 0, 'student') + '. ' +
+      'Change students in the sheet, not here (the next sync would undo it). Clear results still works here.'));
+    var shown = (c.classes || []).filter(function (x) { return x.show; }), off = (c.classes || []).filter(function (x) { return !x.show; });
+    if (shown.length) {
+      var wrap = mk('div', 'lb-table-wrap');
+      var table = mk('table', 'lb-table');
+      var hr = mk('tr');
+      ['Class', 'Shows as', 'Students'].forEach(function (h) { hr.appendChild(mk('th', null, h)); });
+      var thead = mk('thead');
+      thead.appendChild(hr);
+      table.appendChild(thead);
+      var tb = mk('tbody');
+      shown.forEach(function (x) {
+        var tr = mk('tr');
+        tr.appendChild(mk('td', null, x.name));
+        tr.appendChild(mk('td', null, /^\d+$/.test(x.showsAs) ? 'Period ' + x.showsAs : x.showsAs));
+        tr.appendChild(mk('td', null, String(x.count)));
+        tb.appendChild(tr);
+      });
+      table.appendChild(tb);
+      wrap.appendChild(table);
+      details.appendChild(wrap);
+    }
+    if (off.length) details.appendChild(mk('p', 'lb-small', 'Not on the site (unticked in the sheet): ' + off.map(function (x) { return x.name; }).join('; ') + '.'));
+    if (c.url) {
+      var go = btn('Sync now', 'btn', function () {
+        go.disabled = true;
+        msg.textContent = 'Asking the Class List sheet... (about half a minute)';
+        askSheet('sync').then(function (r) {
+          go.disabled = false;
+          msg.textContent = r.text || 'Sent.';
+          data = null;
+          loadRoster();
+          load();
+        }, function (err) { go.disabled = false; msg.textContent = err.message; });
+      });
+      details.appendChild(go);
+    }
+  }
+
+  // The key the Class List sheet needs (Settings tab, Site key), and how to set the sheet up.
+  function classListBox() {
+    var c = classList || {};
+    var details = mk('details', 'lb-roster-box');
+    details.appendChild(mk('summary', null, c.connected ? 'Class list key' : 'Class list from a Google Sheet (set up)'));
+    if (!c.connected) {
+      details.appendChild(mk('p', 'lb-small', 'Keep your class list in a Google Sheet instead of pasting it here. The sheet lists your Google Classroom classes; tick the ones on this site, and it keeps the list up to date every hour. It is also what lets the Assignment Launchpad update your sheets’ code (Update now).'));
+      var ol = mk('ol', 'lb-small');
+      ['Make a new Google Sheet (sheets.new) and name it Class List.',
+        'In it: Extensions > Apps Script. Click Project Settings (the gear on the left) and check Show "appsscript.json" manifest file in editor.',
+        'Back in the editor (the < > on the left): open physical-science-8.pages.dev/pass/releases/class-list/Code.gs.txt, copy it all, and paste it over everything in Code.gs. Then open appsscript.json.txt there and paste it over everything in appsscript.json. Save.',
+        'Turn on the Google Apps Script API once: script.google.com/home/usersettings, switch Google Apps Script API to On.',
+        'Reload the sheet. Class List > Set up, and approve.',
+        'Copy the key below into the sheet’s Settings tab, Site key. Tick Show for your classes in the Classes tab, then Class List > Sync now.'
+      ].forEach(function (s) { ol.appendChild(mk('li', null, s)); });
+      details.appendChild(ol);
+    } else {
+      details.appendChild(mk('p', 'lb-small', 'Your Class List sheet uses this key (Settings tab, Site key). Keep it to yourself: it lets a sheet change the class list and update your assignment sheets. Changing the teacher password changes it, and then the sheet needs the new one.'));
+    }
+    var out = mk('input', 'lb-paste');
+    out.readOnly = true;
+    out.value = c.key || 'The key did not load. Reload the page.';
+    out.setAttribute('aria-label', 'Class list key');
+    out.style.cssText = 'font-family:monospace;font-size:13px;width:100%;max-width:640px';
+    var note = mk('span', 'lb-small');
+    var copy = btn('Copy the key', 'btn', function () {
+      out.select();
+      var done = function () { note.textContent = ' Copied.'; };
+      if (navigator.clipboard) navigator.clipboard.writeText(out.value).then(done, function () { document.execCommand('copy'); done(); });
+      else { document.execCommand('copy'); done(); }
+    });
+    copy.disabled = !c.key;
+    var row = mk('p');
+    row.appendChild(copy);
+    row.appendChild(note);
+    details.appendChild(out);
+    details.appendChild(row);
+    return details;
   }
 
   // The key a review game's Google Sheet needs to put its points on these
@@ -551,7 +672,9 @@
   }
 
   function loadRoster() {
-    rosterCall('GET').then(drawRoster, function (err) {
+    var cl = fetch('/api/classlist', { headers: { 'X-IS8-Editor': '1' }, cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : { connected: false }; }, function () { return { connected: false }; });
+    Promise.all([rosterCall('GET'), cl]).then(function (got) { classList = got[1] || { connected: false }; drawRoster(got[0]); }, function (err) {
       $('lbRoster').hidden = false;
       $('lbRoster').textContent = err.message;
     });
@@ -563,7 +686,8 @@
     var session = ED ? ED.session() : Promise.resolve({ editor: false });
     session.then(function (s) {
       teacher = !!s.editor;
-      if (teacher) $('lbTeacherBtn').parentNode.style.display = 'none';
+      studentView = !!s.studentView;
+      if (teacher || studentView) $('lbTeacherBtn').parentNode.style.display = 'none';
       if (teacher) loadRoster();
       load();
     });
