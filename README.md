@@ -21,10 +21,10 @@ This kit is a complete vocabulary website you run yourself, for free, on GitHub 
 - **Nickname check.** If students type their own names, rude names are refused by word lists and,
   as a second check, by Cloudflare's free AI.
 - **Class Pass and a class leaderboard.** Students sign in with their school Google account (Class
-  Pass) when they play in class or study at home. Wins in team and solo games, top 3 finishes,
-  correct answers, practice sessions, perfect tests and the fastest Match times go on a leaderboard,
-  shown as "First L.". It filters by class period (or all periods together), this school year or
-  all time, and topic. Signing in is never required to study or play.
+  Pass) when they play in class or study at home. Four leaderboards (review game points, live game
+  wins, correct answers and practice), each with gold, silver and bronze trophies for its top 3,
+  shown as "First L.". Two switches: This unit / This year / All time, and My class / All classes.
+  Signing in is never required to study or play.
 
 The kit starts empty: no sets, no folders. Everything you make is saved on your Cloudflare account,
 not in these files, so you never need to touch code to add or change sets.
@@ -201,28 +201,38 @@ from GitHub, step 4).
 - Live games count when **you host them signed in with the teacher password**, and never in Demo
   mode. A game hosted at home does not count. On the host screen, students signed
   in with Class Pass show a ✓.
+- There are four leaderboards: **Review game points**, **Live game wins**, **Correct answers** (right
+  answers in live games) and **Practice**. The top 3 on each stand on a podium with a gold, silver or
+  bronze trophy.
 - A **win** is first place with at least one right answer, in a game with two or more teams (or
-  players). Vocab Live and Blast with teams are **team wins**; Multiplayer Match and solo Vocab Live
-  are **solo wins**. **Top 3 finishes** never count last place.
+  players). Team and solo wins both count.
 - **Practice** counts when a signed-in student finishes Match, a test, or every term in Learn. Each
   set counts once per mode per day, so repeating the same thing all evening does not climb the
-  board. A **perfect test** needs 10 or more questions (or the whole set).
+  board.
 - **Review games** (a review game Google Sheet from the physical science site) count each student's
-  best try on each game: **Review game points** adds up their top points from every game, and
-  **Review games at full credit** counts the games where their best try earned full credit. The
-  sheet sends them when a student finishes a game, and every hour for games in progress. To turn
+  best try on each game: **Review game points** adds up their top points from every game, a running
+  total. The sheet sends them when a student finishes a game, and every hour for games in progress. To turn
   it on, open **Review game key** at the bottom of this page (signed in as the teacher), copy the
   key, and paste it into the sheet's Settings tab in **Website leaderboard key**. Changing the
   teacher password changes the key, so paste the new one into each review game sheet.
-- **Fastest times** show when one set is picked under Topic. Multiplayer Match is ranked by time per
-  pair, so 4 and 8 pair games compare fairly.
+- **This unit** shows the unit you are teaching now. Pick it at the top of the Leaderboard page
+  while signed in as the teacher: choose the unit's folder (from the Flashcards page) in the **Unit**
+  menu, then click **Make this the current unit**. Students see only that unit's sets, live games
+  played on its sets, and review games whose title names the folder or a set in it (like "Forces and
+  Motion Review Game" with a folder called Forces and Motion). When you start a new unit, pick it, and
+  This unit starts over for everyone. Picking a unit without clicking the button shows it to you only.
+  Until you pick one, students start on This year.
+- **This year** is everything since August 1. **All time** is every year and every class together,
+  so later classes can try to beat earlier ones.
+- **Past students:** when a student leaves the class list (a new school year's list, or **Remove**),
+  their name is kept, and their results stay on **All time** with their school year beside their
+  name, like "Maya R. 2025–26". If they come back on the class list, they are a current student again.
 - Each leaderboard shows its **top 10**. A student further down still sees their own place.
-- **This school year** starts August 1.
 - Only you see emails. Students see "First L." (more of the last name when two would match), and
   they see the leaderboard only while signed in.
 - In the roster table you can **Edit** a student to fix a mistyped email, a name or a period (their
   results move to the new email, and they sign in again with Class Pass), **Remove** a student
-  (results are kept in case you add them back) or **Clear results** for one student.
+  (results are kept, on All time, and come back if you add them again) or **Clear results** for one student.
 
 **If a student can't sign in**
 

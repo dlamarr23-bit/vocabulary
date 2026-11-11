@@ -1,11 +1,16 @@
 /* ============================================================
    The class leaderboard (leaderboard/), Donny 2026-10-08.
 
-   Students signed in with Class Pass, and the teacher, see the boards:
-   wins in live games (team and solo), top 3 finishes, correct answers,
-   wins by game, practice, and, for one topic at a time, the fastest Match
-   times. Names show as "First L.". Filters: one class or all of them, this
-   school year (from August) or all time, and a topic (a folder or a set).
+   Students signed in with Class Pass, and the teacher, see the boards.
+   Since 2026-11-10 (Donny: "way too many categories", "easier for an 8th
+   grader") there are four: review game points, live game wins, correct
+   answers and practice, each with gold, silver and bronze trophies
+   (assets/trophy-1/2/3.webp, cut from Donny's picture) for its top 3.
+   Two switches: This unit (the current unit, which the teacher picks
+   here) / This year / All time, and My class / All classes. All time
+   shows every class together, and students who have left the class list
+   too, with their school year, so later classes can try to beat them.
+   Names show as "First L.".
 
    The teacher also gets the roster: paste the class list (email, first name,
    last name, period), see who has signed in, and take a student off or clear
@@ -46,27 +51,35 @@
     $('lbStatus').textContent = text || '';
     $('lbStatus').classList.toggle('bad', !!bad);
   }
-  function plural(n, word) { return n + ' ' + word + (n === 1 ? '' : /(s|sh|ch|x)$/.test(word) ? 'es' : 's'); }
-  function seconds(ms) { return (Math.floor(ms / 100) / 10).toFixed(1) + ' s'; }
+  function plural(n, word) { return n.toLocaleString('en-US') + ' ' + word + (n === 1 ? '' : /(s|sh|ch|x)$/.test(word) ? 'es' : 's'); }
+  var periodName = function (p) { return /^\d+$/.test(p) ? 'Period ' + p : p; };
+  // "🚗💥🚙Mass, Acceleration, and Collisions🚗💥🚙" -> "Mass, Acceleration, and Collisions"
+  function plainName(name) {
+    var t = String(name || '');
+    try { t = t.replace(new RegExp('^[^\\p{L}\\p{N}]+|[^\\p{L}\\p{N}).!?]+$', 'gu'), ''); } catch (e) { /* an old browser: as it is */ }
+    return t || String(name || '');
+  }
 
-  // Remembered on this device: the filters last used.
-  var KEY = 'is8-board-filters';
+  // What is showing: span (unit, year or all), period ('' = all classes) and, for the teacher only, unit (a
+  // folder to look at instead of the current unit). Remembered on this device (span and period), from
+  // 2026-11-10 under a new name, so everyone starts on This unit once.
+  var KEY = 'is8-board-view';
+  var view = null;
   function saved() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } }
   function keep() {
-    try { localStorage.setItem(KEY, JSON.stringify({ period: $('lbPeriod').value, span: span(), topic: $('lbTopic').value })); } catch (e) { /* fine */ }
+    try { localStorage.setItem(KEY, JSON.stringify({ span: view.span, period: view.period })); } catch (e) { /* fine */ }
   }
-  function span() { var r = document.querySelector('input[name="lbSpan"]:checked'); return r ? r.value : 'year'; }
 
   /* ---------------- loading the boards ---------------- */
 
   function load() {
     var mine = ++loading;
-    var start = saved();
-    var q = new URLSearchParams({
-      period: data ? $('lbPeriod').value : (start.period || ''),
-      span: data ? span() : (start.span || 'year'),
-      topic: data ? $('lbTopic').value : (start.topic || '')
-    });
+    if (!view) {
+      var s = saved();
+      view = { span: s.span || '', period: s.period || '', unit: '', chosePeriod: 'period' in s };
+    }
+    var q = new URLSearchParams({ span: view.span, period: view.period });
+    if (view.unit) q.set('unit', view.unit);
     var headers = {};
     if (PASS && PASS.token()) headers['X-Pass'] = PASS.token();
     status(data ? 'Updating...' : 'Loading the leaderboard...');
@@ -77,14 +90,26 @@
       if (res.status === 401) { gate(); return; }
       if (!res.ok) { status(res.d.error || 'The leaderboard did not load. Try again in a minute.', true); return; }
       $('lbGate').hidden = true;
-      var first = !data;
       data = res.d;
-      if (first) fillFilters(q);
+      view.span = data.span;
+      // A student starts on their own class.
+      if (!view.chosePeriod && !teacher && data.me && data.me.period && view.span !== 'all' && view.period !== data.me.period) {
+        view.period = data.me.period;
+        view.chosePeriod = true;
+        load();
+        return;
+      }
       status('');
+      drawFilters();
       draw();
     }, function () {
       if (mine === loading) status('Could not reach the site. Check the internet connection.', true);
     });
+  }
+  function show(change) {
+    for (var k in change) view[k] = change[k];
+    keep();
+    load();
   }
 
   // Not signed in: the Class Pass button.
@@ -113,64 +138,117 @@
     g.appendChild(card);
   }
 
-  function fillFilters(q) {
-    var per = $('lbPeriod');
-    per.length = 1;
-    (data.periods || []).forEach(function (p) {
-      var o = mk('option', null, /^\d+$/.test(p) ? 'Period ' + p : p);
-      o.value = p;
-      per.appendChild(o);
+  /* ---------------- the switches ---------------- */
+
+  // A row of buttons, one of them on: [{ label, on, run }].
+  function switchRow(box, items) {
+    box.textContent = '';
+    items.forEach(function (it) {
+      var b = btn(it.label, 'lb-sw' + (it.on ? ' on' : ''), function () { if (!it.on) it.run(); });
+      b.setAttribute('aria-pressed', it.on ? 'true' : 'false');
+      box.appendChild(b);
     });
-    per.value = q.get('period');
-    if (per.value !== q.get('period')) per.value = '';
-    // A student starts on their own class.
-    if (!teacher && data.me && data.me.period && !('period' in saved())) per.value = data.me.period;
-    $('lbYearLabel').textContent = 'This school year (' + data.year + ')';
-    document.querySelector('input[name="lbSpan"][value="' + (q.get('span') === 'all' ? 'all' : 'year') + '"]').checked = true;
-    var top = $('lbTopic');
-    top.length = 1;
-    var t = data.topics || { folders: [], sets: [] };
-    var setsIn = function (fid) { return t.sets.filter(function (s) { return (s.folder || null) === fid; }); };
-    var addSets = function (parent, list, indent) {
-      list.forEach(function (s) {
-        var o = mk('option', null, indent + s.title);
-        o.value = 's:' + s.id;
-        parent.appendChild(o);
-      });
-    };
-    t.folders.filter(function (f) { return !f.parent; }).forEach(function (f) {
-      var g = mk('optgroup');
-      g.label = f.name;
-      var all = mk('option', null, 'All of ' + f.name);
-      all.value = 'f:' + f.id;
-      g.appendChild(all);
-      addSets(g, setsIn(f.id), '');
-      t.folders.filter(function (k) { return k.parent === f.id; }).forEach(function (k) {
-        var o = mk('option', null, ' ' + k.name + ' (all)');
-        o.value = 'f:' + k.id;
-        g.appendChild(o);
-        addSets(g, setsIn(k.id), '  ');
-      });
-      top.appendChild(g);
-    });
-    var loose = setsIn(null);
-    if (loose.length) {
-      var g2 = mk('optgroup');
-      g2.label = 'Other sets';
-      addSets(g2, loose, '');
-      top.appendChild(g2);
+    box.hidden = !items.length;
+  }
+
+  function drawFilters() {
+    var unit = data.unit;
+    var spans = [];
+    if (unit) spans.push({ label: 'This unit', on: view.span === 'unit', run: function () { show({ span: 'unit' }); } });
+    spans.push({ label: 'This year', on: view.span === 'year', run: function () { show({ span: 'year' }); } });
+    spans.push({ label: 'All time', on: view.span === 'all', run: function () { show({ span: 'all' }); } });
+    switchRow($('lbSpan'), spans);
+
+    // A student: their class or all of them. The teacher (or student view): all classes or one period.
+    var classes = [];
+    if (view.span !== 'all') {
+      var all = { label: 'All classes', on: !view.period, run: function () { show({ period: '', chosePeriod: true }); } };
+      if (!teacher && data.me && data.me.period) {
+        var p = data.me.period;
+        classes.push({ label: 'My class', on: view.period === p, run: function () { show({ period: p, chosePeriod: true }); } });
+        classes.push(all);
+      } else if ((data.periods || []).length > 1) {
+        classes.push(all);
+        data.periods.forEach(function (x) {
+          classes.push({ label: periodName(x), on: view.period === x, run: function () { show({ period: x, chosePeriod: true }); } });
+        });
+      }
     }
-    top.value = q.get('topic');
-    if (top.value !== q.get('topic')) top.value = '';
+    switchRow($('lbClass'), classes);
+
+    var says = view.span === 'unit' ? 'This unit: ' + plainName(unit.name) + ' (this school year, ' + data.year + ')'
+      : view.span === 'year' ? 'This school year (' + data.year + '), every unit'
+        : 'Every year, every class. Students from past years show their school year.';
+    $('lbShowing').textContent = says;
+    if (teacher) unitPicker();
     $('lbFilters').hidden = false;
-    if (per.value !== q.get('period')) load();
+  }
+
+  // The teacher picks the current unit (Donny, 2026-11-10): the one the students' This unit shows. Picking
+  // another unit here shows it to the teacher only, with a button to make it the current unit.
+  function unitPicker() {
+    var box = $('lbUnitPick');
+    box.textContent = '';
+    box.hidden = false;
+    var units = data.units || [];
+    if (!units.length) {
+      box.appendChild(mk('p', 'lb-small', 'For This unit, make a folder for each unit on the Flashcards page. Then pick the current one here.'));
+      return;
+    }
+    var cur = data.current;
+    var lab = mk('label', 'lb-unit-label', 'Unit ');
+    var sel = mk('select');
+    if (!cur) {
+      var none = mk('option', null, 'Pick the unit you are teaching now');
+      none.value = '';
+      sel.appendChild(none);
+    }
+    units.forEach(function (u) {
+      var o = mk('option', null, (u.inside ? '   ' : '') + plainName(u.name) + (cur && cur.id === u.id ? ' (current)' : ''));
+      o.value = u.id;
+      sel.appendChild(o);
+    });
+    sel.value = data.unit ? data.unit.id : '';
+    sel.addEventListener('change', function () {
+      if (!sel.value) return;
+      show({ unit: cur && sel.value === cur.id ? '' : sel.value, span: 'unit' });
+    });
+    lab.appendChild(sel);
+    box.appendChild(lab);
+    var msg = mk('span', 'lb-small');
+    msg.setAttribute('role', 'status');
+    if (data.unit && (!cur || cur.id !== data.unit.id)) {
+      var pick = data.unit;
+      var make = btn('Make this the current unit', 'btn lb-btn-sm', function () {
+        make.disabled = true;
+        msg.textContent = ' Saving...';
+        fetch('/api/board/unit', { method: 'PUT', headers: { 'X-IS8-Editor': '1', 'content-type': 'application/json' }, body: JSON.stringify({ id: pick.id }), cache: 'no-store' })
+          .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw new Error(d.error || 'That did not save. Try again.'); return d; }); })
+          .then(function () { show({ unit: '', span: 'unit' }); }, function (err) { make.disabled = false; msg.textContent = ' ' + err.message; });
+      });
+      box.appendChild(make);
+      if (cur) box.appendChild(mk('span', 'lb-small', ' Students see ' + plainName(cur.name) + ' now. Only you see this one.'));
+    } else if (cur) {
+      box.appendChild(mk('span', 'lb-small', ' Students see this unit under This unit. When you start a new unit, pick it here.'));
+    }
+    box.appendChild(msg);
   }
 
   /* ---------------- drawing the boards ---------------- */
 
-  function valueText(bd, r) {
-    if (bd.unit === 'ms') return seconds(r.value) + (r.pairs ? ' · ' + plural(r.pairs, 'pair') : '');
-    return plural(r.value, bd.unit);
+  var TROPHY = ['', 'trophy-1.webp', 'trophy-2.webp', 'trophy-3.webp'];
+
+  function valueText(bd, r) { return plural(r.value, bd.unit); }
+
+  // "Maya R." with a tag: the period (all classes) or the school year (a past student). On the podium,
+  // where names have little room, "You" is a tag too.
+  function nameEl(tag, cls, r, allClasses, onPodium) {
+    var who = mk(tag, cls, r.name + (r.me && !onPodium ? ' (you)' : ''));
+    if (teacher && r.email) who.title = r.email;
+    if (r.me && onPodium) who.appendChild(mk('span', 'lb-you', 'You'));
+    if (r.year) who.appendChild(mk('span', 'lb-year', r.year));
+    else if (allClasses && r.period) who.appendChild(mk('span', 'lb-period', /^\d+$/.test(r.period) ? 'P' + r.period : r.period));
+    return who;
   }
 
   function rowEl(bd, r, allClasses) {
@@ -178,93 +256,103 @@
     var place = mk('span', 'lb-place', String(r.place));
     place.setAttribute('aria-label', 'Place ' + r.place);
     li.appendChild(place);
-    var who = mk('span', 'lb-name', r.name + (r.me ? ' (you)' : ''));
-    if (teacher && r.email) who.title = r.email;
-    li.appendChild(who);
-    if (allClasses && r.period) li.appendChild(mk('span', 'lb-period', /^\d+$/.test(r.period) ? 'P' + r.period : r.period));
+    li.appendChild(nameEl('span', 'lb-name', r, allClasses));
     li.appendChild(mk('span', 'lb-value', valueText(bd, r)));
     return li;
+  }
+
+  // The top 3 on a podium: 2nd, 1st, 3rd, each with their trophy (a tie for 1st is two gold trophies).
+  function podium(bd, rows, allClasses) {
+    var pod = mk('ol', 'lb-podium');
+    pod.setAttribute('aria-label', 'Top 3');
+    [1, 0, 2].forEach(function (i) {
+      var r = rows[i];
+      if (!r) return;
+      var spot = mk('li', 'lb-spot p' + r.place + (i === 0 ? ' first' : '') + (r.me ? ' me' : ''));
+      var img = mk('img');
+      img.src = '../assets/' + TROPHY[r.place];
+      img.alt = ['', '1st place', '2nd place', '3rd place'][r.place] + ' trophy';
+      img.width = 256;
+      img.height = 233;
+      spot.appendChild(img);
+      spot.appendChild(nameEl('span', 'lb-spot-name', r, allClasses, true));
+      spot.appendChild(mk('span', 'lb-spot-value', valueText(bd, r)));
+      pod.appendChild(spot);
+    });
+    return pod;
+  }
+
+  function card(bd, allClasses, big) {
+    var c = mk('article', 'lb-card' + (big ? ' lb-card-big' : ''));
+    c.appendChild(mk('h2', 'lb-title', bd.title));
+    c.appendChild(mk('p', 'lb-blurb', bd.blurb));
+    if (!bd.rows.length) {
+      c.appendChild(mk('p', 'lb-empty', 'Nobody yet. Be the first!'));
+      return c;
+    }
+    // The podium takes the first rows that are in the top 3 (at most three of them).
+    var n = 0;
+    while (n < 3 && n < bd.rows.length && bd.rows[n].place <= 3) n++;
+    c.appendChild(podium(bd, bd.rows.slice(0, n), allClasses));
+    if (bd.rows.length > n) {
+      var ol = mk('ol', 'lb-list');
+      bd.rows.slice(n).forEach(function (r) { ol.appendChild(rowEl(bd, r, allClasses)); });
+      c.appendChild(ol);
+    }
+    if (bd.mine) {
+      var gap = mk('ol', 'lb-list lb-mine');
+      gap.appendChild(rowEl(bd, bd.mine, allClasses));
+      c.appendChild(gap);
+    }
+    return c;
   }
 
   function draw() {
     var box = $('lbBoards');
     box.textContent = '';
-    var allClasses = !$('lbPeriod').value;
-    var topic = $('lbTopic').value;
-    var groups = [];
-    var byGroup = {};
-    data.boards.forEach(function (bd) {
-      if (!byGroup[bd.group]) { byGroup[bd.group] = []; groups.push(bd.group); }
-      byGroup[bd.group].push(bd);
-    });
+    var allClasses = !view.period;
     if (data.me) {
       var hi = mk('p', 'lb-hello');
       hi.textContent = 'Signed in as ' + data.me.name + (data.me.period ? ', period ' + data.me.period : '') + '. Your row is highlighted.';
       box.appendChild(hi);
     } else if (studentView) {
-      box.appendChild(mk('p', 'lb-hello', 'Student view: this is the leaderboard the way students see it (a student\u2019s own row is highlighted for them).'));
+      box.appendChild(mk('p', 'lb-hello', 'Student view: this is the leaderboard the way students see it (a student’s own row is highlighted for them).'));
     } else if (teacher) {
       box.appendChild(mk('p', 'lb-hello', 'You are signed in as the teacher: each leaderboard shows its top 10, and hovering a name shows the email.'));
     }
-    groups.forEach(function (name) {
-      var sec = mk('section', 'lb-group');
-      sec.appendChild(mk('h2', 'lb-group-title', name));
-      var grid = mk('div', 'lb-grid');
-      byGroup[name].forEach(function (bd) {
-        var card = mk('article', 'lb-card');
-        card.appendChild(mk('h3', 'lb-title', bd.title));
-        card.appendChild(mk('p', 'lb-blurb', bd.blurb));
-        if (!bd.rows.length) {
-          card.appendChild(mk('p', 'lb-empty', bd.low ? 'No times yet on this topic. Play Match to set one!' : 'Nobody yet. Be the first!'));
-        } else {
-          var ol = mk('ol', 'lb-list');
-          bd.rows.forEach(function (r) { ol.appendChild(rowEl(bd, r, allClasses)); });
-          card.appendChild(ol);
-          if (bd.mine) {
-            var gap = mk('ol', 'lb-list lb-mine');
-            gap.appendChild(rowEl(bd, bd.mine, allClasses));
-            card.appendChild(gap);
-          }
-        }
-        grid.appendChild(card);
-      });
-      sec.appendChild(grid);
-      box.appendChild(sec);
-    });
+    var boards = data.boards || [];
+    if (boards.length) box.appendChild(card(boards[0], allClasses, true));
+    var grid = mk('div', 'lb-grid');
+    boards.slice(1).forEach(function (bd) { grid.appendChild(card(bd, allClasses, false)); });
+    box.appendChild(grid);
     if (teacher && data.reviewGames) box.appendChild(reviewTopicsBox());
-    if (!topic.startsWith('s:')) {
-      box.appendChild(mk('p', 'lb-note', 'Fastest Match times show when you pick one set under Topic.'));
-    }
-    box.appendChild(mk('p', 'lb-note', 'How it counts: live games count when your teacher hosts them and you joined signed in with Class Pass. A win is first place. Practice counts when you finish Match, a test, or every term in Learn while signed in. Review games count your best try on each of your teacher’s review games.'));
+    box.appendChild(mk('p', 'lb-note', 'How it counts: review game points add up your best try on each of your teacher’s review games. Live games count when your teacher hosts them and you joined signed in with Class Pass, and a win is first place. Practice counts when you finish Match, a test, or every term in Learn while signed in. All time keeps every year, so you can try to beat students from past years.'));
   }
 
-  // Teacher only (Donny, 2026-11-03): which Topic each review game shows under. A game goes with the folder or
-  // set whose name is in the game's title. A game whose sheet sent its points before the site kept titles shows
-  // under All topics only until the sheet sends them again.
+  // Teacher only (Donny, 2026-11-03): which unit each review game counts toward. A game goes with the folder or
+  // set whose name is in the game's title. A game whose sheet sent its points before the site kept titles counts
+  // on This year and All time only until the sheet sends them again.
   function reviewTopicsBox() {
     var games = data.reviewGames || [], untitled = data.reviewUntitled || 0;
     var trouble = untitled || games.some(function (g) { return !g.topic; });
     var details = mk('details', 'lb-roster-box');
     if (trouble) details.open = true;
-    details.appendChild(mk('summary', null, 'Review games and their topics'));
-    details.appendChild(mk('p', 'lb-small', 'A review game shows under the Topic whose folder or set name is in the game’s title, like “Review: Kinetic Energy and Speed” under a folder called Kinetic Energy and Speed.'));
+    details.appendChild(mk('summary', null, 'Review games and their units'));
+    details.appendChild(mk('p', 'lb-small', 'A review game counts toward This unit when the unit’s folder name, or the name of a set in it, is in the game’s title, like “Review: Kinetic Energy and Speed” with a folder called Kinetic Energy and Speed. Every review game counts on This year and All time.'));
     if (games.length) {
       var ul = mk('ul', 'lb-small');
       games.forEach(function (g) {
-        ul.appendChild(mk('li', null, g.title + ': ' + (g.topic ? 'shows under ' + g.topic : 'no topic yet (no folder or set name is in this title), so it shows under All topics only')));
+        ul.appendChild(mk('li', null, g.title + ': ' + (g.topic ? 'goes with ' + g.topic : 'no unit yet (no folder or set name is in this title), so it counts on This year and All time only')));
       });
       details.appendChild(ul);
     }
     if (untitled) {
-      details.appendChild(mk('p', 'lb-small', plural(untitled, 'review game') + ' sent points before this site kept game titles, so ' + (untitled === 1 ? 'it shows' : 'they show') +
-        ' under All topics only. To fix it, open that game’s Google Sheet and click Self-Check > Send game points to the website leaderboard now. (Sheets on version 2026.11.03b or newer do this by themselves within an hour.)'));
+      details.appendChild(mk('p', 'lb-small', plural(untitled, 'review game') + ' sent points before this site kept game titles, so ' + (untitled === 1 ? 'it counts' : 'they count') +
+        ' on This year and All time only. To fix it, open that game’s Google Sheet and click Self-Check > Send game points to the website leaderboard now. (Sheets on version 2026.11.03b or newer do this by themselves within an hour.)'));
     }
     if (!games.length && !untitled) details.appendChild(mk('p', 'lb-small', 'No review game has sent its points yet.'));
     return details;
   }
-
-  ['lbPeriod', 'lbTopic'].forEach(function (id) { $(id).addEventListener('change', function () { keep(); load(); }); });
-  [].forEach.call(document.querySelectorAll('input[name="lbSpan"]'), function (r) { r.addEventListener('change', function () { keep(); load(); }); });
 
   /* ---------------- the roster (teacher) ---------------- */
 

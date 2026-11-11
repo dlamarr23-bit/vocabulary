@@ -555,6 +555,7 @@ async function api(request, env, url) {
   if (a === 'launchpad' && !b && method === 'PUT') return putLaunchpad(request, env);
   if (a === 'guest' && b === 'code' && !c) return guestCodeApi(request, env);
   if (a === 'roster') return rosterApi(request, env, url, b);
+  if (a === 'board' && b === 'unit' && !c && method === 'PUT') return putBoardUnit(request, env, url);
   if (a === 'review' && b === 'key' && !c && method === 'GET') return json({ key: await reviewKey(env) });
   if (a === 'classlist' && !b && method === 'GET') return classListGet(env);
   if (a === 'suggest' && !b && method === 'GET') return suggest(env, url);
@@ -1227,53 +1228,77 @@ function schoolYear(now = Date.now()) {
   return { start: Date.UTC(y, 7, 1, 7), label: y + '–' + String(y + 1).slice(2) };
 }
 
-// The leaderboards. A signed in student or the teacher can look.
-//   ?period=3        one class ('' = all of them together)
-//   ?span=all        all time (otherwise this school year)
-//   ?topic=s:<id>    one set; f:<id> a folder (and the folders in it); '' every set
+// The leaderboards (fewer choices since 2026-11-10, Donny: "make it easier for an 8th grader"). A signed in
+// student or the teacher can look.
+//   ?span=unit       the current unit (a Flashcards folder the teacher picks, and the folders in it), this school year
+//   ?span=year       everything this school year
+//   ?span=all        everything ever, every class together, with past students (so later classes can beat them)
+//   ?period=3        one class ('' = all of them together; not with span=all)
+//   ?unit=<folder>   the teacher only: look at another unit than the current one
+// KV "leaderboard-unit" keeps the current unit: { id, set } (the folder's id, and when it was picked).
 async function boardsApi(request, env, url) {
   if (!env.LIVE) return needLive();
   const teacher = await isEditor(request, env);
   const lib = await library(env, url);
-  const topic = String(url.searchParams.get('topic') || '');
-  let sets = null;
-  if (topic.startsWith('s:')) sets = [topic.slice(2)];
-  else if (topic.startsWith('f:')) {
-    const f = topic.slice(2);
-    const inside = new Set([f, ...lib.folders.filter((x) => x.parent === f).map((x) => x.id)]);
+  const folderOf = (id) => lib.folders.find((f) => f.id === id) || null;
+  const saved = env.FLASHCARDS ? await env.FLASHCARDS.get('leaderboard-unit', 'json') : null;
+  const current = saved && folderOf(saved.id);
+  const asked = teacher ? folderOf(String(url.searchParams.get('unit') || '')) : null;
+  const unit = asked || current;
+  let span = String(url.searchParams.get('span') || '');
+  if (!['unit', 'year', 'all'].includes(span)) span = current ? 'unit' : 'year';
+  if (span === 'unit' && !unit) span = 'year';
+  let sets = null, picked = null;
+  if (span === 'unit') {
+    const inside = new Set([unit.id, ...lib.folders.filter((x) => x.parent === unit.id).map((x) => x.id)]);
     sets = lib.sets.filter((x) => inside.has(x.folder)).map((x) => x.id);
-  }
-  // Review games belong to the topic named in their title (Donny, 2026-10-27):
-  // "Mass, Acceleration, and Collisions Review Game" goes with the folder or set
-  // called "🚗💥🚙Mass, Acceleration, and Collisions🚗💥🚙". The game server
-  // matches each game's title against every topic name (the longest name found
-  // wins) and counts the game only when that topic is picked here.
-  let picked = null;
-  if (topic.startsWith('s:')) picked = lib.sets.filter((x) => x.id === topic.slice(2)).map((x) => x.title);
-  else if (topic.startsWith('f:')) {
-    const f = topic.slice(2);
-    const inside = new Set([f, ...lib.folders.filter((x) => x.parent === f).map((x) => x.id)]);
+    // Review games belong to the unit named in their title (Donny, 2026-10-27):
+    // "Mass, Acceleration, and Collisions Review Game" goes with the folder or set
+    // called "🚗💥🚙Mass, Acceleration, and Collisions🚗💥🚙". The game server
+    // matches each game's title against every folder and set name (the longest
+    // name found wins) and counts the game only when its unit is the one shown.
     picked = lib.folders.filter((x) => inside.has(x.id)).map((x) => x.name)
       .concat(lib.sets.filter((x) => inside.has(x.folder)).map((x) => x.title));
   }
   const year = schoolYear();
-  const span = url.searchParams.get('span') === 'all' ? 'all' : 'year';
   const r = await board(env, 'boards', {
     teacher,
     token: passToken(request),
-    period: String(url.searchParams.get('period') || ''),
+    period: span === 'all' ? '' : String(url.searchParams.get('period') || ''),
     since: span === 'all' ? 0 : year.start,
+    past: span === 'all',
     sets,
-    single: !!(sets && sets.length === 1),
     topicNames: lib.folders.map((x) => x.name).concat(lib.sets.map((x) => x.title)),
     picked
   });
   if (r.status !== 200) return boardJSON(r);
-  const topics = {
-    folders: lib.folders.map((f) => ({ id: f.id, name: f.name, parent: f.parent || null })),
-    sets: lib.sets.filter((x) => x.count).map((x) => ({ id: x.id, title: x.title, folder: x.folder || null }))
-  };
-  return json({ ...r.data, teacher, year: year.label, span, topics });
+  const brief = (f) => f && { id: f.id, name: f.name };
+  const out = { ...r.data, teacher, year: year.label, span, unit: brief(unit), current: brief(current) };
+  // The teacher picks the current unit from the folders (a folder inside another comes right after it).
+  if (teacher) {
+    out.units = [];
+    lib.folders.filter((f) => !f.parent).forEach((f) => {
+      out.units.push({ id: f.id, name: f.name });
+      lib.folders.filter((k) => k.parent === f.id).forEach((k) => out.units.push({ id: k.id, name: k.name, inside: true }));
+    });
+  }
+  return json(out);
+}
+
+// The teacher picks the current unit (PUT { id }, a folder's id, or '' for none).
+async function putBoardUnit(request, env, url) {
+  let body = {};
+  try { body = (await request.json()) || {}; } catch { body = {}; }
+  const id = String(body.id || '');
+  if (!id) {
+    await env.FLASHCARDS.delete('leaderboard-unit');
+    return json({ ok: true, current: null });
+  }
+  const lib = await library(env, url);
+  const f = lib.folders.find((x) => x.id === id);
+  if (!f) return json({ error: 'That folder is not on the Flashcards page anymore. Reload the page.' }, 404);
+  await env.FLASHCARDS.put('leaderboard-unit', JSON.stringify({ id: f.id, set: Date.now() }));
+  return json({ ok: true, current: { id: f.id, name: f.name } });
 }
 
 // The roster (teacher only): GET it, PUT a pasted list, POST /edit, /remove or /reset one student.

@@ -21,6 +21,10 @@
 //             game's Google Sheet id, score = their top points, correct and
 //             total = right answers and questions in their best try, full =
 //             full credit), kept up to date by that sheet (Donny, 2026-10-26)
+//   past      a student who left the roster (a new school year's class list,
+//             or Remove): their name and period, so their results stay on
+//             the All time leaderboards for later classes to beat (Donny,
+//             2026-11-10). Back on the roster, they leave this list.
 import { DurableObject } from 'cloudflare:workers';
 
 const SESSION_DAYS = 120;
@@ -48,6 +52,12 @@ const PRACTICE = ['match', 'test', 'learn'];
 const GAMES = ['volley', 'blast', 'match', 'royale', 'surge'];
 // The day in California, for "once a day" counting.
 const dayOf = (ms) => new Date(ms - 7 * 3600 * 1000).toISOString().slice(0, 10);
+// The school year a time falls in (it starts August 1 in California), like "2026–27".
+function yearOf(ms) {
+  const d = new Date(ms - 7 * 3600 * 1000);
+  const y = d.getUTCMonth() >= 7 ? d.getUTCFullYear() : d.getUTCFullYear() - 1;
+  return y + '–' + String(y + 1).slice(2);
+}
 
 // "Maya R." for each student, with more of the last name where two would match.
 export function displayNames(rows) {
@@ -82,6 +92,7 @@ export class Leaderboard extends DurableObject {
       game TEXT, set_id TEXT, team INTEGER, place INTEGER, win INTEGER, correct INTEGER, ms INTEGER, pairs INTEGER, score INTEGER, total INTEGER, full INTEGER)`);
     // Each review game's title, which says which topic it belongs to (Donny, 2026-10-27).
     this.sql.exec(`CREATE TABLE IF NOT EXISTS review_games (id TEXT PRIMARY KEY, title TEXT, updated INTEGER)`);
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS past (email TEXT PRIMARY KEY, first TEXT, last TEXT, period TEXT, left INTEGER)`);
     this.sql.exec(`CREATE INDEX IF NOT EXISTS events_email ON events (email)`);
     this.sql.exec(`CREATE INDEX IF NOT EXISTS events_at ON events (at)`);
     this.sql.exec(`CREATE INDEX IF NOT EXISTS sessions_email ON sessions (email)`);
@@ -151,13 +162,24 @@ export class Leaderboard extends DurableObject {
     if (!rows.length) throw Object.assign(new Error('No student emails were found in that list.'), { status: 400 });
     const now = Date.now();
     this.ctx.storage.transactionSync(() => {
-      if (b.mode === 'replace') this.sql.exec('DELETE FROM roster');
+      if (b.mode === 'replace') {
+        this.rosterRows().forEach((r) => { if (!seen.has(r.email)) this.toPast(r, now); });
+        this.sql.exec('DELETE FROM roster');
+      }
       rows.forEach((r) => this.sql.exec(`INSERT INTO roster (email, first, last, period, added) VALUES (?, ?, ?, ?, ?)
         ON CONFLICT(email) DO UPDATE SET first = excluded.first, last = excluded.last, period = excluded.period`, r.email, r.first, r.last, r.period, now));
-      // Anyone no longer on the roster is signed out.
+      // Anyone no longer on the roster is signed out; anyone on it is not a past student.
       this.sql.exec('DELETE FROM sessions WHERE email NOT IN (SELECT email FROM roster)');
+      this.sql.exec('DELETE FROM past WHERE email IN (SELECT email FROM roster)');
     });
     return { saved: rows.length, ...this.roster() };
+  }
+
+  // A student leaving the roster keeps their name for the All time leaderboards.
+  toPast(r, now) {
+    this.sql.exec(`INSERT INTO past (email, first, last, period, left) VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(email) DO UPDATE SET first = excluded.first, last = excluded.last, period = excluded.period, left = excluded.left`,
+    r.email, r.first, r.last, r.period, now);
   }
 
   // The teacher fixes one student's row (Donny, 2026-10-12): a mistyped email,
@@ -178,6 +200,7 @@ export class Leaderboard extends DurableObject {
       if (row.email !== old) {
         this.sql.exec('UPDATE events SET email = ? WHERE email = ?', row.email, old);
         this.sql.exec('DELETE FROM sessions WHERE email = ?', old);
+        this.sql.exec('DELETE FROM past WHERE email = ?', row.email);
       }
     });
     return this.roster();
@@ -185,8 +208,11 @@ export class Leaderboard extends DurableObject {
 
   rosterRemove(b) {
     const email = clean(b.email, 120).toLowerCase();
-    this.sql.exec('DELETE FROM roster WHERE email = ?', email);
-    this.sql.exec('DELETE FROM sessions WHERE email = ?', email);
+    this.ctx.storage.transactionSync(() => {
+      this.all('SELECT email, first, last, period FROM roster WHERE email = ?', email).forEach((r) => this.toPast(r, Date.now()));
+      this.sql.exec('DELETE FROM roster WHERE email = ?', email);
+      this.sql.exec('DELETE FROM sessions WHERE email = ?', email);
+    });
     return this.roster();
   }
 
@@ -391,32 +417,35 @@ export class Leaderboard extends DurableObject {
   }
 
   // b: { since (ms, 0 = all time), period ('' = every class), sets (null =
-  //      every set, or a list), single (one set: the fastest times show),
-  //      token (the student looking), teacher (true: longer lists, emails) }
+  //      every set, or a list: one unit's), past (true: students who left
+  //      the roster count too, with the school year of their last result),
+  //      token (the student looking), teacher (true: emails) }
+  // Four leaderboards since 2026-11-10 (Donny: "way too many categories"):
+  // review game points, live game wins, correct answers and practice.
   async boards(b) {
     const me = b.teacher ? null : await this.check(b.token);
     if (!b.teacher && !me) throw Object.assign(new Error('Sign in with Class Pass to see the leaderboards.'), { status: 401 });
     const roster = this.rosterRows();
-    const names = displayNames(roster);
     const period = clean(b.period, 20);
     const students = roster.filter((r) => !period || r.period === period);
     const allowed = new Map(students.map((r) => [r.email, r]));
+    // Past students have their own "First L." names (the year beside them tells them apart).
+    const names = displayNames(roster);
+    const past = new Set();
+    if (b.past && !period) {
+      const gone = this.all('SELECT email, first, last, period FROM past').filter((r) => !allowed.has(r.email));
+      const pastNames = displayNames(gone);
+      gone.forEach((r) => { allowed.set(r.email, r); past.add(r.email); names[r.email] = pastNames[r.email]; });
+    }
     const since = Number(b.since) || 0;
     let sets = Array.isArray(b.sets) ? b.sets.filter((x) => SET_ID.test(String(x))).slice(0, 500) : null;
-    // One topic picked: its review games count too (the games whose title names it).
-    const reviewGames = sets ? this.reviewGamesFor(b.topicNames, b.picked) : [];
-    if (sets) sets = sets.concat(reviewGames);
+    // One unit picked: its review games count too (the games whose title names it).
+    if (sets) sets = new Set(sets.concat(this.reviewGamesFor(b.topicNames, b.picked)));
+    const forTeacher = b.teacher ? this.reviewGamesInfo(b.topicNames) : {};
     // Every event that counts for this view, read once and counted here: a
     // class's results are thousands of rows at most.
-    let q = 'SELECT email, at, day, kind, game, set_id, team, place, win, correct, ms, pairs, score, total, full FROM events WHERE at >= ?';
-    const args = [since];
-    const forTeacher = b.teacher ? this.reviewGamesInfo(b.topicNames) : {};
-    if (sets) {
-      if (!sets.length) return { boards: [], periods: periodsOf(roster), me: me && { name: me.name, period: me.period }, ...forTeacher };
-      q += ' AND set_id IN (' + sets.map(() => '?').join(',') + ')';
-      args.push(...sets);
-    }
-    const events = this.all(q, ...args).filter((e) => allowed.has(e.email));
+    const events = this.all('SELECT email, at, day, kind, game, set_id, team, place, win, correct, ms, pairs, score, total, full FROM events WHERE at >= ?', since)
+      .filter((e) => allowed.has(e.email) && (!sets || sets.has(e.set_id)));
     const tally = (test, value) => {
       const m = new Map();
       events.forEach((e) => { if (test(e)) m.set(e.email, (m.get(e.email) || 0) + value(e)); });
@@ -434,57 +463,31 @@ export class Leaderboard extends DurableObject {
     const one = () => 1;
     const live = (e) => e.kind === 'live';
     const boards = [
-      { id: 'teamWins', group: 'Class champions', title: 'Team game wins', blurb: 'Vocab Live, Blast and Surge Showdown games won by your team.', unit: 'win', data: tally((e) => live(e) && e.team && e.win, one) },
-      { id: 'soloWins', group: 'Class champions', title: 'Solo game wins', blurb: 'Multiplayer Match, Battle Royale and solo Vocab Live games won on your own.', unit: 'win', data: tally((e) => live(e) && !e.team && e.win, one) },
-      { id: 'podiums', group: 'Class champions', title: 'Top 3 finishes', blurb: 'Live games where you or your team came 1st, 2nd or 3rd.', unit: 'finish', data: tally((e) => live(e) && e.place >= 1 && e.place <= 3 && e.place < (e.total || 2), one) },
-      { id: 'right', group: 'Class champions', title: 'Correct answers in games', blurb: 'Right answers you gave in live games.', unit: 'answer', data: tally(live, (e) => e.correct || 0) },
-      { id: 'volley', group: 'Wins by game', title: 'Vocab Live wins', blurb: 'Team and solo.', unit: 'win', data: tally((e) => live(e) && e.game === 'volley' && e.win, one) },
-      { id: 'blast', group: 'Wins by game', title: 'Blast wins', blurb: 'Games your team won.', unit: 'win', data: tally((e) => live(e) && e.game === 'blast' && e.win, one) },
-      { id: 'mmatch', group: 'Wins by game', title: 'Multiplayer Match wins', blurb: 'First to match every card.', unit: 'win', data: tally((e) => live(e) && e.game === 'match' && e.win, one) },
-      { id: 'royale', group: 'Wins by game', title: 'Battle Royale wins', blurb: 'Last hero standing, or the most HP when the clock ran out.', unit: 'win', data: tally((e) => live(e) && e.game === 'royale' && e.win, one) },
-      { id: 'surge', group: 'Wins by game', title: 'Surge Showdown wins', blurb: 'Games your team finished in 1st place.', unit: 'win', data: tally((e) => live(e) && e.game === 'surge' && e.win, one) },
-      { id: 'practice', group: 'Studying', title: 'Practice sessions', blurb: 'Match, Test or Learn finished on your own. Each set counts once per mode, per day.', unit: 'session', data: distinct((e) => PRACTICE.includes(e.kind), (e) => e.set_id + '|' + e.kind + '|' + e.day) },
-      { id: 'perfect', group: 'Studying', title: 'Perfect tests', blurb: '100% on a practice test of 10 or more questions (or the whole set). Each set counts once a day.', unit: 'test', data: distinct((e) => e.kind === 'test' && e.full && e.score === e.total, (e) => e.set_id + '|' + e.day) },
-      { id: 'mastered', group: 'Studying', title: 'Sets mastered in Learn', blurb: 'Every term mastered in Learn mode. Each set counts once.', unit: 'set', data: distinct((e) => e.kind === 'learn', (e) => e.set_id) },
-      { id: 'reviewPoints', group: 'Review games', title: 'Review game points', blurb: 'Points from your teacher’s review games (your best try on each game), added up. Right answers in a row and power-ups earn more.', unit: 'point', data: tally((e) => e.kind === 'review', (e) => e.score || 0) },
-      { id: 'reviewPassed', group: 'Review games', title: 'Review games at full credit', blurb: 'Review games where your best try earned full credit (like 70% or better).', unit: 'game', data: tally((e) => e.kind === 'review' && e.full, one) }
+      { id: 'reviewPoints', title: 'Review game points', blurb: 'Your best try on each review game, added up.', unit: 'point', data: tally((e) => e.kind === 'review', (e) => e.score || 0) },
+      { id: 'wins', title: 'Live game wins', blurb: 'Team and solo wins in every live game.', unit: 'win', data: tally((e) => live(e) && e.win, one) },
+      { id: 'right', title: 'Correct answers', blurb: 'Right answers you gave in live games.', unit: 'answer', data: tally(live, (e) => e.correct || 0) },
+      { id: 'practice', title: 'Practice', blurb: 'Match, Test and Learn on your own. Each set counts once per mode, per day.', unit: 'session', data: distinct((e) => PRACTICE.includes(e.kind), (e) => e.set_id + '|' + e.kind + '|' + e.day) }
     ];
-    // Fastest times only mean something for one set at a time.
-    const fastest = [];
-    if (b.single) {
-      // Ranked by time a pair, so a 4 pair game and an 8 pair game compare fairly.
-      const best = (test) => {
-        const m = new Map();
-        events.forEach((e) => {
-          if (!test(e) || !e.ms || !e.pairs) return;
-          const cur = m.get(e.email);
-          const rate = e.ms / e.pairs;
-          if (!cur || rate < cur.rate) m.set(e.email, { ms: e.ms, pairs: e.pairs, rate });
-        });
-        return m;
-      };
-      fastest.push({ id: 'fastMatch', group: 'Fastest times', title: 'Fastest Match (practice)', blurb: 'Best time in Match mode on this set, wrong-match seconds included.', unit: 'ms', low: true, data: best((e) => e.kind === 'match') });
-      fastest.push({ id: 'fastLive', group: 'Fastest times', title: 'Fastest Multiplayer Match', blurb: 'Best finish in a live Match game on this set, ranked by time per pair (hidden-card games not counted).', unit: 'ms', low: true, data: best((e) => live(e) && e.game === 'match') });
-    }
-    // The Review games boards show for every topic together, and for a topic that has a review game.
-    const shown = boards.filter((bd) => bd.group !== 'Review games' || !sets || reviewGames.length);
-    const out = shown.concat(fastest).map((bd) => {
-      const list = [...bd.data].map(([email, v]) => (typeof v === 'object' ? { email, value: v.ms, pairs: v.pairs, rank: v.rate } : { email, value: v, rank: v }))
+    // A past student's school year: the year of their last result here.
+    const lastAt = new Map();
+    events.forEach((e) => { if (past.has(e.email) && e.at > (lastAt.get(e.email) || 0)) lastAt.set(e.email, e.at); });
+    const out = boards.map((bd) => {
+      const list = [...bd.data].map(([email, v]) => ({ email, value: v }))
         .filter((r) => r.value > 0)
-        .sort((x, y) => (bd.low ? x.rank - y.rank : y.rank - x.rank) || names[x.email].localeCompare(names[y.email]));
+        .sort((x, y) => y.value - x.value || names[x.email].localeCompare(names[y.email]));
       // Equal values share a place: 1, 2, 2, 4.
       let place = 0;
-      list.forEach((r, i) => { if (i === 0 || r.rank !== list[i - 1].rank) place = i + 1; r.place = place; });
+      list.forEach((r, i) => { if (i === 0 || r.value !== list[i - 1].value) place = i + 1; r.place = place; });
       const row = (r) => {
         const s = allowed.get(r.email);
         const x = { place: r.place, name: names[r.email], period: s.period, value: r.value, me: !!(me && me.email === r.email) };
-        if (r.pairs) x.pairs = r.pairs;
+        if (past.has(r.email)) { x.year = yearOf(lastAt.get(r.email) || Date.now()); x.period = ''; }
         if (b.teacher) x.email = r.email;
         return x;
       };
       const top = list.slice(0, TOP).map(row);
       const mine = me && list.find((r) => r.email === me.email);
-      return { id: bd.id, group: bd.group, title: bd.title, blurb: bd.blurb, unit: bd.unit, low: !!bd.low, rows: top, mine: mine && !top.some((x) => x.me) ? row(mine) : null, players: list.length };
+      return { id: bd.id, title: bd.title, blurb: bd.blurb, unit: bd.unit, rows: top, mine: mine && !top.some((x) => x.me) ? row(mine) : null, players: list.length };
     });
     return { boards: out, periods: periodsOf(roster), me: me && { name: me.name, period: me.period }, ...forTeacher };
   }

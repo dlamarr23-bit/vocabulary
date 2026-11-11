@@ -2,16 +2,27 @@
 .lb-page{ padding-top:8px; padding-bottom:40px; }
 .lb-hero-icon svg{ width:150px; height:150px; }
 
-.lb-filters{ display:flex; flex-wrap:wrap; gap:12px 20px; align-items:flex-end; background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:14px 18px; box-shadow:var(--shadow-sm); margin-bottom:8px; }
+/* Two switches (2026-11-10): This unit / This year / All time, and My class / All classes. */
+.lb-filters{ display:flex; flex-wrap:wrap; gap:12px 16px; align-items:center; background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:14px 18px; box-shadow:var(--shadow-sm); margin-bottom:8px; }
 .lb-filters[hidden]{ display:none; }
-.lb-field{ display:grid; gap:4px; font-size:.78rem; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.05em; border:none; margin:0; padding:0; min-width:0; }
-.lb-field legend{ padding:0; margin-bottom:4px; }
-.lb-field select{ font:inherit; font-size:.95rem; text-transform:none; letter-spacing:0; font-weight:600; color:var(--ink); border:1.5px solid var(--line); border-radius:10px; padding:8px 10px; background:var(--card); max-width:100%; }
-.lb-topic{ flex:1 1 260px; }
-.lb-topic select{ width:100%; }
-.lb-span{ display:flex; flex-wrap:wrap; gap:6px; }
-.lb-span label{ display:flex; align-items:center; gap:6px; text-transform:none; letter-spacing:0; font-size:.92rem; font-weight:600; color:var(--ink); border:1.5px solid var(--line); border-radius:999px; padding:6px 14px 6px 10px; cursor:pointer; }
-.lb-span label:has(input:checked){ border-color:var(--accent); background:var(--accent-tint); color:var(--accent-dark); }
+.lb-switch{ display:flex; flex-wrap:wrap; gap:6px; }
+.lb-switch[hidden]{ display:none; }
+.lb-sw{ font:inherit; font-size:.95rem; font-weight:700; color:var(--ink-soft); background:var(--card); border:1.5px solid var(--line); border-radius:999px; padding:8px 16px; cursor:pointer; min-height:42px; }
+.lb-sw:hover{ border-color:var(--accent); color:var(--ink); }
+.lb-sw.on{ background:var(--accent); border-color:var(--accent); color:#fff; cursor:default; }
+.lb-sw:focus-visible{ outline:3px solid var(--accent-dark); outline-offset:2px; }
+.lb-switch + .lb-switch{ padding-left:16px; border-left:1.5px solid var(--line); }
+@media (max-width:560px){
+  .lb-filters{ padding:12px 14px; }
+  .lb-sw{ padding:8px 13px; font-size:.9rem; }
+  .lb-switch + .lb-switch{ padding-left:0; border-left:none; }
+}
+.lb-showing{ flex:1 1 100%; margin:0; font-size:.92rem; font-weight:600; color:var(--ink-soft); }
+.lb-unit-pick{ flex:1 1 100%; display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; padding-top:10px; border-top:1px dashed var(--line); }
+.lb-unit-pick[hidden]{ display:none; }
+.lb-unit-pick .lb-small{ margin:0; }
+.lb-unit-label{ display:flex; align-items:center; gap:8px; font-weight:700; font-size:.92rem; }
+.lb-unit-label select{ font:inherit; font-size:.95rem; font-weight:600; color:var(--ink); border:1.5px solid var(--line); border-radius:10px; padding:7px 10px; background:var(--card); max-width:min(420px, 72vw); }
 
 .lb-status{ min-height:1.4em; color:var(--ink-soft); font-weight:600; margin:10px 0; }
 .lb-status.bad{ color:var(--bad-ink); }
@@ -22,11 +33,28 @@
 .lb-gate p{ color:var(--ink-soft); line-height:1.5; }
 .lb-gate-msg{ min-height:1.3em; font-size:.9rem; }
 
-.lb-group{ margin-top:26px; }
-.lb-group-title{ font-size:1.2rem; margin:0 0 12px; }
-.lb-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:16px; }
+.lb-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(270px, 1fr)); gap:16px; margin-top:16px; }
 .lb-card{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:16px 16px 12px; box-shadow:var(--shadow-sm); min-width:0; }
-.lb-title{ font-size:1.02rem; margin:0; }
+.lb-card-big{ margin-top:16px; padding:20px 22px 16px; }
+.lb-title{ font-size:1.1rem; margin:0; }
+.lb-card-big .lb-title{ font-size:1.35rem; }
+
+/* The top 3 on a podium with Donny's trophies: 2nd, 1st (biggest), 3rd. */
+.lb-podium{ list-style:none; margin:6px 0 10px; padding:0; display:flex; justify-content:center; align-items:flex-end; gap:6px; }
+.lb-spot{ flex:0 1 33%; min-width:0; display:flex; flex-direction:column; align-items:center; text-align:center; padding:6px 4px 8px; border-radius:12px; }
+.lb-spot img{ display:block; width:62px; height:auto; margin-bottom:4px; }
+.lb-spot.p1 img{ width:84px; }
+.lb-spot.p2 img{ width:68px; }
+.lb-card-big .lb-spot img{ width:92px; }
+.lb-card-big .lb-spot.p2 img{ width:100px; }
+.lb-card-big .lb-spot.p1 img{ width:128px; }
+.lb-spot.me{ background:var(--accent-tint); box-shadow:inset 0 0 0 1.5px var(--accent); }
+.lb-spot-name{ max-width:100%; font-weight:700; font-size:.94rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.lb-card-big .lb-spot-name{ font-size:1.02rem; }
+.lb-spot-name .lb-year, .lb-spot-name .lb-period, .lb-you{ display:block; width:max-content; margin:2px auto 1px; }
+.lb-you{ font-size:.7rem; font-weight:800; color:#fff; background:var(--accent); border-radius:6px; padding:1px 7px; }
+.lb-spot-value{ font-variant-numeric:tabular-nums; font-weight:700; font-size:.84rem; color:var(--accent-dark); }
+.lb-year{ display:inline-block; font-size:.7rem; font-weight:800; color:#6b4e00; background:#fdf0c8; border-radius:6px; padding:1px 6px; margin-left:6px; vertical-align:1px; }
 .lb-blurb{ font-size:.82rem; color:var(--ink-soft); margin:4px 0 10px; line-height:1.4; }
 .lb-empty{ font-size:.9rem; color:var(--ink-soft); font-style:italic; margin:10px 0; }
 .lb-list{ list-style:none; margin:0; padding:0; display:grid; gap:2px; }
@@ -38,7 +66,7 @@
 .lb-row.silver .lb-place{ background:#c7ccd6; color:#2b303b; }
 .lb-row.bronze .lb-place{ background:#d99a6c; color:#3b1f0b; }
 .lb-name{ flex:1 1 auto; min-width:0; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.lb-period{ flex:none; font-size:.72rem; font-weight:700; color:var(--ink-soft); border:1px solid var(--line); border-radius:999px; padding:1px 7px; }
+.lb-period{ display:inline-block; font-size:.72rem; font-weight:700; color:var(--ink-soft); border:1px solid var(--line); border-radius:999px; padding:1px 7px; margin-left:6px; vertical-align:1px; }
 .lb-value{ flex:none; font-variant-numeric:tabular-nums; font-weight:700; color:var(--accent-dark); font-size:.88rem; }
 .lb-note{ font-size:.84rem; color:var(--ink-soft); margin:18px 0 0; line-height:1.5; }
 
@@ -75,3 +103,4 @@
 /* ---- dark mode inside the physical science site (book.css html[data-theme="dark"]) ---- */
 html[data-theme="dark"] .lb-roster-box{ background:#2b2512; border-color:#6b5a1e; }
 html[data-theme="dark"] .lb-saved td{ background:#16302a; }
+html[data-theme="dark"] .lb-year{ background:#4a3b0c; color:#fde68a; }

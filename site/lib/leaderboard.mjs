@@ -10,7 +10,7 @@ export function renderLeaderboard() {
   const v = (f) => `../assets/${f}?v=${assetVersion(f)}`;
   return head({
     title: `Leaderboard | ${site.title}`,
-    description: 'The class leaderboard: game wins, fastest times and practice.',
+    description: 'The class leaderboard: review game points, live game wins and practice.',
     unitId: null,
     depth,
     extraHead: `<link rel="stylesheet" href="${v('flashcards.css')}">\n<link rel="stylesheet" href="${v('leaderboard.css')}">\n<script src="${v('editor.js')}" defer></script>\n<script src="${v('leaderboard.js')}" defer></script>\n`
@@ -20,19 +20,17 @@ export function renderLeaderboard() {
     `<div class="hero hero-page hero-section"><div class="hero-inner">
 <div>
 <h1>Leaderboard</h1>
-<p class="lede">Game wins, fastest times and practice for every class. Sign in with Class Pass when you play or study, and your results count here.</p>
+<p class="lede">Review game points, live game wins and practice. Sign in with Class Pass when you play or study, and your results count here.</p>
 </div>
 <img class="hero-pic" src="${v('leaderboard-icon.webp')}" width="240" height="160" alt="">
 </div></div>
 <main id="main" class="container lb-page">
-<form class="lb-filters" id="lbFilters" hidden>
-<label class="lb-field"><span>Class</span><select id="lbPeriod"><option value="">All my classes</option></select></label>
-<fieldset class="lb-field lb-span"><legend>Time</legend>
-<label><input type="radio" name="lbSpan" value="year" checked> <span id="lbYearLabel">This school year</span></label>
-<label><input type="radio" name="lbSpan" value="all"> <span>All time</span></label>
-</fieldset>
-<label class="lb-field lb-topic"><span>Topic</span><select id="lbTopic"><option value="">All topics</option></select></label>
-</form>
+<div class="lb-filters" id="lbFilters" hidden>
+<div class="lb-switch" id="lbSpan" role="group" aria-label="Time"></div>
+<div class="lb-switch" id="lbClass" role="group" aria-label="Class"></div>
+<p class="lb-showing" id="lbShowing"></p>
+<div class="lb-unit-pick" id="lbUnitPick" hidden></div>
+</div>
 <p class="lb-status" id="lbStatus" role="status">Loading the leaderboard...</p>
 <div id="lbGate" hidden></div>
 <div id="lbBoards"></div>
