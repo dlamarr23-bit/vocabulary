@@ -6,7 +6,7 @@
    grader") there are four: review game points, live game wins, correct
    answers and practice, each with gold, silver and bronze trophies
    (assets/trophy-1/2/3.webp, cut from Donny's picture) for its top 3.
-   Two switches: This unit (the current unit, which the teacher picks
+   Two switches: This topic (the current topic, which the teacher picks
    here) / This year / All time, and My class / All classes. All time
    shows every class together, and students who have left the class list
    too, with their school year, so later classes can try to beat them.
@@ -154,7 +154,7 @@
   function drawFilters() {
     var unit = data.unit;
     var spans = [];
-    if (unit) spans.push({ label: 'This unit', on: view.span === 'unit', run: function () { show({ span: 'unit' }); } });
+    if (unit) spans.push({ label: 'This topic', on: view.span === 'unit', run: function () { show({ span: 'unit' }); } });
     spans.push({ label: 'This year', on: view.span === 'year', run: function () { show({ span: 'year' }); } });
     spans.push({ label: 'All time', on: view.span === 'all', run: function () { show({ span: 'all' }); } });
     switchRow($('lbSpan'), spans);
@@ -176,30 +176,31 @@
     }
     switchRow($('lbClass'), classes);
 
-    var says = view.span === 'unit' ? 'This unit: ' + plainName(unit.name) + ' (this school year, ' + data.year + ')'
-      : view.span === 'year' ? 'This school year (' + data.year + '), every unit'
+    var says = view.span === 'unit' ? 'This topic: ' + plainName(unit.name) + ' (this school year, ' + data.year + ')'
+      : view.span === 'year' ? 'This school year (' + data.year + '), every topic'
         : 'Every year, every class. Students from past years show their school year.';
     $('lbShowing').textContent = says;
     if (teacher) unitPicker();
     $('lbFilters').hidden = false;
   }
 
-  // The teacher picks the current unit (Donny, 2026-11-10): the one the students' This unit shows. Picking
-  // another unit here shows it to the teacher only, with a button to make it the current unit.
+  // The teacher picks the current topic (Donny, 2026-11-10; called a unit at first, "topic" since 2026-11-11): the
+  // folder the students' This topic shows. Picking another one here shows it to the teacher only, with a button to
+  // make it the current topic. (The code and the site's API still call it the unit.)
   function unitPicker() {
     var box = $('lbUnitPick');
     box.textContent = '';
     box.hidden = false;
     var units = data.units || [];
     if (!units.length) {
-      box.appendChild(mk('p', 'lb-small', 'For This unit, make a folder for each unit on the Flashcards page. Then pick the current one here.'));
+      box.appendChild(mk('p', 'lb-small', 'For This topic, make a folder for each topic on the Flashcards page. Then pick the current one here.'));
       return;
     }
     var cur = data.current;
-    var lab = mk('label', 'lb-unit-label', 'Unit ');
+    var lab = mk('label', 'lb-unit-label', 'Topic ');
     var sel = mk('select');
     if (!cur) {
-      var none = mk('option', null, 'Pick the unit you are teaching now');
+      var none = mk('option', null, 'Pick the topic you are teaching now');
       none.value = '';
       sel.appendChild(none);
     }
@@ -219,7 +220,7 @@
     msg.setAttribute('role', 'status');
     if (data.unit && (!cur || cur.id !== data.unit.id)) {
       var pick = data.unit;
-      var make = btn('Make this the current unit', 'btn lb-btn-sm', function () {
+      var make = btn('Make this the current topic', 'btn lb-btn-sm', function () {
         make.disabled = true;
         msg.textContent = ' Saving...';
         fetch('/api/board/unit', { method: 'PUT', headers: { 'X-IS8-Editor': '1', 'content-type': 'application/json' }, body: JSON.stringify({ id: pick.id }), cache: 'no-store' })
@@ -229,7 +230,7 @@
       box.appendChild(make);
       if (cur) box.appendChild(mk('span', 'lb-small', ' Students see ' + plainName(cur.name) + ' now. Only you see this one.'));
     } else if (cur) {
-      box.appendChild(mk('span', 'lb-small', ' Students see this unit under This unit. When you start a new unit, pick it here.'));
+      box.appendChild(mk('span', 'lb-small', ' Students see this topic under This topic. When you start a new topic, pick it here.'));
     }
     box.appendChild(msg);
   }
@@ -329,7 +330,7 @@
     box.appendChild(mk('p', 'lb-note', 'How it counts: review game points add up your best try on each of your teacher’s review games. Live games count when your teacher hosts them and you joined signed in with Class Pass, and a win is first place. Practice counts when you finish Match, a test, or every term in Learn while signed in. All time keeps every year, so you can try to beat students from past years.'));
   }
 
-  // Teacher only (Donny, 2026-11-03): which unit each review game counts toward. A game goes with the folder or
+  // Teacher only (Donny, 2026-11-03): which topic each review game counts toward. A game goes with the folder or
   // set whose name is in the game's title. A game whose sheet sent its points before the site kept titles counts
   // on This year and All time only until the sheet sends them again.
   function reviewTopicsBox() {
@@ -337,12 +338,12 @@
     var trouble = untitled || games.some(function (g) { return !g.topic; });
     var details = mk('details', 'lb-roster-box');
     if (trouble) details.open = true;
-    details.appendChild(mk('summary', null, 'Review games and their units'));
-    details.appendChild(mk('p', 'lb-small', 'A review game counts toward This unit when the unit’s folder name, or the name of a set in it, is in the game’s title, like “Review: Kinetic Energy and Speed” with a folder called Kinetic Energy and Speed. Every review game counts on This year and All time.'));
+    details.appendChild(mk('summary', null, 'Review games and their topics'));
+    details.appendChild(mk('p', 'lb-small', 'A review game counts toward This topic when the topic’s folder name, or the name of a set in it, is in the game’s title, like “Review: Kinetic Energy and Speed” with a folder called Kinetic Energy and Speed. Every review game counts on This year and All time.'));
     if (games.length) {
       var ul = mk('ul', 'lb-small');
       games.forEach(function (g) {
-        ul.appendChild(mk('li', null, g.title + ': ' + (g.topic ? 'goes with ' + g.topic : 'no unit yet (no folder or set name is in this title), so it counts on This year and All time only')));
+        ul.appendChild(mk('li', null, g.title + ': ' + (g.topic ? 'goes with ' + g.topic : 'no topic yet (no folder or set name is in this title), so it counts on This year and All time only')));
       });
       details.appendChild(ul);
     }

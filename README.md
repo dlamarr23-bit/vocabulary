@@ -23,7 +23,7 @@ This kit is a complete vocabulary website you run yourself, for free, on GitHub 
 - **Class Pass and a class leaderboard.** Students sign in with their school Google account (Class
   Pass) when they play in class or study at home. Four leaderboards (review game points, live game
   wins, correct answers and practice), each with gold, silver and bronze trophies for its top 3,
-  shown as "First L.". Two switches: This unit / This year / All time, and My class / All classes.
+  shown as "First L.". Two switches: This topic / This year / All time, and My class / All classes.
   Signing in is never required to study or play.
 
 The kit starts empty: no sets, no folders. Everything you make is saved on your Cloudflare account,
@@ -215,13 +215,13 @@ from GitHub, step 4).
   it on, open **Review game key** at the bottom of this page (signed in as the teacher), copy the
   key, and paste it into the sheet's Settings tab in **Website leaderboard key**. Changing the
   teacher password changes the key, so paste the new one into each review game sheet.
-- **This unit** shows the unit you are teaching now. Pick it at the top of the Leaderboard page
-  while signed in as the teacher: choose the unit's folder (from the Flashcards page) in the **Unit**
-  menu, then click **Make this the current unit**. Students see only that unit's sets, live games
+- **This topic** shows the topic you are teaching now. Pick it at the top of the Leaderboard page
+  while signed in as the teacher: choose the topic's folder (from the Flashcards page) in the **Topic**
+  menu, then click **Make this the current topic**. Students see only that topic's sets, live games
   played on its sets, and review games whose title names the folder or a set in it (like "Forces and
-  Motion Review Game" with a folder called Forces and Motion). When you start a new unit, pick it, and
-  This unit starts over for everyone. Picking a unit without clicking the button shows it to you only.
-  Until you pick one, students start on This year.
+  Motion Review Game" with a folder called Forces and Motion). When you start a new topic, pick it,
+  and This topic starts over for everyone. Picking a topic without clicking the button shows it to you
+  only. Until you pick one, students start on This year.
 - **This year** is everything since August 1. **All time** is every year and every class together,
   so later classes can try to beat earlier ones.
 - **Past students:** when a student leaves the class list (a new school year's list, or **Remove**),
