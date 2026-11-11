@@ -24,6 +24,11 @@
      code signs them out. The teacher sees and changes the code
      (/api/guest/code).
 
+   - a form a student hasn't finished on that site (the Extra Credit book
+     forms, Donny 2026-11-11) is kept with their Class Pass sign-in
+     (/api/pass/draft), so they can finish it on another computer:
+     formDraft, saveFormDraft, formDone.
+
    The state also says whether this frame can keep a sign-in at all (kept):
    some browsers block a framed site's storage, and then the page around it
    keeps its own record.
@@ -96,6 +101,25 @@
     });
   }
 
+  // the student's own Class Pass calls (their sign-in key, not the teacher's cookie)
+  function passCall(method, path, body) {
+    var token = window.IS8Pass.token();
+    if (!token) { var none = new Error('Sign in with Class Pass to save your answers to your account.'); none.status = 401; return Promise.reject(none); }
+    return fetch('/api/pass/' + path, {
+      method: method,
+      cache: 'no-store',
+      keepalive: method !== 'GET' && JSON.stringify(body || {}).length < 60000, // a save of the words can finish after the page closes
+      headers: { 'X-Pass-Client': '1', 'X-Pass': token, 'content-type': 'application/json' },
+      body: method === 'GET' ? undefined : JSON.stringify(body || {})
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (d) {
+        if (!r.ok) { var err = new Error(d.error || 'Class Pass did not answer. Try again in a minute.'); err.status = r.status; throw err; }
+        return d;
+      });
+    });
+  }
+  var FORM = /^[a-z0-9-]{1,40}$/;
+
   window.addEventListener('message', function (e) {
     if (e.origin !== BOOK_SITE || e.source !== window.parent) return;
     var m = e.data && e.data.vocabBridge;
@@ -125,6 +149,21 @@
       // the Class List sheet (2026-11-10): is it sending the class list, its web app (the Launchpad's helper for Update now) and the key it needs
       case 'classList': reply(call('GET', 'classlist').catch(signedOut)); break;
       case 'refresh': session(); break;
+      // a student's unfinished form (the Extra Credit book forms)
+      case 'formDraft':
+        if (!FORM.test(String(m.form || ''))) { reply(Promise.reject(new Error('Not found.'))); break; }
+        reply(passCall('GET', 'draft?form=' + encodeURIComponent(m.form)));
+        break;
+      case 'saveFormDraft':
+        if (!FORM.test(String(m.form || ''))) { reply(Promise.reject(new Error('Not found.'))); break; }
+        var save = { form: m.form, id: String(m.draftId || ''), data: String(m.data || '') };
+        if (typeof m.picture === 'string') save.picture = m.picture;
+        reply(passCall('POST', 'draft', save));
+        break;
+      case 'formDone':
+        if (!FORM.test(String(m.form || ''))) { reply(Promise.reject(new Error('Not found.'))); break; }
+        reply(passCall('POST', 'draft-done', { form: m.form, id: String(m.draftId || '') }));
+        break;
       // a guest: the code gives a key; signing out forgets it
       case 'guest':
         reply(call('POST', 'guest', { code: String(m.code || '') }).then(function (d) {

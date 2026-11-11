@@ -25,6 +25,13 @@
 //             or Remove): their name and period, so their results stay on
 //             the All time leaderboards for later classes to beat (Donny,
 //             2026-11-10). Back on the roster, they leave this list.
+//   drafts    a student's unfinished form on the physical science site, one
+//             row per student per form (Donny, 2026-11-11: the Extra Credit
+//             Fiction and Nonfiction book forms, which students finish on
+//             another computer): the answers (data, the page's own JSON), the
+//             picture kept apart (so a save of the words alone doesn't send it
+//             again), and done_id, the id of the form last turned in, so an
+//             old copy of it on another computer isn't picked up again.
 import { DurableObject } from 'cloudflare:workers';
 
 const SESSION_DAYS = 120;
@@ -48,6 +55,13 @@ const int = (v, lo, hi) => {
 const EMAIL = /^[^@\s,;<>"]+@[^@\s,;<>"]+\.[a-z]{2,}$/i;
 const SET_ID = /^[A-Za-z0-9_-]{1,60}$/;
 const PRACTICE = ['match', 'test', 'learn'];
+// Forms whose drafts are kept (drafts table), the most one draft's words and picture can hold, and how often a
+// student can save (a page saves every few seconds while they type; this stops a runaway page, not a student).
+const DRAFT_FORMS = ['book-fiction', 'book-nonfiction'];
+const DRAFT_MAX = 200000;
+const DRAFT_PICTURE_MAX = 1800000; // a SQLite value holds up to 2 MB
+const DRAFT_SAVES_PER_HOUR = 900;
+const DRAFT_ID = /^[a-z0-9]{6,40}$/;
 // Surge Showdown moved onto this site on 2026-11-04 (Donny), so its games count too.
 const GAMES = ['volley', 'blast', 'match', 'royale', 'surge'];
 // The day in California, for "once a day" counting.
@@ -93,6 +107,8 @@ export class Leaderboard extends DurableObject {
     // Each review game's title, which says which topic it belongs to (Donny, 2026-10-27).
     this.sql.exec(`CREATE TABLE IF NOT EXISTS review_games (id TEXT PRIMARY KEY, title TEXT, updated INTEGER)`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS past (email TEXT PRIMARY KEY, first TEXT, last TEXT, period TEXT, left INTEGER)`);
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS drafts (email TEXT, form TEXT, id TEXT, data TEXT, picture TEXT, saved INTEGER,
+      done_id TEXT, done INTEGER, saves INTEGER, hour INTEGER, PRIMARY KEY (email, form))`);
     this.sql.exec(`CREATE INDEX IF NOT EXISTS events_email ON events (email)`);
     this.sql.exec(`CREATE INDEX IF NOT EXISTS events_at ON events (at)`);
     this.sql.exec(`CREATE INDEX IF NOT EXISTS sessions_email ON sessions (email)`);
@@ -127,6 +143,9 @@ export class Leaderboard extends DurableObject {
       case 'live': return this.live(b);
       case 'review': return this.review(b);
       case 'boards': return this.boards(b);
+      case 'draft-get': return this.draftGet(b);
+      case 'draft-put': return this.draftPut(b);
+      case 'draft-done': return this.draftDone(b);
       default: throw Object.assign(new Error('Not found.'), { status: 404 });
     }
   }
@@ -276,6 +295,63 @@ export class Leaderboard extends DurableObject {
 
   async signOut(b) {
     if (/^[0-9a-f]{64}$/.test(String(b.token || ''))) this.sql.exec('DELETE FROM sessions WHERE key = ?', await sha(b.token));
+    return { ok: true };
+  }
+
+  /* ---------------- drafts (a form a student hasn't finished) ---------------- */
+
+  // the signed-in student and the form, or an error a student can read
+  async draftWho(b) {
+    const me = await this.check(b.token);
+    if (!me) throw Object.assign(new Error('Sign in with Class Pass to save your answers to your account.'), { status: 401 });
+    const form = String(b.form || '');
+    if (!DRAFT_FORMS.includes(form)) throw Object.assign(new Error('That form is not one that saves.'), { status: 400 });
+    return { email: me.email, form };
+  }
+
+  // { draft: the answers or null, picture: or null, saved, doneId }
+  async draftGet(b) {
+    const { email, form } = await this.draftWho(b);
+    const r = this.all('SELECT data, picture, saved, done_id FROM drafts WHERE email = ? AND form = ?', email, form)[0];
+    return { draft: r && r.data ? r.data : null, picture: r && r.data && r.picture ? r.picture : null, saved: (r && r.saved) || 0, doneId: (r && r.done_id) || '' };
+  }
+
+  // b.data: the answers (the page's JSON, as text). b.picture: left out = keep the one saved, '' = none, text = this one.
+  async draftPut(b) {
+    const { email, form } = await this.draftWho(b);
+    const id = String(b.id || '');
+    const data = typeof b.data === 'string' ? b.data : '';
+    if (!DRAFT_ID.test(id) || !data) throw Object.assign(new Error('Those answers could not be saved.'), { status: 400 });
+    if (data.length > DRAFT_MAX) throw Object.assign(new Error('Those answers are too long to save.'), { status: 413 });
+    const pic = b.picture === undefined ? undefined : String(b.picture || '');
+    if (pic && pic.length > DRAFT_PICTURE_MAX) throw Object.assign(new Error('That picture is too big to save to your account.'), { status: 413 });
+    const now = Date.now();
+    const hour = Math.floor(now / 3600000);
+    const r = this.all('SELECT done_id, saves, hour FROM drafts WHERE email = ? AND form = ?', email, form)[0];
+    if (r && r.done_id === id) return { saved: 0, turnedIn: true }; // an old copy of a form already turned in
+    const saves = r && r.hour === hour ? (r.saves || 0) + 1 : 1;
+    if (saves > DRAFT_SAVES_PER_HOUR) throw Object.assign(new Error('Too many saves this hour. Your answers are still saved on this computer.'), { status: 429 });
+    if (!r) {
+      this.sql.exec('INSERT INTO drafts (email, form, id, data, picture, saved, done_id, done, saves, hour) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        email, form, id, data, pic || null, now, null, null, saves, hour);
+    } else if (pic === undefined) {
+      this.sql.exec('UPDATE drafts SET id = ?, data = ?, saved = ?, saves = ?, hour = ? WHERE email = ? AND form = ?', id, data, now, saves, hour, email, form);
+    } else {
+      this.sql.exec('UPDATE drafts SET id = ?, data = ?, picture = ?, saved = ?, saves = ?, hour = ? WHERE email = ? AND form = ?',
+        id, data, pic || null, now, saves, hour, email, form);
+    }
+    return { saved: now };
+  }
+
+  // the form was turned in: forget the draft, remember which one it was
+  async draftDone(b) {
+    const { email, form } = await this.draftWho(b);
+    const id = String(b.id || '');
+    if (!DRAFT_ID.test(id)) throw Object.assign(new Error('Not found.'), { status: 400 });
+    const now = Date.now();
+    this.sql.exec(`INSERT INTO drafts (email, form, id, data, picture, saved, done_id, done, saves, hour) VALUES (?, ?, ?, NULL, NULL, ?, ?, ?, 0, 0)
+      ON CONFLICT (email, form) DO UPDATE SET data = NULL, picture = NULL, saved = excluded.saved, done_id = excluded.done_id, done = excluded.done`,
+    email, form, id, now, id, now);
     return { ok: true };
   }
 

@@ -1188,6 +1188,18 @@ async function passApi(request, env, url, b) {
   if (b === 'google' && method === 'POST') return passGoogle(env, body);
   if (b === 'claim' && method === 'POST') return boardJSON(await board(env, 'claim', { nonce: String(body.nonce || '') }));
   if (b === 'signout' && method === 'POST') return boardJSON(await board(env, 'signout', { token: passToken(request) }));
+  // A form the student hasn't finished on the physical science site (the Extra Credit book forms, Donny 2026-11-11),
+  // kept with their Class Pass sign-in so they can finish it on another computer. Only the student who saved it can read it.
+  //   GET  draft?form=book-fiction            { draft, picture, saved, doneId }
+  //   POST draft      { form, id, data, picture? }   (picture left out = keep the saved one)
+  //   POST draft-done { form, id }            turned in: the draft is forgotten
+  if (b === 'draft' && method === 'GET') return boardJSON(await board(env, 'draft-get', { token: passToken(request), form: String(url.searchParams.get('form') || '') }));
+  if (b === 'draft' && method === 'POST') {
+    const out = { token: passToken(request), form: String(body.form || ''), id: String(body.id || ''), data: typeof body.data === 'string' ? body.data : '' };
+    if (typeof body.picture === 'string') out.picture = body.picture;
+    return boardJSON(await board(env, 'draft-put', out));
+  }
+  if (b === 'draft-done' && method === 'POST') return boardJSON(await board(env, 'draft-done', { token: passToken(request), form: String(body.form || ''), id: String(body.id || '') }));
   if (b === 'report' && method === 'POST') {
     const setId = String(body.setId || '');
     const lib = await library(env, url);
