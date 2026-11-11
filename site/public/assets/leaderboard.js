@@ -294,16 +294,25 @@
     // The podium takes the first rows that are in the top 3 (at most three of them).
     var n = 0;
     while (n < 3 && n < bd.rows.length && bd.rows[n].place <= 3) n++;
-    c.appendChild(podium(bd, bd.rows.slice(0, n), allClasses));
+    // The big card (Donny, 2026-11-11: "a lot of dead space"): the podium on the left, 4th place down on the
+    // right, side by side (stacked on a phone).
+    var body = big ? mk('div', 'lb-big-body') : c;
+    body.appendChild(podium(bd, bd.rows.slice(0, n), allClasses));
+    var rest = big ? mk('div', 'lb-big-rest') : c;
     if (bd.rows.length > n) {
       var ol = mk('ol', 'lb-list');
       bd.rows.slice(n).forEach(function (r) { ol.appendChild(rowEl(bd, r, allClasses)); });
-      c.appendChild(ol);
+      rest.appendChild(ol);
     }
     if (bd.mine) {
       var gap = mk('ol', 'lb-list lb-mine');
       gap.appendChild(rowEl(bd, bd.mine, allClasses));
-      c.appendChild(gap);
+      rest.appendChild(gap);
+    }
+    if (big) {
+      if (rest.firstChild) body.appendChild(rest);
+      else body.classList.add('lb-big-alone');
+      c.appendChild(body);
     }
     return c;
   }
