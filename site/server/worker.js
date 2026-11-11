@@ -1230,7 +1230,7 @@ function schoolYear(now = Date.now()) {
 
 // The leaderboards (fewer choices since 2026-11-10, Donny: "make it easier for an 8th grader"). A signed in
 // student or the teacher can look.
-//   ?span=unit       the current unit (a Flashcards folder the teacher picks, and the folders in it), this school year
+//   ?span=unit       This topic: the current topic (a flashcard set the teacher picks; topicOf), this school year
 //   ?span=year       everything this school year
 //   ?span=all        everything ever, every class together, with past students (so later classes can beat them)
 //   ?period=3        one class ('' = all of them together; not with span=all)
@@ -1240,25 +1240,23 @@ async function boardsApi(request, env, url) {
   if (!env.LIVE) return needLive();
   const teacher = await isEditor(request, env);
   const lib = await library(env, url);
-  const folderOf = (id) => lib.folders.find((f) => f.id === id) || null;
+  const topic = topicOf(lib);
   const saved = env.FLASHCARDS ? await env.FLASHCARDS.get('leaderboard-unit', 'json') : null;
-  const current = saved && folderOf(saved.id);
-  const asked = teacher ? folderOf(String(url.searchParams.get('unit') || '')) : null;
+  const current = saved && topic(saved.id);
+  const asked = teacher ? topic(String(url.searchParams.get('unit') || '')) : null;
   const unit = asked || current;
   let span = String(url.searchParams.get('span') || '');
   if (!['unit', 'year', 'all'].includes(span)) span = current ? 'unit' : 'year';
   if (span === 'unit' && !unit) span = 'year';
   let sets = null, picked = null;
   if (span === 'unit') {
-    const inside = new Set([unit.id, ...lib.folders.filter((x) => x.parent === unit.id).map((x) => x.id)]);
-    sets = lib.sets.filter((x) => inside.has(x.folder)).map((x) => x.id);
-    // Review games belong to the unit named in their title (Donny, 2026-10-27):
-    // "Mass, Acceleration, and Collisions Review Game" goes with the folder or set
+    // Review games belong to the topic named in their title (Donny, 2026-10-27):
+    // "Mass, Acceleration, and Collisions Review Game" goes with the set
     // called "🚗💥🚙Mass, Acceleration, and Collisions🚗💥🚙". The game server
     // matches each game's title against every folder and set name (the longest
-    // name found wins) and counts the game only when its unit is the one shown.
-    picked = lib.folders.filter((x) => inside.has(x.id)).map((x) => x.name)
-      .concat(lib.sets.filter((x) => inside.has(x.folder)).map((x) => x.title));
+    // name found wins) and counts the game only when its topic is the one shown.
+    sets = unit.sets;
+    picked = unit.names;
   }
   const year = schoolYear();
   const r = await board(env, 'boards', {
@@ -1272,20 +1270,41 @@ async function boardsApi(request, env, url) {
     picked
   });
   if (r.status !== 200) return boardJSON(r);
-  const brief = (f) => f && { id: f.id, name: f.name };
+  const brief = (t) => t && { id: t.id, name: t.name };
   const out = { ...r.data, teacher, year: year.label, span, unit: brief(unit), current: brief(current) };
-  // The teacher picks the current unit from the folders (a folder inside another comes right after it).
+  // The teacher picks the current topic: one of the flashcard sets, in the Flashcards page's order
+  // (folder by folder, a folder inside another right after it, then sets in no folder).
   if (teacher) {
-    out.units = [];
-    lib.folders.filter((f) => !f.parent).forEach((f) => {
-      out.units.push({ id: f.id, name: f.name });
-      lib.folders.filter((k) => k.parent === f.id).forEach((k) => out.units.push({ id: k.id, name: k.name, inside: true }));
-    });
+    const order = [];
+    const add = (fid) => lib.sets.forEach((s) => { if ((s.folder || null) === fid && !order.includes(s)) order.push(s); });
+    lib.folders.filter((f) => !f.parent).forEach((f) => { add(f.id); lib.folders.filter((k) => k.parent === f.id).forEach((k) => add(k.id)); });
+    add(null);
+    lib.sets.forEach((s) => { if (!order.includes(s)) order.push(s); });
+    out.units = order.map((s) => ({ id: s.id, name: s.title }));
   }
   return json(out);
 }
 
-// The teacher picks the current unit (PUT { id }, a folder's id, or '' for none).
+// A topic for the leaderboard's This topic, by id: { id, name, sets (its set ids), names (what a review
+// game's title must name) }. A topic is a flashcard set (Donny, 2026-11-11: his topics are the sets, like
+// "👓Frame of Reference👓"). A folder (a textbook unit) still works, for one picked before that.
+function topicOf(lib) {
+  return (id) => {
+    const s = lib.sets.find((x) => x.id === id);
+    if (s) return { id: s.id, name: s.title, sets: [s.id], names: [s.title] };
+    const f = lib.folders.find((x) => x.id === id);
+    if (!f) return null;
+    const inside = new Set([f.id, ...lib.folders.filter((x) => x.parent === f.id).map((x) => x.id)]);
+    return {
+      id: f.id,
+      name: f.name,
+      sets: lib.sets.filter((x) => inside.has(x.folder)).map((x) => x.id),
+      names: lib.folders.filter((x) => inside.has(x.id)).map((x) => x.name).concat(lib.sets.filter((x) => inside.has(x.folder)).map((x) => x.title))
+    };
+  };
+}
+
+// The teacher picks the current topic (PUT { id }, a flashcard set's id, or '' for none).
 async function putBoardUnit(request, env, url) {
   let body = {};
   try { body = (await request.json()) || {}; } catch { body = {}; }
@@ -1294,11 +1313,10 @@ async function putBoardUnit(request, env, url) {
     await env.FLASHCARDS.delete('leaderboard-unit');
     return json({ ok: true, current: null });
   }
-  const lib = await library(env, url);
-  const f = lib.folders.find((x) => x.id === id);
-  if (!f) return json({ error: 'That folder is not on the Flashcards page anymore. Reload the page.' }, 404);
-  await env.FLASHCARDS.put('leaderboard-unit', JSON.stringify({ id: f.id, set: Date.now() }));
-  return json({ ok: true, current: { id: f.id, name: f.name } });
+  const t = topicOf(await library(env, url))(id);
+  if (!t) return json({ error: 'That set is not on the Flashcards page anymore. Reload the page.' }, 404);
+  await env.FLASHCARDS.put('leaderboard-unit', JSON.stringify({ id: t.id, set: Date.now() }));
+  return json({ ok: true, current: { id: t.id, name: t.name } });
 }
 
 // The roster (teacher only): GET it, PUT a pasted list, POST /edit, /remove or /reset one student.

@@ -53,16 +53,10 @@
   }
   function plural(n, word) { return n.toLocaleString('en-US') + ' ' + word + (n === 1 ? '' : /(s|sh|ch|x)$/.test(word) ? 'es' : 's'); }
   var periodName = function (p) { return /^\d+$/.test(p) ? 'Period ' + p : p; };
-  // "🚗💥🚙Mass, Acceleration, and Collisions🚗💥🚙" -> "Mass, Acceleration, and Collisions"
-  function plainName(name) {
-    var t = String(name || '');
-    try { t = t.replace(new RegExp('^[^\\p{L}\\p{N}]+|[^\\p{L}\\p{N}).!?]+$', 'gu'), ''); } catch (e) { /* an old browser: as it is */ }
-    return t || String(name || '');
-  }
 
-  // What is showing: span (unit, year or all), period ('' = all classes) and, for the teacher only, unit (a
-  // folder to look at instead of the current unit). Remembered on this device (span and period), from
-  // 2026-11-10 under a new name, so everyone starts on This unit once.
+  // What is showing: span (unit = This topic, year or all), period ('' = all classes) and, for the teacher
+  // only, unit (a topic to look at instead of the current one). Remembered on this device (span and period),
+  // from 2026-11-10 under a new name, so everyone starts on This topic once.
   var KEY = 'is8-board-view';
   var view = null;
   function saved() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } }
@@ -176,7 +170,7 @@
     }
     switchRow($('lbClass'), classes);
 
-    var says = view.span === 'unit' ? 'This topic: ' + plainName(unit.name) + ' (this school year, ' + data.year + ')'
+    var says = view.span === 'unit' ? 'This topic: ' + unit.name + ' (this school year, ' + data.year + ')'
       : view.span === 'year' ? 'This school year (' + data.year + '), every topic'
         : 'Every year, every class. Students from past years show their school year.';
     $('lbShowing').textContent = says;
@@ -185,7 +179,7 @@
   }
 
   // The teacher picks the current topic (Donny, 2026-11-10; called a unit at first, "topic" since 2026-11-11): the
-  // folder the students' This topic shows. Picking another one here shows it to the teacher only, with a button to
+  // flashcard set (a topic) the students' This topic shows. Picking another one here shows it to the teacher only, with a button to
   // make it the current topic. (The code and the site's API still call it the unit.)
   function unitPicker() {
     var box = $('lbUnitPick');
@@ -193,7 +187,7 @@
     box.hidden = false;
     var units = data.units || [];
     if (!units.length) {
-      box.appendChild(mk('p', 'lb-small', 'For This topic, make a folder for each topic on the Flashcards page. Then pick the current one here.'));
+      box.appendChild(mk('p', 'lb-small', 'For This topic, make a flashcard set for each topic on the Flashcards page. Then pick the current one here.'));
       return;
     }
     var cur = data.current;
@@ -205,7 +199,7 @@
       sel.appendChild(none);
     }
     units.forEach(function (u) {
-      var o = mk('option', null, (u.inside ? '   ' : '') + plainName(u.name) + (cur && cur.id === u.id ? ' (current)' : ''));
+      var o = mk('option', null, u.name + (cur && cur.id === u.id ? ' (current)' : ''));
       o.value = u.id;
       sel.appendChild(o);
     });
@@ -228,7 +222,7 @@
           .then(function () { show({ unit: '', span: 'unit' }); }, function (err) { make.disabled = false; msg.textContent = ' ' + err.message; });
       });
       box.appendChild(make);
-      if (cur) box.appendChild(mk('span', 'lb-small', ' Students see ' + plainName(cur.name) + ' now. Only you see this one.'));
+      if (cur) box.appendChild(mk('span', 'lb-small', ' Students see ' + cur.name + ' now. Only you see this one.'));
     } else if (cur) {
       box.appendChild(mk('span', 'lb-small', ' Students see this topic under This topic. When you start a new topic, pick it here.'));
     }
@@ -348,7 +342,7 @@
     var details = mk('details', 'lb-roster-box');
     if (trouble) details.open = true;
     details.appendChild(mk('summary', null, 'Review games and their topics'));
-    details.appendChild(mk('p', 'lb-small', 'A review game counts toward This topic when the topic’s folder name, or the name of a set in it, is in the game’s title, like “Review: Kinetic Energy and Speed” with a folder called Kinetic Energy and Speed. Every review game counts on This year and All time.'));
+    details.appendChild(mk('p', 'lb-small', 'A review game counts toward This topic when the topic’s name (its flashcard set’s name, without the emojis) is in the game’s title, like “Kinetic Energy and Speed Review Game” for the topic Kinetic Energy and Speed. Every review game counts on This year and All time.'));
     if (games.length) {
       var ul = mk('ul', 'lb-small');
       games.forEach(function (g) {
