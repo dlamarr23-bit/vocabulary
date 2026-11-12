@@ -2039,8 +2039,24 @@ LiveGame.prototype.surgeRoom = function () {
 
 // This Worker has no pages of its own. The Pages site reaches the games
 // through its LIVE binding.
+//
+// The nightly link check (Donny, 2026-11-11): Cloudflare runs scheduled() at
+// the Cron Trigger in wrangler.toml ("23 10 * * *", 10:23 UTC every day), and
+// the class leaderboard checks some of the physical science site's videos and
+// links (links.js says how).
 export default {
   fetch() {
     return new Response('Not found', { status: 404 });
+  },
+  scheduled(event, env, ctx) {
+    if (!env.BOARD) return;
+    const run = env.BOARD.get(env.BOARD.idFromName('main')).fetch('https://board/board/links-run', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ cron: event.cron || '' })
+    }).then(async (res) => {
+      if (!res.ok) console.log('Link check did not run: ' + (await res.text()).slice(0, 300));
+    });
+    ctx.waitUntil(run);
   }
 };

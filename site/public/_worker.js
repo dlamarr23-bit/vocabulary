@@ -24,6 +24,12 @@
 //     site without Class Pass (/api/guest, /api/guest/code for the teacher)
 //   - takes that site's bug reports and ideas (/api/pass/feedback, anyone)
 //     for the teacher's Feedback inbox there (/api/feedback, teacher only)
+//   - shows the teacher the nightly check of that site's videos and links
+//     (/api/links, teacher only; the check itself runs on the game server,
+//     game-server/src/links.js), keeps the replacements he picks (KV
+//     link-swaps), which every page of that site gets with its words
+//     (/api/book-text/<page>), and hands the Class List sheet the weekly
+//     report to email him (/api/classlist/links, with the Class list key)
 //   - keeps the multiple choice question sets Battle Royale plays
 //     (/api/qsets), which only the teacher can see
 //
@@ -536,6 +542,8 @@ async function api(request, env, url) {
   if (a === 'review' && b === 'results' && !c && method === 'POST') return reviewResults(request, env);
   // The teacher's Class List Google Sheet sends the class list (with the Class list key from the Leaderboard page).
   if (a === 'classlist' && b === 'sync' && !c && method === 'POST') return classListSync(request, env);
+  // ... and asks for the nightly link check's weekly report, to email it (the same key).
+  if (a === 'classlist' && b === 'links' && !c && method === 'POST') return classListLinks(request, env);
 
   if (!cloudReady(env)) return json({ error: 'Saving to the site is not switched on yet.' }, 503);
   // A page on another site can post a form here but cannot add this header,
@@ -558,6 +566,7 @@ async function api(request, env, url) {
   if (a === 'guest' && b === 'code' && !c) return guestCodeApi(request, env);
   if (a === 'roster') return rosterApi(request, env, url, b);
   if (a === 'feedback' && !c) return feedbackApi(request, env, url, b);
+  if (a === 'links' && !c) return linksApi(request, env, b);
   if (a === 'board' && b === 'unit' && !c && method === 'PUT') return putBoardUnit(request, env, url);
   if (a === 'review' && b === 'key' && !c && method === 'GET') return json({ key: await reviewKey(env) });
   if (a === 'classlist' && !b && method === 'GET') return classListGet(env);
@@ -609,11 +618,57 @@ const BOOK_PAGE = /^[a-z0-9][a-z0-9-]{0,79}$/;
 const BOOK_BOX = /^[a-z][a-z0-9]{0,11}-[a-z0-9]{1,16}(?:-\d{1,4})?$/;
 const MAX_BOOK_TEXT = 512 * 1024;
 
+// The page also gets the replacements the teacher picked for videos and links that stopped working (links, from
+// the nightly link check, KV link-swaps): { <the link as the page has it, or yt:<video id>>: { url, title, source } }.
 async function getBookText(env, page) {
   const headers = { 'Access-Control-Allow-Origin': BOOK_SITE, Vary: 'Origin', 'cache-control': 'public, max-age=20' };
   if (!BOOK_PAGE.test(page)) return json({ error: 'There is no page with that name.' }, 404, headers);
-  const saved = env.FLASHCARDS ? await env.FLASHCARDS.get('book-text:' + page, 'json') : null;
-  return json({ edits: (saved && saved.edits) || {}, saved: (saved && saved.saved) || 0 }, 200, headers);
+  const [saved, links] = env.FLASHCARDS
+    ? await Promise.all([env.FLASHCARDS.get('book-text:' + page, 'json'), env.FLASHCARDS.get('link-swaps', 'json')])
+    : [null, null];
+  return json({ edits: (saved && saved.edits) || {}, saved: (saved && saved.saved) || 0, links: (links && links.swaps) || {} }, 200, headers);
+}
+
+/* ---------------- the nightly link check (Donny, 2026-11-11) ---------------- */
+
+// The physical science site's videos and web links are checked a few each night by the game server (Cron Trigger
+// on the vocab-live Worker, game-server/src/links.js), which keeps everything with the class leaderboard. The
+// teacher's Site check page there (site-check.html) comes here through the bridge:
+//   GET  /api/links          everything (what is broken, the picks, the free limits)
+//   POST /api/links/run      check some now (the same as a night's run)
+//   POST /api/links/use      { key, url, own?, title? }  put a replacement in
+//   POST /api/links/undo     { key }                     take it out again
+//   POST /api/links/ok       { key, ok }                 it works after all (not listed as a problem)
+//   POST /api/links/find     { key }                     look for replacements now (one Brave search)
+//   POST /api/links/check    { key }                     check that one now
+// Each answer carries the replacements in use (swaps); a copy is kept in KV link-swaps for the pages.
+async function linksApi(request, env, b) {
+  if (!env.LIVE) return needLive();
+  const method = request.method;
+  let body = {};
+  if (method !== 'GET') { try { body = (await request.json()) || {}; } catch { body = {}; } }
+  const key = String(body.key || '').slice(0, 1100);
+  let r;
+  if (!b && method === 'GET') r = await board(env, 'links-status', {});
+  else if (b === 'run' && method === 'POST') r = await board(env, 'links-run', { manual: true });
+  else if (b === 'use' && method === 'POST') {
+    r = await board(env, 'links-use', { key, url: String(body.url || '').trim().slice(0, 1100), own: Boolean(body.own),
+      title: String(body.title || '').slice(0, 200), source: String(body.source || '').slice(0, 120) });
+  } else if (b === 'undo' && method === 'POST') r = await board(env, 'links-undo', { key });
+  else if (b === 'ok' && method === 'POST') r = await board(env, 'links-ok', { key, ok: Boolean(body.ok) });
+  else if (b === 'find' && method === 'POST') r = await board(env, 'links-find', { key });
+  else if (b === 'check' && method === 'POST') r = await board(env, 'links-check', { key });
+  else return json({ error: 'Not found.' }, 404);
+  if (r.status === 200 && r.data && r.data.swaps && env.FLASHCARDS) await keepSwaps(env, r.data.swaps);
+  return boardJSON(r);
+}
+// KV link-swaps follows the game server's list (written only when it changed).
+async function keepSwaps(env, swaps) {
+  const now = await env.FLASHCARDS.get('link-swaps', 'json');
+  const same = JSON.stringify((now && now.swaps) || {}) === JSON.stringify(swaps);
+  if (same) return;
+  if (Object.keys(swaps).length) await env.FLASHCARDS.put('link-swaps', JSON.stringify({ swaps, saved: Date.now() }));
+  else await env.FLASHCARDS.delete('link-swaps');
 }
 
 // The teacher sends every change on the page at once; the page's entry is replaced (or removed when
@@ -1471,6 +1526,22 @@ async function classListSync(request, env) {
   const version = /^\d{4}\.\d{2}\.\d{2}[a-z]?$/.test(String(h.version || '')) ? String(h.version) : '';
   await env.FLASHCARDS.put('class-list', JSON.stringify({ classes, students: rows.length, synced: Date.now(), url, version, added, removed }));
   return json({ ok: true, saved: r.data.saved, added, removed });
+}
+
+// The Class List sheet, once a day: the nightly link check's reports it has not emailed yet. It sends back the ids
+// it emailed (sent), which are then marked. { key, sent: [ids] } -> { reports: [{ id, at, items }], page }
+async function classListLinks(request, env) {
+  if (!env.LIVE) return needLive();
+  if (!env.EDIT_PASSWORD) return json({ error: 'This site has no teacher password yet (README, step 3).' }, 503);
+  let body = null;
+  try { body = await request.json(); } catch { body = null; }
+  const given = String((body && body.key) || '').trim().toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(given) || !same(given, await classListKey(env))) {
+    await new Promise((r) => setTimeout(r, 700));
+    return json({ error: 'That Site key is not right. Copy it again from the website’s Leaderboard page (Class list), into the sheet’s Settings tab.' }, 401);
+  }
+  const sent = (Array.isArray(body.sent) ? body.sent : []).slice(0, 50).map(Number).filter((n) => Number.isInteger(n) && n > 0);
+  return boardJSON(await board(env, 'links-news', { sent }));
 }
 
 // The teacher pages (Leaderboard, Launchpad): is a Class List sheet sending the list, and the key it needs.

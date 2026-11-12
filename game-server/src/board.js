@@ -36,8 +36,13 @@
 //             2026-11-11): one row per report or idea, with who sent it (a
 //             Class Pass student, a guest, the teacher or nobody signed in),
 //             the page it came from and a screenshot if they took one. The
-//             teacher reads them on that site's Feedback inbox page.
+//             teacher reads them on that site's Feedback inbox page. who 'site' is
+//             the nightly link check's report of videos and links that stopped working.
+//   links, link_pages, link_runs, link_reports, link_meta
+//             the nightly link check of that site's videos and web links (Donny,
+//             2026-11-11), in links.js, which says how it works.
 import { DurableObject } from 'cloudflare:workers';
+import { links } from './links.js';
 
 // Special permission (Donny, 2026-11-11): accounts that are not on the class list but may sign in with Class
 // Pass anyway to use the physical science site. They never show on a leaderboard (only the roster does), and a
@@ -138,6 +143,7 @@ export class Leaderboard extends DurableObject {
     this.sql.exec(`CREATE INDEX IF NOT EXISTS events_email ON events (email)`);
     this.sql.exec(`CREATE INDEX IF NOT EXISTS events_at ON events (at)`);
     this.sql.exec(`CREATE INDEX IF NOT EXISTS sessions_email ON sessions (email)`);
+    this.linksTables();
   }
 
   all(q, ...args) { return this.sql.exec(q, ...args).toArray(); }
@@ -177,6 +183,16 @@ export class Leaderboard extends DurableObject {
       case 'feedback-picture': return this.feedbackPicture(b);
       case 'feedback-done': return this.feedbackDone(b);
       case 'feedback-delete': return this.feedbackDelete(b);
+      // the nightly link check (links.js): the run, the teacher's Site check page, the Class List sheet's email
+      case 'links-run': return this.linksRun(b);
+      case 'links-status': return this.linksStatus(b);
+      case 'links-use': return this.linksUse(b);
+      case 'links-undo': return this.linksUndo(b);
+      case 'links-ok': return this.linksOk(b);
+      case 'links-find': return this.linksFind(b);
+      case 'links-check': return this.linksCheckOne(b);
+      case 'links-swaps': return { swaps: this.linksSwaps() };
+      case 'links-news': return this.linksNews(b);
       default: throw Object.assign(new Error('Not found.'), { status: 404 });
     }
   }
@@ -680,6 +696,9 @@ function topicKey(v) {
   const k = String(v == null ? '' : v).normalize('NFKD').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
   return k ? ' ' + k + ' ' : '';
 }
+
+// The nightly link check's steps (links.js) run on the same object.
+Object.assign(Leaderboard.prototype, links);
 
 function periodSort(a, b) {
   const na = parseFloat(a), nb = parseFloat(b);

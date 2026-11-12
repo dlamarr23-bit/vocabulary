@@ -35,6 +35,11 @@
      /api/pass/feedback. The teacher's Feedback inbox page reads them:
      feedbackList, feedbackPicture, feedbackDone, feedbackDelete.
 
+   - the nightly check of that site's videos and links (Donny 2026-11-11):
+     the teacher's Site check page reads it (linksStatus) and acts on it
+     (linksRun, linksUse, linksUndo, linksOk, linksFind, linksCheck), all
+     through /api/links (teacher only).
+
    The state also says whether this frame can keep a sign-in at all (kept):
    some browsers block a framed site's storage, and then the page around it
    keeps its own record.
@@ -199,6 +204,16 @@
       case 'feedbackPicture': reply(call('GET', 'feedback/picture?id=' + encodeURIComponent(String(Number(m.reportId) || 0))).catch(signedOut)); break;
       case 'feedbackDone': reply(call('POST', 'feedback/done', { id: Number(m.reportId) || 0, done: Boolean(m.done) }).catch(signedOut)); break;
       case 'feedbackDelete': reply(call('POST', 'feedback/delete', { id: Number(m.reportId) || 0 }).catch(signedOut)); break;
+      // the nightly link check (the teacher's Site check page)
+      case 'linksStatus': reply(call('GET', 'links').catch(signedOut)); break;
+      case 'linksRun': reply(call('POST', 'links/run', {}).catch(signedOut)); break;
+      case 'linksUse':
+        reply(call('POST', 'links/use', { key: String(m.key || ''), url: String(m.url || ''), own: Boolean(m.own), title: String(m.title || '') }).catch(signedOut));
+        break;
+      case 'linksUndo': reply(call('POST', 'links/undo', { key: String(m.key || '') }).catch(signedOut)); break;
+      case 'linksOk': reply(call('POST', 'links/ok', { key: String(m.key || ''), ok: Boolean(m.ok) }).catch(signedOut)); break;
+      case 'linksFind': reply(call('POST', 'links/find', { key: String(m.key || '') }).catch(signedOut)); break;
+      case 'linksCheck': reply(call('POST', 'links/check', { key: String(m.key || '') }).catch(signedOut)); break;
       // a guest: the code gives a key; signing out forgets it
       case 'guest':
         reply(call('POST', 'guest', { code: String(m.code || '') }).then(function (d) {

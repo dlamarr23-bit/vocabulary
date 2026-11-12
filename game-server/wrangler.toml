@@ -35,3 +35,14 @@ new_sqlite_classes = ["Leaderboard"]
 # plenty for a class; if it runs out, names are checked by the word lists only.
 [ai]
 binding = "AI"
+
+# The nightly link check (src/links.js): every day at 10:23 UTC (2:23 a.m.
+# Pacific in winter, 3:23 in summer) a few of the physical science site's
+# videos and web links are checked. Workers & Pages > vocab-live > Settings >
+# Trigger events shows it. Two optional secrets (Settings > Variables and
+# Secrets, type Secret) make it do more:
+#   BRAVE_KEY      a Brave Search API key: replacements for broken links
+#   CF_API_TOKEN   a Cloudflare API token with Account Analytics: Read, for
+#                  the Site check page's count of today's Workers AI use
+[triggers]
+crons = ["23 10 * * *"]
