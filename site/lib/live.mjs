@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { site } from '../content/site.mjs';
 import { esc, head, topbar, drawer, footer } from './render.mjs';
-import { setTerms, TILE } from './flashcards.mjs';
+import { setTerms } from './flashcards.mjs';
 
 // "../assets/<file>?v=<first 8 of its hash>": a changed file gets a new
 // address, so a browser never keeps using an old copy after an update.
@@ -25,25 +25,24 @@ function choiceCard(group, value, title, text, picture, checked) {
 </label>`;
 }
 
-// Two tone pictures on the choice cards, matching the set page tiles: a
-// strong shape (.a) over a soft one (.b), with white details (.w).
+// Hand-drawn pictures on the choice cards (Donny, 2026-11-15: the
+// "Editorial" icon sheet), one file each in assets/review-icons/. They are
+// the same on every unit's color, so they stay as they were drawn.
+const pic = (file) => `<img class="lv-pic" src="${asset('review-icons/' + file + '.webp')}" alt="">`;
 const ART = {
-  teams: '<svg viewBox="0 0 64 40"><circle class="b" cx="17" cy="12" r="6"/><path class="b" d="M6 36c0-7 5-12 11-12s11 5 11 12z"/><circle class="b" cx="47" cy="12" r="6"/><path class="b" d="M36 36c0-7 5-12 11-12s11 5 11 12z"/><circle class="a" cx="32" cy="14" r="7"/><path class="a" d="M19 39c0-8 6-13 13-13s13 5 13 13z"/></svg>',
-  pick: '<svg viewBox="0 0 64 40"><rect class="b" x="4" y="6" width="24" height="28" rx="5"/><rect class="b" x="36" y="6" width="24" height="28" rx="5"/><circle class="a" cx="48" cy="16" r="5"/><path class="a" d="M40 31c0-5 3.6-8 8-8s8 3 8 8z"/><path class="a" d="M24 22h10l-3.5-3.5M34 22l-3.5 3.5" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-  solo: '<svg viewBox="0 0 64 40"><circle class="b" cx="32" cy="21" r="18"/><circle class="a" cx="32" cy="15" r="6.5"/><path class="a" d="M20 35c0-7 5-12 12-12s12 5 12 12z"/></svg>',
-  defFirst: '<svg viewBox="0 0 64 40"><rect class="a" x="8" y="2" width="48" height="15" rx="4"/><rect class="w" x="14" y="7.5" width="26" height="4" rx="2"/><rect class="b" x="8" y="21" width="22" height="7.5" rx="3"/><rect class="b" x="34" y="21" width="22" height="7.5" rx="3"/><rect class="b" x="8" y="31" width="22" height="7.5" rx="3"/><rect class="b" x="34" y="31" width="22" height="7.5" rx="3"/></svg>',
-  termFirst: '<svg viewBox="0 0 64 40"><rect class="a" x="20" y="2" width="24" height="10" rx="4"/><rect class="b" x="6" y="16" width="52" height="10" rx="3"/><rect class="w" x="11" y="19.5" width="30" height="3" rx="1.5"/><rect class="b" x="6" y="29" width="52" height="10" rx="3"/><rect class="w" x="11" y="32.5" width="22" height="3" rx="1.5"/></svg>',
-  // A Class Pass card with a tick, and the same card with a guest beside it.
-  pass: '<svg viewBox="0 0 64 40"><rect class="b" x="10" y="4" width="44" height="32" rx="6"/><circle class="a" cx="24" cy="16" r="6"/><path class="a" d="M14.5 31c0-5.5 4.2-9 9.5-9s9.5 3.5 9.5 9z"/><path class="w" d="M38 15h9M38 21h6"/><path class="as" d="M40 28l3.5 3.5 7-7.5"/></svg>',
-  guests: '<svg viewBox="0 0 64 40"><rect class="b" x="3" y="6" width="34" height="28" rx="6"/><circle class="a" cx="15" cy="16" r="5"/><path class="a" d="M7 30c0-4.5 3.6-7.5 8-7.5s8 3 8 7.5z"/><path class="w" d="M27 15h6M27 20h4"/><circle class="a" cx="50" cy="14" r="6"/><path class="a" d="M40 34c0-6 4.5-10 10-10s10 4 10 10z"/></svg>',
-  volley: TILE.volley,
-  blast: TILE.blast,
-  match: TILE.mmatch,
-  // Two heroes face to face, and a lightning bolt.
-  royale: '<svg viewBox="0 0 32 32" aria-hidden="true"><rect class="b" x="2" y="10" width="11" height="12" rx="3"/><circle class="w" cx="5.5" cy="15" r="1.4"/><circle class="w" cx="9.5" cy="15" r="1.4"/><rect class="a" x="19" y="10" width="11" height="12" rx="3"/><circle class="w" cx="22.5" cy="15" r="1.4"/><circle class="w" cx="26.5" cy="15" r="1.4"/><path class="a" d="M16.8 6l-3.2 8.5h2.7l-1.7 8.5 4.6-10.5h-2.8l2-6.5z"/></svg>',
-  surge: '<svg viewBox="0 0 32 32" aria-hidden="true"><circle class="b" cx="16" cy="16" r="12.5"/><path class="a" d="M18.5 4.5l-9.5 13h6.2l-2.2 10 9.8-13.5h-6.3z"/></svg>',
-  // Mole Hunt (2026-11-15): a mole in goggles peeking out of its hole.
-  molehunt: '<svg viewBox="0 0 32 32" aria-hidden="true"><ellipse class="b" cx="16" cy="28" rx="14" ry="3.5"/><path class="a" d="M6 28c0-12 4.5-20 10-20s10 8 10 20z"/><circle class="w" cx="12.5" cy="12" r="2.6"/><circle class="w" cx="19.5" cy="12" r="2.6"/><ellipse class="w" cx="16" cy="18" rx="2.4" ry="1.8"/></svg>'
+  teams: pic('random-teams'),
+  pick: pic('students-pick-teams'),
+  solo: pic('individuals'),
+  defFirst: pic('definition-term'),
+  termFirst: pic('term-definition'),
+  pass: pic('class-pass'),
+  guests: pic('class-pass-guests'),
+  volley: pic('vocab-live'),
+  blast: pic('blast'),
+  match: pic('match'),
+  royale: pic('battle-royale'),
+  surge: pic('surge-showdown'),
+  molehunt: pic('mole-hunt')
 };
 
 // Who can join, and the class period playing (Donny, 2026-11-04: students

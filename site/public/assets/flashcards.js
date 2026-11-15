@@ -80,8 +80,12 @@
       return out;
     };
 
-    var FOLDER_SVG = '<svg viewBox="0 0 32 32" aria-hidden="true"><path class="b" d="M4 9a3 3 0 0 1 3-3h6l3 3h9a3 3 0 0 1 3 3v2H4z"/><rect class="a" x="4" y="12" width="24" height="15" rx="3"/></svg>';
-    var SET_SVG = '<svg viewBox="0 0 32 32" aria-hidden="true"><rect class="b" x="10" y="5" width="17" height="14" rx="3"/><rect class="a" x="5" y="11" width="17" height="15" rx="3"/></svg>';
+    // A folder or set with no icon of its own gets the hand-drawn folder or
+    // stack of cards (Donny, 2026-11-15). The build puts their addresses on
+    // #fxTree; the old two tone shapes stay for a page built before that.
+    var picTag = function (src) { return '<img class="fx-pic" src="' + src.replace(/"/g, '&quot;') + '" alt="">'; };
+    var FOLDER_SVG = view.getAttribute('data-folder-pic') ? picTag(view.getAttribute('data-folder-pic')) : '<svg viewBox="0 0 32 32" aria-hidden="true"><path class="b" d="M4 9a3 3 0 0 1 3-3h6l3 3h9a3 3 0 0 1 3 3v2H4z"/><rect class="a" x="4" y="12" width="24" height="15" rx="3"/></svg>';
+    var SET_SVG = view.getAttribute('data-set-pic') ? picTag(view.getAttribute('data-set-pic')) : '<svg viewBox="0 0 32 32" aria-hidden="true"><rect class="b" x="10" y="5" width="17" height="14" rx="3"/><rect class="a" x="5" y="11" width="17" height="15" rx="3"/></svg>';
 
     /* ---- drawing ---- */
 

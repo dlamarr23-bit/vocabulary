@@ -577,3 +577,14 @@ html[data-theme="dark"] .fc-switch input{ background:#3a4052; }
 html[data-theme="dark"] .fc-hint-in{ background:var(--card); }
 html[data-theme="dark"] .fc-drop{ border-color:#3a4052; }
 html[data-theme="dark"] .fx-more:hover, html[data-theme="dark"] .fx-more[aria-expanded="true"]{ background:#3a4052; border-color:#3a4052; }
+
+/* Hand-drawn pictures (Donny's "Editorial" icon sheet, 2026-11-15): the
+   game tiles on a set's page, and a folder or set with no icon of its own on
+   the Flashcards page. Dark mode puts them on a light tile so their dark
+   outlines still show. */
+.fc-game-pic{ display:block; width:84px; height:64px; object-fit:contain; }
+.fx-card-icon:has(.fx-pic){ width:56px; height:56px; }
+.fx-card-icon img.fx-pic, .fx-here-icon img.fx-pic{ width:100%; height:100%; object-fit:contain; border-radius:0; }
+.fx-here-icon:has(.fx-pic){ width:56px; height:56px; }
+.fx-pick .fx-pic{ display:block; width:100%; height:100%; object-fit:contain; }
+html[data-theme="dark"] .fc-game-pic, html[data-theme="dark"] .fx-card-icon img.fx-pic, html[data-theme="dark"] .fx-here-icon img.fx-pic, html[data-theme="dark"] .fx-pick .fx-pic{ background:#f4efe6; border-radius:12px; padding:4px; box-sizing:border-box; }

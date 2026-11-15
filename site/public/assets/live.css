@@ -926,3 +926,9 @@ html[data-theme="dark"] .lv-fb-prompt{ background:rgba(255,255,255,.06); }
 /* Six games on Host a game (Mole Hunt, 2026-11-15): two rows of three. */
 .lv-choices-6{ grid-template-columns:repeat(3, minmax(0, 1fr)); }
 @media (max-width:600px){ .lv-choices-6{ grid-template-columns:1fr; } }
+
+/* Hand-drawn choice pictures (Donny's "Editorial" icon sheet, 2026-11-15).
+   In dark mode they sit on a light tile so their dark outlines still show. */
+.lv-choice-art .lv-pic{ display:block; width:7.5rem; height:5.5rem; object-fit:contain; }
+.lv-choice:has(.lv-pic){ align-content:start; }
+html[data-theme="dark"] .lv-choice-art .lv-pic{ background:#f4efe6; border-radius:0.875rem; padding:0.3rem; box-sizing:border-box; }

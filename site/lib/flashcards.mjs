@@ -92,18 +92,16 @@ export const TILE = {
   flashcards: '<svg viewBox="0 0 32 32" aria-hidden="true"><rect class="b" x="10" y="5" width="17" height="14" rx="3"/><rect class="a" x="5" y="11" width="17" height="15" rx="3"/></svg>',
   learn: '<svg viewBox="0 0 32 32" aria-hidden="true"><circle class="bs" cx="16" cy="16" r="10.5" stroke-dasharray="2.2 3.2"/><path class="as" d="M16 5.5a10.5 10.5 0 0 1 10.5 10.5"/><circle class="a" cx="16" cy="5.5" r="3"/><circle class="a" cx="26.5" cy="16" r="2"/></svg>',
   test: '<svg viewBox="0 0 32 32" aria-hidden="true"><rect class="b" x="10" y="4" width="16" height="21" rx="3"/><rect class="a" x="6" y="8" width="16" height="21" rx="3"/><rect class="w" x="9.5" y="13" width="9" height="2.4" rx="1.2"/><rect class="w" x="9.5" y="18" width="6" height="2.4" rx="1.2"/></svg>',
-  match: '<svg viewBox="0 0 32 32" aria-hidden="true"><rect class="a" x="4" y="5" width="16" height="11" rx="2.5"/><rect class="w" x="7.5" y="9.3" width="9" height="2.4" rx="1.2"/><rect class="b" x="14" y="17" width="14" height="10" rx="2.5"/><rect class="w" x="17" y="20.8" width="8" height="2.4" rx="1.2"/></svg>',
-  volley: '<svg viewBox="0 0 32 32" aria-hidden="true"><rect class="a" x="5" y="6" width="19" height="4.6" rx="2.3" transform="rotate(-12 14.5 8.3)"/><rect class="b" x="8" y="13.7" width="19" height="4.6" rx="2.3" transform="rotate(-12 17.5 16)"/><rect class="a" x="5" y="21.4" width="19" height="4.6" rx="2.3" transform="rotate(-12 14.5 23.7)"/></svg>',
-  blast: '<svg viewBox="0 0 32 32" aria-hidden="true"><path class="b" d="M9.5 18.5l-4 2 3.5-7.5 4 1.5zM13.5 22.5l-2 4 7.5-3.5-1.5-4z"/><path class="a" d="M26.5 5.5c-6 0-11 3.5-14.5 9.5l5 5c6-3.5 9.5-8.5 9.5-14.5z"/><circle class="w" cx="20" cy="12" r="2.6"/><path class="bs" d="M9 23l-3 3"/></svg>',
-  mmatch: '<svg viewBox="0 0 32 32" aria-hidden="true"><rect class="a" x="4" y="4" width="15" height="17" rx="3"/><rect class="w" x="7.5" y="8.5" width="8" height="2.4" rx="1.2"/><rect class="w" x="7.5" y="13" width="5" height="2.4" rx="1.2"/><rect class="b" x="17" y="14" width="11" height="14" rx="3"/><path class="w" d="M21.5 17.5l3 3-3 3"/></svg>'
+  match: '<svg viewBox="0 0 32 32" aria-hidden="true"><rect class="a" x="4" y="5" width="16" height="11" rx="2.5"/><rect class="w" x="7.5" y="9.3" width="9" height="2.4" rx="1.2"/><rect class="b" x="14" y="17" width="14" height="10" rx="2.5"/><rect class="w" x="17" y="20.8" width="8" height="2.4" rx="1.2"/></svg>'
 };
 
 // Games played together live (textbook/live-worker): anyone can host one
-// with this set; the others join with the code.
+// with this set; the others join with the code. Each has the hand-drawn
+// picture from the Host a game page (assets/review-icons/, Donny 2026-11-15).
 const GAMES = [
-  ['volley', 'Vocab Live', TILE.volley],
-  ['blast', 'Blast', TILE.blast],
-  ['match', 'Multiplayer Match', TILE.mmatch]
+  ['volley', 'Vocab Live', 'vocab-live'],
+  ['blast', 'Blast', 'blast'],
+  ['match', 'Multiplayer Match', 'match']
 ];
 
 const MODES = [
@@ -273,7 +271,7 @@ ${p.own ? '<label class="fc-own-name" id="fcOwnTitleRow" hidden><span>Set name</
 <section class="fc-hub" aria-labelledby="fcGamesTitle">
 <div class="fc-hub-head"><h2 id="fcGamesTitle">Multiplayer games</h2><a href="${up}join/">Have a code? Join a game</a></div>
 <div class="fc-tiles fc-tiles-3">
-${GAMES.map(([id, name, icon]) => `<div class="fc-tile fc-game-tile"><a class="fc-tile-main" href="${up}live/?game=${id}#${p.id}">${icon}<span>${name}</span></a><button type="button" class="linkbtn fc-tile-howto" data-howto="${id}" aria-label="How to play ${name}">How to play</button></div>`).join('\n')}
+${GAMES.map(([id, name, pic]) => `<div class="fc-tile fc-game-tile"><a class="fc-tile-main" href="${up}live/?game=${id}#${p.id}"><img class="fc-game-pic" src="${asset('review-icons/' + pic + '.webp')}" alt=""><span>${name}</span></a><button type="button" class="linkbtn fc-tile-howto" data-howto="${id}" aria-label="How to play ${name}">How to play</button></div>`).join('\n')}
 </div>
 </section>
 
@@ -421,7 +419,7 @@ ${joinBox('../')}
 <input type="search" id="fxFind" placeholder="Type a word" autocomplete="off" spellcheck="false">
 <p class="fx-find-note" id="fxFindNote" aria-live="polite"></p>
 </div>
-<div id="fxTree"></div>
+<div id="fxTree" data-folder-pic="${v('review-icons/folder.webp')}" data-set-pic="${v('review-icons/question-set.webp')}"></div>
 <noscript><p>The flashcards need JavaScript turned on.</p></noscript>
 <div class="fx-signin"><button type="button" class="linkbtn" id="fxSignInBtn">Teacher sign in</button><div id="fxSignIn" hidden></div></div>
 <script type="application/json" id="fxData">${safeJSON(lib)}</script>
