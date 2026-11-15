@@ -400,7 +400,7 @@ export function renderFlashcardIndex(chapters, lib) {
     description: 'Every flashcard set, sorted into folders.',
     unitId: null,
     depth,
-    extraHead: `<link rel="stylesheet" href="${v('flashcards.css')}">\n<script src="${v('editor.js')}" defer></script>\n<script src="${v('flashcards.js')}" defer></script>\n`
+    extraHead: `<link rel="stylesheet" href="${v('flashcards.css')}">\n<link rel="stylesheet" href="${v('review-current.css')}">\n<script src="${v('editor.js')}" defer></script>\n<script src="${v('flashcards.js')}" defer></script>\n<script src="${v('review-current.js')}" defer></script>\n`
   }) +
     topbar(depth, 'flashcards') +
     drawer(depth, chapters, null, null) +
@@ -414,6 +414,8 @@ ${joinBox('../')}
 </div></div>
 <main id="main" class="container fc-page fx-page">
 <div class="fx-teacher" id="fxTeacher" hidden></div>
+<div class="rg-teach" id="rgTeacher" hidden></div>
+<div class="rg-wrap" id="rgBanner" hidden></div>
 <div class="fx-find">
 <label for="fxFind">Find a word</label>
 <input type="search" id="fxFind" placeholder="Type a word" autocomplete="off" spellcheck="false">

@@ -578,6 +578,8 @@ async function api(request, env, url) {
   if (a === 'links' && !c) return linksApi(request, env, b);
   if (a === 'board' && b === 'unit' && !c && method === 'PUT') return putBoardUnit(request, env, url);
   if (a === 'review' && b === 'key' && !c && method === 'GET') return json({ key: await reviewKey(env) });
+  if (a === 'review' && b === 'games' && !c && method === 'GET') return reviewGamesApi(env, url);
+  if (a === 'review' && b === 'current' && !c && method === 'PUT') return putReviewCurrent(request, env);
   if (a === 'classlist' && !b && method === 'GET') return classListGet(env);
   if (a === 'suggest' && !b && method === 'GET') return suggest(env, url);
   if (a === 'images' && b === 'search' && !c && method === 'GET') return imageSearch(url, env);
@@ -1252,6 +1254,8 @@ async function passApi(request, env, url, b) {
   let body = {};
   if (method === 'POST') { try { body = (await request.json()) || {}; } catch { body = {}; } }
   if (b === 'me' && method === 'GET') return boardJSON(await board(env, 'check', { token: passToken(request) }));
+  // The current review game banner on the Review page (Donny, 2026-11-15): anyone, a signed-in student's own numbers too.
+  if (b === 'current-review' && method === 'GET') return currentReview(request, env, url);
   if (b === 'google' && method === 'POST') return passGoogle(env, body);
   if (b === 'claim' && method === 'POST') return boardJSON(await board(env, 'claim', { nonce: String(body.nonce || '') }));
   if (b === 'signout' && method === 'POST') return boardJSON(await board(env, 'signout', { token: passToken(request) }));
@@ -1474,7 +1478,62 @@ async function reviewResults(request, env) {
   const game = String((body.game && body.game.id) || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 60);
   if (!game) return json({ error: 'The sheet did not say which game this is.' }, 400);
   const title = String((body.game && body.game.title) || '').slice(0, 200);
-  return boardJSON(await board(env, 'review', { game, title, rows: Array.isArray(body.rows) ? body.rows.slice(0, 500) : [] }));
+  // The student link and each period's Classroom due date (2026.11.15 sheets, every hour): the current review game banner.
+  const g = body.game || {};
+  const info = 'dues' in g || 'link' in g ? { link: String(g.link || '').slice(0, 300), dues: g.dues && typeof g.dues === 'object' ? g.dues : {}, goal: g.goal && typeof g.goal === 'object' ? g.goal : null } : null;
+  return boardJSON(await board(env, 'review', { game, title, info, rows: Array.isArray(body.rows) ? body.rows.slice(0, 500) : [] }));
+}
+
+/* ---------------- the current review game (Donny, 2026-11-15) ---------------- */
+
+// The teacher picks a review game on the Review page; a banner above the folders shows it to every student with a countdown
+// to their own period's due time (start of class on test day, from Classroom through the game's sheet), the period race, and
+// their best try. The Play button is the sheet's own Class Pass link, the same one Classroom has, so a student's score lands in
+// that sheet and on the leaderboard either way. KV review-current = { id: the game's Google Sheet id, on, saved }.
+
+// Every folder and set name with the folder it is in, so a game's title finds its unit ("Review: Kinetic Energy and Speed" is
+// in the set "Kinetic Energy and Speed", in the folder "Energy of Motion").
+function reviewTopicList(lib) {
+  const folders = new Map(lib.folders.map((f) => [f.id, f]));
+  const top = (f) => { let x = f; for (let i = 0; x && x.parent && folders.has(x.parent) && i < 5; i += 1) x = folders.get(x.parent); return x; };
+  return lib.folders.map((f) => ({ name: f.name, unit: (top(f) || f).name }))
+    .concat(lib.sets.map((s) => ({ name: s.title, unit: folders.has(s.folder) ? top(folders.get(s.folder)).name : '' })));
+}
+
+// GET /api/pass/current-review (anyone; a signed-in student sends X-Pass): the banner, or { game: null }.
+async function currentReview(request, env, url) {
+  const pick = env.FLASHCARDS ? await env.FLASHCARDS.get('review-current', 'json') : null;
+  if (!pick || !pick.id || !pick.on) return json({ game: null }, 200, { 'cache-control': 'no-store' });
+  const lib = await library(env, url);
+  const r = await board(env, 'review-current', { id: pick.id, token: passToken(request), topics: reviewTopicList(lib) });
+  return json(r.data, r.status, { 'cache-control': 'no-store' });
+}
+
+// GET /api/review/games (teacher): the review games the site knows, the periods, and the current pick.
+async function reviewGamesApi(env, url) {
+  if (!env.LIVE) return needLive();
+  const lib = await library(env, url);
+  const [r, pick] = await Promise.all([board(env, 'review-games', { topics: reviewTopicList(lib) }), env.FLASHCARDS.get('review-current', 'json')]);
+  if (r.status !== 200) return boardJSON(r);
+  return json({ ...r.data, current: pick && pick.id ? { id: pick.id, on: Boolean(pick.on), saved: pick.saved || 0 } : null });
+}
+
+// PUT /api/review/current (teacher) { id, on }: id = a game's sheet id, or a Google Sheet link (its id is taken from it);
+// '' takes the banner down for good. on: false hides it but keeps the pick.
+async function putReviewCurrent(request, env) {
+  let body = {};
+  try { body = (await request.json()) || {}; } catch { body = {}; }
+  const given = String(body.id || '').trim();
+  if (!given) {
+    await env.FLASHCARDS.delete('review-current');
+    return json({ ok: true, current: null });
+  }
+  const m = /\/spreadsheets\/(?:u\/\d+\/)?d\/([A-Za-z0-9_-]{20,60})/.exec(given);
+  const id = m ? m[1] : given;
+  if (!/^[A-Za-z0-9_-]{20,60}$/.test(id)) return json({ error: 'That is not a Google Sheet link. Copy the address of the review game’s sheet (it has /spreadsheets/d/ in it).' }, 400);
+  const pick = { id, on: body.on !== false, saved: Date.now() };
+  await env.FLASHCARDS.put('review-current', JSON.stringify(pick));
+  return json({ ok: true, current: pick });
 }
 
 /* ---------------- the Class List sheet (Donny, 2026-11-10) ---------------- */

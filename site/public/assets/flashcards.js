@@ -736,6 +736,8 @@
           $('fxSignInBtn').parentNode.hidden = true;
           teacherBar();
           fromHash();
+          // the current review game's teacher box (review-current.js, Donny 2026-11-15)
+          try { document.dispatchEvent(new CustomEvent('fx:teacher')); } catch (e) { /* an old browser: no teacher box */ }
         });
       }).catch(function () { /* the page still works for studying */ });
     }

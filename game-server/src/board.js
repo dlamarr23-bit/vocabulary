@@ -38,6 +38,10 @@
 //             the page it came from and a screenshot if they took one. The
 //             teacher reads them on that site's Feedback inbox page. who 'site' is
 //             the nightly link check's report of videos and links that stopped working.
+//   review_games  each review game's sheet id and title (the topic it belongs to), and since 2026-11-15
+//             its student link and each period's Classroom due date, for the
+//             current review game banner on the Review page (the teacher's pick
+//             is in the site's KV, review-current)
 //   links, link_pages, link_runs, link_reports, link_meta
 //             the nightly link check of that site's videos and web links (Donny,
 //             2026-11-11), in links.js, which says how it works.
@@ -136,6 +140,10 @@ export class Leaderboard extends DurableObject {
       game TEXT, set_id TEXT, team INTEGER, place INTEGER, win INTEGER, correct INTEGER, ms INTEGER, pairs INTEGER, score INTEGER, total INTEGER, full INTEGER)`);
     // Each review game's title, which says which topic it belongs to (Donny, 2026-10-27).
     this.sql.exec(`CREATE TABLE IF NOT EXISTS review_games (id TEXT PRIMARY KEY, title TEXT, updated INTEGER)`);
+    // The current review game on the Review page (Donny, 2026-11-15): the student link and each period's Classroom due date,
+    // { "1": ms, ... } as JSON, and goal { pct, points } (Full credit at, and its points), all sent by the game's sheet every hour.
+    // Added to tables made before them.
+    for (const col of ['link TEXT', 'dues TEXT', 'goal TEXT']) { try { this.sql.exec('ALTER TABLE review_games ADD COLUMN ' + col); } catch { /* already there */ } }
     this.sql.exec(`CREATE TABLE IF NOT EXISTS past (email TEXT PRIMARY KEY, first TEXT, last TEXT, period TEXT, left INTEGER)`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS drafts (email TEXT, form TEXT, id TEXT, data TEXT, picture TEXT, saved INTEGER,
       done_id TEXT, done INTEGER, saves INTEGER, hour INTEGER, PRIMARY KEY (email, form))`);
@@ -175,6 +183,8 @@ export class Leaderboard extends DurableObject {
       case 'report': return this.report(b);
       case 'live': return this.live(b);
       case 'review': return this.review(b);
+      case 'review-current': return this.reviewCurrent(b);
+      case 'review-games': return this.reviewGames(b);
       case 'boards': return this.boards(b);
       case 'draft-get': return this.draftGet(b);
       case 'draft-put': return this.draftPut(b);
@@ -555,6 +565,12 @@ export class Leaderboard extends DurableObject {
     if (!SET_ID.test(game)) return { saved: 0 };
     const title = clean(b.title, 200);
     if (title) this.sql.exec('INSERT INTO review_games (id, title, updated) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET title = excluded.title, updated = excluded.updated', game, title, Date.now());
+    // The student link and the due dates come only with the sheet's hourly check (2026.11.15 sheets); a student's own send
+    // leaves them out, and then the ones already here stay.
+    if (b.info) {
+      this.sql.exec('INSERT INTO review_games (id, title, updated) VALUES (?, ?, ?) ON CONFLICT(id) DO NOTHING', game, title || '', Date.now());
+      this.sql.exec('UPDATE review_games SET link = ?, dues = ?, goal = ? WHERE id = ?', reviewLink(b.info.link), JSON.stringify(reviewDues(b.info.dues)), JSON.stringify(reviewGoal(b.info.goal)), game);
+    }
     if (!rows.length) return { saved: 0 };
     const onRoster = new Set(this.rosterRows().map((r) => r.email));
     const now = Date.now();
@@ -576,6 +592,66 @@ export class Leaderboard extends DurableObject {
       }
     });
     return { saved };
+  }
+
+  /* ---------------- the current review game (Donny, 2026-11-15) ---------------- */
+
+  // The unit a review game belongs to, for the Review page: the longest folder or set name found in its title, as whole words,
+  // and the folder that set is in. topics: [{ name, unit }] from the site's library.
+  reviewUnit(title, topics) {
+    const t = topicKey(title);
+    let best = null;
+    (Array.isArray(topics) ? topics.slice(0, 1000) : []).forEach((x) => {
+      const k = topicKey(x && x.name);
+      if (k && t.includes(k) && (!best || k.length > best.k.length)) best = { k, unit: clean((x && (x.unit || x.name)) || '', 200) };
+    });
+    return best ? best.unit : '';
+  }
+
+  // The banner above the Review page's folders: the game the teacher picked (b.id), its student link and each period's due
+  // date (from its sheet), the period race (how many of each period's students have full credit), and for a signed-in student
+  // their best try, whether it's full credit, and their place in their own period by points.
+  async reviewCurrent(b) {
+    const id = clean(b.id, 60);
+    if (!SET_ID.test(id)) return { game: null };
+    const g = this.all('SELECT id, title, link, dues, goal FROM review_games WHERE id = ?', id)[0];
+    if (!g || !g.title) return { game: null };
+    const roster = this.rosterRows();
+    const periodOf = new Map(roster.map((r) => [r.email, r.period]));
+    const results = this.all("SELECT email, correct, total, score, full FROM events WHERE kind = 'review' AND set_id = ?", id)
+      .filter((r) => periodOf.has(r.email));
+    const race = periodsOf(roster).map((p) => ({
+      period: p,
+      students: roster.filter((r) => r.period === p).length,
+      passed: results.filter((r) => r.full && periodOf.get(r.email) === p).length
+    }));
+    let me = null;
+    const who = await this.check(b.token);
+    if (who && who.period) {
+      const mine = results.find((r) => r.email === who.email);
+      me = { period: who.period, played: Boolean(mine) };
+      if (mine) {
+        const better = results.filter((r) => periodOf.get(r.email) === who.period && (r.score || 0) > (mine.score || 0)).length;
+        Object.assign(me, { pct: mine.total ? Math.round((100 * mine.correct) / mine.total) : 0, passed: Boolean(mine.full), points: mine.score || 0, place: better + 1 });
+      }
+    } else if (who) me = { period: '' };
+    return {
+      game: { id: g.id, title: g.title, link: g.link || '', dues: duesOf(g.dues), goal: goalOf(g.goal), unit: this.reviewUnit(g.title, b.topics),
+        questions: results.reduce((m, r) => Math.max(m, r.total || 0), 0) },
+      race, me, now: Date.now()
+    };
+  }
+
+  // For the teacher's Current review game box: every review game that has sent its title (the newest send first), its unit,
+  // student link and due dates (none until its sheet runs the 2026.11.15 code), and how many students played it.
+  reviewGames(b) {
+    const played = new Map(this.all("SELECT set_id, COUNT(*) AS n, SUM(full) AS f FROM events WHERE kind = 'review' GROUP BY set_id").map((r) => [r.set_id, r]));
+    const games = this.all("SELECT id, title, link, dues, updated FROM review_games WHERE title IS NOT NULL AND title <> '' ORDER BY updated DESC").map((g) => {
+      const p = played.get(g.id);
+      return { id: g.id, title: g.title, link: g.link || '', dues: duesOf(g.dues), sent: g.dues != null, unit: this.reviewUnit(g.title, b.topics),
+        updated: g.updated || 0, played: p ? p.n : 0, passed: p ? p.f || 0 : 0 };
+    });
+    return { games, periods: periodsOf(this.rosterRows()) };
   }
 
   /* ---------------- the leaderboards ---------------- */
@@ -700,6 +776,36 @@ function topicKey(v) {
 
 // The nightly link check's steps (links.js) run on the same object.
 Object.assign(Leaderboard.prototype, links);
+
+// A review game's student link (the current review game, 2026-11-15): Class Pass on the physical science site, or the sheet's
+// own web app page. Anything else is dropped.
+function reviewLink(v) {
+  const s = String(v == null ? '' : v).trim();
+  return /^https:\/\/physical-science-8\.pages\.dev\/pass\/(?:[a-z-]+\/)?\?app=[\w-]{10,200}$/.test(s) || /^https:\/\/script\.google\.com\/macros\/s\/[\w-]{10,200}\/exec$/.test(s) ? s : '';
+}
+// Each period's due date, { "1": ms, "3": ms }: a period is a short name ("01" is "1"), a date is within a few years of now.
+function reviewDues(v) {
+  const out = {};
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return out;
+  Object.keys(v).slice(0, 20).forEach((p) => {
+    let k = clean(p, 20);
+    if (/^\d+$/.test(k)) k = String(Number(k));
+    const ms = Number(v[p]);
+    if (k && Number.isFinite(ms) && ms > 1.6e12 && ms < 4.1e12) out[k] = Math.round(ms);
+  });
+  return out;
+}
+// Full credit at (a percent) and the points it earns, or null.
+function reviewGoal(v) {
+  const pct = v && int(v.pct, 1, 100), points = v && int(v.points, 0, 1000);
+  return pct ? { pct, points: points || 0 } : null;
+}
+function goalOf(text) {
+  try { return reviewGoal(JSON.parse(text || 'null')); } catch { return null; }
+}
+function duesOf(text) {
+  try { return reviewDues(JSON.parse(text || '{}')); } catch { return {}; }
+}
 
 function periodSort(a, b) {
   const na = parseFloat(a), nb = parseFloat(b);
