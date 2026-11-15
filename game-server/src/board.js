@@ -92,7 +92,8 @@ const FEEDBACK_KEEP = 400;
 const FEEDBACK_KINDS = ['bug', 'idea'];
 const FEEDBACK_FINISHED = ['yes', 'hard', 'no'];
 // Surge Showdown moved onto this site on 2026-11-04 (Donny), so its games count too.
-const GAMES = ['volley', 'blast', 'match', 'royale', 'surge'];
+// Mole Hunt (2026-11-15) counts too.
+const GAMES = ['volley', 'blast', 'match', 'royale', 'surge', 'molehunt'];
 // The day in California, for "once a day" counting.
 const dayOf = (ms) => new Date(ms - 7 * 3600 * 1000).toISOString().slice(0, 10);
 // The school year a time falls in (it starts August 1 in California), like "2026–27".

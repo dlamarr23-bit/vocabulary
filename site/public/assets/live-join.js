@@ -226,6 +226,8 @@
       if (m.kind === 'royale') { leaving = true; if (ws) try { ws.close(); } catch (e) { /* closed */ } location.replace('../royale/play/#' + code); return; }
       // So does Surge Showdown (surge/play/).
       if (m.kind === 'surge') { leaving = true; if (ws) try { ws.close(); } catch (e) { /* closed */ } location.replace('../surge/play/#' + code); return; }
+      // And Mole Hunt (molehunt/play/).
+      if (m.kind === 'molehunt') { leaving = true; if (ws) try { ws.close(); } catch (e) { /* closed */ } location.replace('../molehunt/play/#' + code); return; }
       lastHello = m;
       typedNames = m.typedNames;
       counts = !!m.counts;

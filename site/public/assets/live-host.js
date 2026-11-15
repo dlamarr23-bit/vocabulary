@@ -76,7 +76,7 @@
       $('lvResume').hidden = false;
     }
     // Opened from a set page's game card: live/?game=blast#<set>
-    var kind = (location.search.match(/[?&]game=(volley|blast|match|royale|surge)/) || [])[1];
+    var kind = (location.search.match(/[?&]game=(volley|blast|match|royale|surge|molehunt)/) || [])[1];
     if (kind) document.querySelector('input[name="lvGame"][value="' + kind + '"]').checked = true;
     // The question sets come from the site; the saved pick waits for them.
     $('lvQset').dataset.want = (defaults && defaults.lvQset) || '';
@@ -134,7 +134,8 @@
   // goes on to that screen with the set picked here.
   var OTHER = {
     royale: { text: 'Battle Royale has its own setup screen: HP, group size, time per question and the game clock. It plays the question set picked above, or the flashcard set when no question set is picked.', button: 'Next: Battle Royale settings' },
-    surge: { text: 'Surge Showdown has its own setup screen: teams, game length, power-ups and special events. It plays the question set picked above, or the flashcard set (made into multiple choice) when no question set is picked.', button: 'Next: Surge Showdown settings' }
+    surge: { text: 'Surge Showdown has its own setup screen: teams, game length, power-ups and special events. It plays the question set picked above, or the flashcard set (made into multiple choice) when no question set is picked.', button: 'Next: Surge Showdown settings' },
+    molehunt: { text: 'Mole Hunt has its own setup screen: how many Moles, meetings, the clock, scans, tools and extras. It plays the question set picked above, or the flashcard set when no question set is picked.', button: 'Next: Mole Hunt settings' }
   };
   function syncOther(kind) {
     var other = OTHER[kind];
@@ -192,7 +193,7 @@
     $('lvSetupError').textContent = '';
     $('lvSetupNote').textContent = '';
     var kind0 = picked('lvGame');
-    if (kind0 === 'royale' || kind0 === 'surge') {
+    if (kind0 === 'royale' || kind0 === 'surge' || kind0 === 'molehunt') {
       if ($('lvSaveDefault').checked) { var sd0 = readSaved(); sd0.defaults = collectDefaults(); writeSaved(sd0); }
       // Both have their own setup screen on this site (Surge Showdown moved
       // here from its own site, Donny 2026-11-04).

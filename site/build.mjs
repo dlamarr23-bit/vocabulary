@@ -13,6 +13,7 @@ import { renderEditMoved, renderFlashcardIndex, renderOwnSetShell, defaultLibrar
 import { renderLiveHost, renderLiveJoin } from './lib/live.mjs';
 import { renderRoyaleHost, renderRoyalePlay } from './lib/royale.mjs';
 import { renderSurgeHost, renderSurgePlay } from './lib/surge.mjs';
+import { renderMoleHost, renderMolePlay, renderMoleRemote } from './lib/molehunt.mjs';
 import { renderLeaderboard, renderSignIn, renderBridge } from './lib/leaderboard.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -62,6 +63,10 @@ write('royale/play/index.html', renderRoyalePlay([]));
 // Surge Showdown (Donny, 2026-11-04: moved here from its own site).
 write('surge/index.html', renderSurgeHost([]));
 write('surge/play/index.html', renderSurgePlay([]));
+// Mole Hunt (Donny, 2026-11-15): the teacher's screen, the students' screen and the Teacher Remote.
+write('molehunt/index.html', renderMoleHost([]));
+write('molehunt/play/index.html', renderMolePlay([]));
+write('molehunt/remote/index.html', renderMoleRemote([]));
 write('leaderboard/index.html', renderLeaderboard());
 write('signin/index.html', renderSignIn());
 write('bridge/index.html', renderBridge());

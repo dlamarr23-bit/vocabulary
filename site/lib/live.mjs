@@ -41,7 +41,9 @@ const ART = {
   match: TILE.mmatch,
   // Two heroes face to face, and a lightning bolt.
   royale: '<svg viewBox="0 0 32 32" aria-hidden="true"><rect class="b" x="2" y="10" width="11" height="12" rx="3"/><circle class="w" cx="5.5" cy="15" r="1.4"/><circle class="w" cx="9.5" cy="15" r="1.4"/><rect class="a" x="19" y="10" width="11" height="12" rx="3"/><circle class="w" cx="22.5" cy="15" r="1.4"/><circle class="w" cx="26.5" cy="15" r="1.4"/><path class="a" d="M16.8 6l-3.2 8.5h2.7l-1.7 8.5 4.6-10.5h-2.8l2-6.5z"/></svg>',
-  surge: '<svg viewBox="0 0 32 32" aria-hidden="true"><circle class="b" cx="16" cy="16" r="12.5"/><path class="a" d="M18.5 4.5l-9.5 13h6.2l-2.2 10 9.8-13.5h-6.3z"/></svg>'
+  surge: '<svg viewBox="0 0 32 32" aria-hidden="true"><circle class="b" cx="16" cy="16" r="12.5"/><path class="a" d="M18.5 4.5l-9.5 13h6.2l-2.2 10 9.8-13.5h-6.3z"/></svg>',
+  // Mole Hunt (2026-11-15): a mole in goggles peeking out of its hole.
+  molehunt: '<svg viewBox="0 0 32 32" aria-hidden="true"><ellipse class="b" cx="16" cy="28" rx="14" ry="3.5"/><path class="a" d="M6 28c0-12 4.5-20 10-20s10 8 10 20z"/><circle class="w" cx="12.5" cy="12" r="2.6"/><circle class="w" cx="19.5" cy="12" r="2.6"/><ellipse class="w" cx="16" cy="18" rx="2.4" ry="1.8"/></svg>'
 };
 
 // Who can join, and the class period playing (Donny, 2026-11-04: students
@@ -130,16 +132,17 @@ export function renderLiveHost(chapters, units, sets) {
 <span class="lv-small">For Vocab Live, Blast and Match.</span></label>
 <div class="lv-field" id="lvQsetField"><label class="lv-q" for="lvQset">Question set</label>
 <select id="lvQset"><option value="">Loading your question sets...</option></select>
-<span class="lv-small">For Battle Royale and Surge Showdown. <a href="../royale/#new">Make a new question set</a></span></div>
+<span class="lv-small">For Battle Royale, Surge Showdown and Mole Hunt. <a href="../royale/#new">Make a new question set</a></span></div>
 </div>
 
 <fieldset class="lv-group"><legend class="lv-q">Which game?</legend>
-<div class="lv-choices lv-choices-5">
+<div class="lv-choices lv-choices-5 lv-choices-6">
 ${choiceCard('lvGame', 'volley', 'Vocab Live', 'Teams race to answer in a row. Each teammate holds some of the answers.', ART.volley, true)}
 ${choiceCard('lvGame', 'blast', 'Blast', 'Teams of up to 4 blast the asteroid with the right term before time runs out.', ART.blast, false)}
 ${choiceCard('lvGame', 'match', 'Match', 'Everyone races to match every term to its definition. First done wins.', ART.match, false)}
 ${choiceCard('lvGame', 'royale', 'Battle Royale', 'Students face off with superhero avatars. A wrong or slower answer costs 1 HP. Last hero standing wins.', ART.royale, false)}
 ${choiceCard('lvGame', 'surge', 'Surge Showdown', 'Team battle: earn energy with right answers, then attack, heal and shield. Power-ups get stronger as the clock runs down.', ART.surge, false)}
+${choiceCard('lvGame', 'molehunt', 'Mole Hunt', 'Find the secret Moles. Earn energy with right answers, scan classmates and vote at Lab Meetings.', ART.molehunt, false)}
 </div></fieldset>
 
 <div class="lv-other" id="lvOther" hidden><p id="lvOtherText"></p></div>

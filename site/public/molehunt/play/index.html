@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Play Mole Hunt with the code on the board.">
+<title>Mole Hunt | Vocabulary</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect x=%2720%27 y=%2710%27 width=%2736%27 height=%2728%27 rx=%276%27 fill=%27%239db8f2%27/%3E%3Crect x=%278%27 y=%2724%27 width=%2738%27 height=%2730%27 rx=%276%27 fill=%27%231d4ed8%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../../assets/book.css">
+<script>/* dark mode, only inside the physical science site, before the page draws: its page names the mode (?theme=), else the last one it named (book.js keeps it up to date) */(function(){if(window.parent===window)return;var t="";try{t=new URLSearchParams(location.search).get("theme")||""}catch(e){}try{if(t==="dark"||t==="light")localStorage.setItem("vocab-theme",t);else t=localStorage.getItem("vocab-theme")||""}catch(e){}if(t==="dark")document.documentElement.setAttribute("data-theme","dark")})()</script>
+<script>/* student view, only inside the physical science site: its page says ?sv=1 (the teacher is looking the way a student does) or ?sv=0; editor.js then keeps the teacher's tools hidden */(function(){if(window.parent===window)return;try{var s=new URLSearchParams(location.search).get("sv");if(s==="1"||s==="0")localStorage.setItem("vocab-student-view",s)}catch(e){}})()</script>
+<script src="../../assets/icons.js" defer></script>
+<script src="../../assets/book.js" defer></script>
+<script src="../../assets/pass.js?v=f773610b" defer></script>
+<link rel="stylesheet" href="../../assets/flashcards.css?v=4b3a9a09">
+<link rel="stylesheet" href="../../assets/live.css?v=abf6cc86">
+<link rel="stylesheet" href="../../assets/royale.css?v=25d98cba">
+<link rel="stylesheet" href="../../assets/molehunt.css?v=1493c5d4">
+<script src="../../assets/live-celebrate.js?v=b55c9a9c" defer></script>
+<script src="../../assets/heroes.js?v=eb09730e" defer></script>
+<script src="../../assets/royale-zoom.js?v=d62e9324" defer></script>
+<script src="../../assets/molehunt-common.js?v=d3ff23f3" defer></script>
+<script src="../../assets/molehunt-play.js?v=2df99dfe" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to the page</a><div class="topbar"><div class="topbar-inner">
+<a class="brand" href="../../index.html">
+<span class="dot" aria-hidden="true"></span>
+<span class="mascot" aria-hidden="true"><svg viewBox="0 0 64 64" role="img" aria-label="Flashcards" xmlns="http://www.w3.org/2000/svg">
+<rect x="20" y="10" width="36" height="28" rx="6" fill="#9db8f2"/>
+<rect x="8" y="24" width="38" height="30" rx="6" fill="#1d4ed8"/>
+<rect x="15" y="34" width="22" height="4" rx="2" fill="#ffffff"/>
+<rect x="15" y="42" width="14" height="4" rx="2" fill="#ffffff"/>
+</svg></span>
+<span>Vocabulary</span>
+</a>
+<nav class="inline-links" aria-label="Site"><a href="../../flashcards/">Review</a><a href="../../live/" data-teacher-only>Host a game</a><a href="../../join/">Join a game</a><a href="../../leaderboard/">Leaderboard</a></nav>
+<button class="menu-btn" id="openDrawer" aria-expanded="false" aria-controls="drawer">&#9776; Menu</button>
+</div></div><div class="drawer-backdrop" id="drawerBackdrop"></div>
+<div class="drawer" id="drawer" aria-label="Menu">
+<button class="drawer-close" id="closeDrawer" aria-label="Close the menu">&times;</button>
+<h2 class="drawer-title">Menu</h2>
+<nav class="drawer-links" aria-label="Site"><a href="../../flashcards/">Review</a><a href="../../live/" data-teacher-only>Host a game</a><a href="../../join/">Join a game</a><a href="../../leaderboard/">Leaderboard</a></nav>
+
+</div><main id="main" class="container lv-page mh-page mh-play">
+
+<section class="lv-step lv-card" id="mpCode" hidden>
+<h1>Mole Hunt</h1>
+<form id="mpCodeForm" class="lv-form">
+<label class="lv-q" for="mpCodeInput">Enter the join code</label>
+<input id="mpCodeInput" class="lv-code-input" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="6">
+<button type="submit" class="btn lv-big">Continue</button>
+</form>
+<p class="lv-error" id="mpCodeError" role="alert"></p>
+</section>
+
+<section class="lv-step lv-card lv-pass-step" id="mpPass" hidden>
+<p class="lv-eyebrow" id="mpPassTitle"></p>
+<h1>Sign in to play</h1>
+<p class="lv-lede">Sign in with Class Pass. Your name comes from the class list, and your wins go on the class leaderboard.</p>
+<button type="button" class="btn lv-big" id="mpPassBtn">Sign in with Class Pass</button>
+<p class="lv-error" id="mpPassError" role="alert"></p>
+<div id="mpGuestBox" hidden>
+<p class="lv-pass-or">Not on the class list?</p>
+<button type="button" class="btn secondary" id="mpGuestBtn">Join as a guest</button>
+</div>
+</section>
+
+<section class="lv-step lv-card" id="mpName" hidden>
+<p class="lv-eyebrow">Mole Hunt</p>
+<form id="mpNameForm" class="lv-form">
+<label class="lv-q" for="mpNick">Enter your first name and last initial only.</label>
+<input id="mpNick" class="lv-nick-input" type="text" autocomplete="off" spellcheck="false" maxlength="16">
+<p class="lv-small">For example: Maria G.</p>
+<button type="submit" class="btn lv-big" id="mpNameBtn">Join game</button>
+</form>
+<p class="lv-error" id="mpNameError" role="alert"></p>
+</section>
+
+<section class="lv-step" id="mpLobby" hidden>
+<div class="rp-me-card mh-me-card">
+<div class="rp-me-hero" id="mpMeHero"></div>
+<div class="rp-me-text">
+<p class="lv-eyebrow">You are in</p>
+<p class="rp-me-name" id="mpMeName"></p>
+<p class="lv-small" id="mpWaitText">Pick your hero. Your teacher will start the game soon.</p>
+</div>
+<div class="mh-me-mole"><svg class="mh-mole" viewBox="0 0 40 40" aria-hidden="true"><ellipse cx="20" cy="36.5" rx="18" ry="3.5" fill="#6e4a2f"/><path d="M7 37c0-17 6-27 13-27s13 10 13 27z" fill="#5e4b41"/><path d="M12 37c0-6 3.5-12 8-12s8 6 8 12z" fill="#e9edf5"/><path d="M17 25.5 20 30l3-4.5" fill="none" stroke="#8a97ad" stroke-width="1.2"/><rect x="10" y="12" width="20" height="2.6" rx="1.2" fill="#22324d"/><circle cx="15.5" cy="13.2" r="3.2" fill="#ffd9a8" stroke="#22324d" stroke-width="1.4"/><circle cx="24.5" cy="13.2" r="3.2" fill="#ffd9a8" stroke="#22324d" stroke-width="1.4"/><circle cx="16" cy="19" r="1.4" fill="#111"/><circle cx="24" cy="19" r="1.4" fill="#111"/><ellipse cx="20" cy="22.3" rx="3.2" ry="2.3" fill="#ff8fa3"/><path d="M10.5 31.5l-3 2.2M11.5 33l-2.4 2.8M29.5 31.5l3 2.2M28.5 33l2.4 2.8" stroke="#f3d3c3" stroke-width="1.3" stroke-linecap="round"/></svg></div>
+</div>
+<div class="rp-picker" id="mpPicker">
+<h2 class="rp-pick-title">Pick your hero</h2>
+<p class="rp-pick-msg" id="mpPickMsg" role="status"></p>
+<div class="rp-grid" id="mpGrid"></div>
+</div>
+</section>
+
+<section class="lv-step mh-game" id="mpGame" hidden>
+<header class="mh-me-bar" id="mpBar"></header>
+<div class="mh-banners" id="mpBanners"></div>
+<nav class="mh-tabs" id="mpTabs" role="tablist"></nav>
+<div class="mh-panes" id="mpPanes"></div>
+<div class="mh-overlay" id="mpOverlay" hidden></div>
+<div class="mh-popup-back" id="mpPopBack" hidden><div class="mh-popup" id="mpPop" role="dialog" aria-modal="true"></div></div>
+</section>
+
+<section class="lv-step lv-card" id="mpPaused" hidden>
+<p class="lv-done-emoji" aria-hidden="true">⏸️</p>
+<p class="lv-me">Your teacher paused the game.</p>
+<p class="lv-lede">Look up at the board.</p>
+</section>
+
+<section class="lv-step mh-game" id="mpDone" hidden></section>
+
+<section class="lv-step lv-card" id="mpGone" hidden>
+<p class="lv-me" id="mpGoneText"></p>
+<a class="btn" href="../../join/">Join a game</a>
+</section>
+
+<div class="lv-toast" id="mpToast" role="status" aria-live="polite"></div>
+<p class="lv-status" id="mpStatus" role="status" aria-live="polite"></p>
+</main><footer><div class="container">Vocabulary &middot; Flashcards and live vocabulary games </div></footer>
+</body>
+</html>

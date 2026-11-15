@@ -94,6 +94,47 @@
     toGoogle(/^[0-9a-f]{32}$/.test(s.n || '') ? s.n : q.get('n'), okBack(s.back));
   });
 
+  // A teacher's Mole Hunt report (2026-11-15): signin/?sheet=<number> asks
+  // Google for permission to make files in the teacher's Drive (drive.file:
+  // only files this site makes, nothing else in their Drive), and hands the
+  // answer to the page that opened this window. That page makes the Google
+  // Sheet, then sends this window to it.
+  var SHEET = 'is8-sheet-signin';
+  var sheetN = q.get('sheet') || '';
+  if (/^[0-9a-f]{24}$/.test(sheetN)) {
+    $('psTitle').textContent = 'Google Sheets';
+    try { sessionStorage.setItem(SHEET, sheetN); } catch (e) { /* the state comes back from Google too */ }
+    say('Opening Google sign-in...');
+    fetch('/api/pass/config', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (c) {
+      var p = new URLSearchParams({
+        client_id: c.client,
+        redirect_uri: location.origin + '/signin/',
+        response_type: 'token',
+        scope: 'https://www.googleapis.com/auth/drive.file',
+        state: 'sheet-' + sheetN,
+        prompt: 'select_account',
+        include_granted_scopes: 'true'
+      });
+      location.replace('https://accounts.google.com/o/oauth2/v2/auth?' + p.toString());
+    }, function () { say('Could not reach the site. Check the internet connection.', true); });
+    return;
+  }
+  if (hash && /^sheet-[0-9a-f]{24}$/.test(hash.get('state') || '')) {
+    var sn = hash.get('state').slice(6);
+    var mine = '';
+    try { mine = sessionStorage.getItem(SHEET) || ''; } catch (e) { /* fine */ }
+    try { history.replaceState(null, '', location.pathname); } catch (e) { /* fine */ }
+    $('psTitle').textContent = 'Google Sheets';
+    var msg = { is8sheet: sn };
+    if (mine && mine !== sn) msg.error = 'that sign-in did not start here';
+    else if (hash.get('access_token')) msg.token = hash.get('access_token');
+    else msg.error = hash.get('error') === 'access_denied' ? 'it was canceled' : (hash.get('error') || 'no permission came back');
+    say(msg.token ? 'Making your Google Sheet... It opens here in a moment.' : 'Google sign-in did not finish: ' + msg.error + '.', !msg.token);
+    try { if (window.opener) window.opener.postMessage(msg, location.origin); } catch (e) { /* the page cannot be told */ }
+    if (!window.opener) say('Go back to the game screen and press Open in Google Sheets again.', true);
+    return;
+  }
+
   if (hash && (hash.get('id_token') || hash.get('error'))) {
     var saved = recall();
     try { history.replaceState(null, '', location.pathname); } catch (e) { /* fine */ }

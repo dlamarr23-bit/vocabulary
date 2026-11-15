@@ -24,9 +24,12 @@
 // - Battle Royale ('royale', royale.js), like Blooket's: everyone starts with
 //   some energy, faces a random opponent each round, and loses energy for a
 //   wrong or slower answer. Last one standing wins.
+// - Mole Hunt ('molehunt', molehunt.js), a hidden-role game: Scientists
+//   answer questions for energy, scan classmates and vote out the secret Moles.
 import { DurableObject } from 'cloudflare:workers';
 import { cleanName, rudeName, aiSaysRude } from './names.js';
 import { royale } from './royale.js';
+import { molehunt } from './molehunt.js';
 import { SurgeRoom } from './surge.js';
 export { Leaderboard } from './board.js';
 
@@ -221,6 +224,12 @@ export class LiveGame extends DurableObject {
     // "_board", which only ever passes these requests on.
     if (url.pathname.startsWith('/board/')) return this.env.BOARD.get(this.env.BOARD.idFromName('main')).fetch(request);
     if (url.pathname === '/init' && request.method === 'POST') return this.init(await request.json());
+    // The Teacher Remote (Mole Hunt, C): the site asks for the host key only
+    // after checking the teacher password, so a phone can join as the host.
+    if (url.pathname === '/hostkey' && request.method === 'GET') {
+      const g = await this.load();
+      return g ? Response.json({ hostKey: g.hostKey, kind: g.kind }) : Response.json({ error: 'There is no game with that code.' }, { status: 404 });
+    }
     if (request.headers.get('Upgrade') === 'websocket') return this.connect(url, request);
     return new Response('Not found', { status: 404 });
   }
@@ -229,6 +238,7 @@ export class LiveGame extends DurableObject {
 
   async init(body) {
     if (body && body.kind === 'royale') return this.rInit(body);
+    if (body && body.kind === 'molehunt') return this.mhInit(body);
     if (body && body.kind === 'surge') return this.surgeRoom().init(body);
     const old = await this.load();
     if (old && Date.now() - old.created < LIFETIME_MS) return new Response('taken', { status: 409 });
@@ -310,6 +320,7 @@ export class LiveGame extends DurableObject {
       return;
     }
     if (g.kind === 'royale') return this.rAlarm();
+    if (g.kind === 'molehunt') return this.mhAlarm();
     if (g.kind === 'surge') return this.surgeRoom().alarm();
     // A Blast round, or a Vocab Live game with a time limit, ends on time;
     // the game itself stays open.
@@ -332,6 +343,7 @@ export class LiveGame extends DurableObject {
   nextAlarm(now) {
     const g = this.game;
     if (g.kind === 'royale') return this.rNextAlarm(now);
+    if (g.kind === 'molehunt') return this.mhNextAlarm(now);
     if (g.kind === 'surge') return this.surgeRoom().nextAt(now);
     let at = Math.min(this.idleAt || now + IDLE_MS, g.created + LIFETIME_MS);
     if (g.phase === 'play' && g.endsAt) at = Math.min(at, g.endsAt);
@@ -388,8 +400,9 @@ export class LiveGame extends DurableObject {
         return new Response(null, { status: 101, webSocket: client });
       }
       this.ctx.acceptWebSocket(server);
-      server.serializeAttachment({ role: 'host' });
-      server.send(JSON.stringify(this.board()));
+      // A Mole Hunt Teacher Remote (?remote=1) is a host that is also sent who the Moles are.
+      server.serializeAttachment({ role: 'host', remote: g.kind === 'molehunt' && url.searchParams.get('remote') === '1' });
+      server.send(JSON.stringify(g.kind === 'molehunt' ? this.mhBoard(url.searchParams.get('remote') === '1') : this.board()));
     } else {
       this.ctx.acceptWebSocket(server);
       // A student signed in with Class Pass: the site checked the sign-in and
@@ -404,7 +417,7 @@ export class LiveGame extends DurableObject {
   // Battle Royale's own switch, and the other games never needed it.
   needPass() {
     const o = this.game.opts;
-    return o.who ? o.who === 'pass' : this.game.kind === 'royale' && !!o.pass;
+    return o.who ? o.who === 'pass' : (this.game.kind === 'royale' || this.game.kind === 'molehunt') && !!o.pass;
   }
 
   // Open connections only: one that is closing no longer counts as online.
@@ -458,6 +471,7 @@ export class LiveGame extends DurableObject {
     try { ws.send(JSON.stringify(msg)); } catch { /* closed */ }
   }
   toHost() {
+    if (this.game && this.game.kind === 'molehunt') return this.mhToHost();
     const b = this.board();
     this.sockets((a) => a.role === 'host').forEach((ws) => this.send(ws, b));
   }
@@ -494,12 +508,13 @@ export class LiveGame extends DurableObject {
       else {
         g.opts.who = whoOf(m);
         g.opts.typedNames = g.opts.who === 'guests';
-        if (g.kind === 'royale') g.opts.pass = g.opts.who === 'pass';
+        if (g.kind === 'royale' || g.kind === 'molehunt') g.opts.pass = g.opts.who === 'pass';
       }
       await this.save();
       return this.toHost();
     }
     if (g.kind === 'royale') return this.rMessage(ws, a, m);
+    if (g.kind === 'molehunt') return this.mhMessage(ws, a, m);
     // A student's screen went to the background, or came back.
     if (a.pid && (m.t === 'away' || m.t === 'back')) {
       a.away = m.t === 'away';
@@ -1901,6 +1916,7 @@ export class LiveGame extends DurableObject {
   board() {
     const g = this.game;
     if (g.kind === 'royale') return this.rBoard();
+    if (g.kind === 'molehunt') return this.mhBoard(false);
     if (g.kind === 'surge') return { t: 'state', state: this.surgeRoom().publicState(true) };
     const missed = Object.keys(g.missed)
       .map((i) => ({ term: g.cards[i].term, def: g.cards[i].def, n: g.missed[i] }))
@@ -1934,6 +1950,7 @@ export class LiveGame extends DurableObject {
   view(pid) {
     const g = this.game;
     if (g.kind === 'royale') return this.rView(pid);
+    if (g.kind === 'molehunt') return this.mhView(pid);
     const p = g.players[pid];
     if (!p) return { t: 'removed', msg: 'You are not in this game.' };
     const t = p.team && g.teams[p.team];
@@ -2030,6 +2047,7 @@ export class LiveGame extends DurableObject {
 
 // Battle Royale's own steps (royale.js) run on the same game object.
 Object.assign(LiveGame.prototype, royale);
+Object.assign(LiveGame.prototype, molehunt);
 // Surge Showdown (surge.js, Donny 2026-11-04) is a helper that works on this
 // game object, made once for each game server copy.
 LiveGame.prototype.surgeRoom = function () {

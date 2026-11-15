@@ -558,6 +558,15 @@ async function api(request, env, url) {
 
   // Only the teacher hosts a game (Donny, 2026-10-14; students could before).
   if (a === 'live' && b === 'create' && method === 'POST') return liveCreate(request, env, url);
+  // Mole Hunt's Teacher Remote (2026-11-15): the teacher's phone, signed in
+  // with the teacher password, is given the game's host key.
+  if (a === 'live' && b && c === 'remote' && method === 'GET') {
+    if (!env.LIVE) return json({ error: 'Live games are not switched on yet.' }, 503);
+    if (!/^[A-Z2-9]{6}$/.test(b.toUpperCase())) return json({ error: 'That is not a game code.' }, 404);
+    const res = await env.LIVE.get(env.LIVE.idFromName(b.toUpperCase())).fetch('https://live/hostkey');
+    const d = await res.json().catch(() => ({}));
+    return res.ok ? json({ hostKey: d.hostKey, kind: d.kind }) : json({ error: d.error || 'There is no game with that code.' }, 404);
+  }
   if (a === 'qsets' && !c) return qsetsApi(request, env, b);
 
   if (a === 'book-text' && b && !c && method === 'PUT') return putBookText(request, env, b);
@@ -919,7 +928,7 @@ async function liveCreate(request, env, url) {
   // Battle Royale and Surge Showdown (Donny, 2026-11-04: moved onto this site)
   // can play a multiple choice question set instead of flashcards. With a
   // flashcard set, the game server makes each card a multiple choice question.
-  if ((kind === 'royale' || kind === 'surge') && body && body.qsetId) {
+  if ((kind === 'royale' || kind === 'surge' || kind === 'molehunt') && body && body.qsetId) {
     const qid = String(body.qsetId);
     const set = QSET_ID.test(qid) ? await env.FLASHCARDS.get('qset:' + qid, 'json') : null;
     if (!set) return json({ error: 'Pick a question set first.' }, 400);

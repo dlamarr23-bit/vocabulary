@@ -922,3 +922,7 @@ html[data-theme="dark"] .lv-guest-tag{ background:#2b3040; color:#c7cdd8; }
 html[data-theme="dark"] .lv-toast, html[data-theme="dark"] .lv-big-clock:not(.soon):not(.urgent){ background:#2b3040; }
 html[data-theme="dark"] .lv-resume, html[data-theme="dark"] .lv-demo-pick, html[data-theme="dark"] .lv-pu-vote{ background:#2b2512; border-color:#6b5a1e; }
 html[data-theme="dark"] .lv-fb-prompt{ background:rgba(255,255,255,.06); }
+
+/* Six games on Host a game (Mole Hunt, 2026-11-15): two rows of three. */
+.lv-choices-6{ grid-template-columns:repeat(3, minmax(0, 1fr)); }
+@media (max-width:600px){ .lv-choices-6{ grid-template-columns:1fr; } }
