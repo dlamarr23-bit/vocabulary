@@ -340,7 +340,7 @@
 
   var panes = {};
   function pane(name) {
-    if (!panes[name]) { panes[name] = mk('div', 'mh-pane'); panes[name].dataset.key = ''; }
+    if (!panes[name]) { panes[name] = mk('div', 'mh-pane mh-pane-' + name); panes[name].dataset.key = ''; }
     return panes[name];
   }
   function drawPanes(v) {
@@ -716,24 +716,59 @@
     });
   }
 
-  var revealShownAt = 0;
+  // Beside the vote (Donny, 2026-11-15: "allow rumors and suspects to be
+  // seen"): the student's own suspects and trusted classmates from their
+  // Evidence Board, what their scans said, and every rumor so far.
+  function caseNotes(v) {
+    var box = mk('aside', 'mh-case');
+    var by = {};
+    v.people.forEach(function (p) { by[p.id] = p; });
+    var b = v.board || {};
+    function group(title, cls, ids, empty) {
+      var sec = mk('section', 'mh-case-sec ' + cls);
+      sec.appendChild(mk('h4', '', title));
+      var chips = mk('div', 'mh-chips');
+      ids.map(function (id) { return by[id]; }).filter(Boolean).forEach(function (p) { chips.appendChild(M.chip(p)); });
+      if (!chips.children.length) sec.appendChild(mk('p', 'mh-empty', empty)); else sec.appendChild(chips);
+      box.appendChild(sec);
+    }
+    group('🚩 My suspects', 'sus', b.suspect || [], 'Nobody yet. Drag names to Suspect on your Evidence Board.');
+    group('✅ I trust', 'tru', b.trust || [], 'Nobody yet.');
+    var scans = (v.notes || []).filter(function (n) { return n.k === 'scan' || n.k === 'scanned' || n.k === 'peek'; }).slice(-6).reverse();
+    var sec = mk('section', 'mh-case-sec');
+    sec.appendChild(mk('h4', '', '🔍 My scans'));
+    if (!scans.length) sec.appendChild(mk('p', 'mh-empty', 'No scans yet.'));
+    scans.forEach(function (n) { sec.appendChild(mk('div', 'mh-clue', n.text)); });
+    box.appendChild(sec);
+    var rs = mk('section', 'mh-case-sec');
+    rs.appendChild(mk('h4', '', '📡 Rumors'));
+    var rumors = (v.rumors || []).slice().reverse();
+    if (!rumors.length) rs.appendChild(mk('p', 'mh-empty', 'No rumors yet.'));
+    rumors.forEach(function (r) { rs.appendChild(mk('div', 'mh-rumor', (r.by ? 'A ghost whispers: ' : 'Rumor ' + r.n + ': ') + r.text)); });
+    box.appendChild(rs);
+    return box;
+  }
+  // Which part of the reveal is showing: 'tally' (who the class voted for),
+  // 'drum' (the suspense) or 'result'.
+  function revealPhase(m) {
+    if (m.shown) return 'result';
+    return Date.now() < local(m.drumAt || 0) ? 'tally' : 'drum';
+  }
   function drawMeeting(o, v, m) {
-    var key = JSON.stringify(['meet', m.n, m.step, v.myVote, voteFor, voteWhy, v.alive, m.step === 'vote' ? [m.votesIn, m.of] : 0,
-      m.step === 'vote' && !v.myVote ? v.people.map(function (p) { return [p.id, p.alive]; }) : 0, m.result && m.result.out && m.result.out.id]);
+    var b = v.board || {};
+    var ph = m.step === 'reveal' ? revealPhase(m) : '';
+    var key = JSON.stringify(['meet', m.n, m.step, ph, v.myVote, voteFor, voteWhy, v.alive, m.step === 'vote' ? [m.votesIn, m.of] : 0,
+      m.step !== 'reveal' ? [v.people.map(function (p) { return [p.id, p.alive, p.clear]; }), b, (v.notes || []).length, (v.rumors || []).length] : 0,
+      m.result && m.result.out && m.result.out.id]);
     part(o, key, function (x) {
-      x.className = 'mh-overlay mh-meeting-cover';
+      x.className = 'mh-overlay mh-meeting-cover' + (m.step === 'reveal' ? ' mh-reveal' : ' mh-meet');
       if (m.step === 'talk') {
         x.appendChild(mk('h2', '', '🔔 Lab Meeting ' + m.n));
         x.appendChild(mk('p', '', 'Called by ' + m.by + '. Talk it over: who is a Mole? Share what your scans said, or keep it to yourself.'));
         x.appendChild(mk('p', 'mh-timer-pill mh-meet-left', ''));
-        var mine = (v.notes || []).filter(function (n) { return /scan|peek|meeting|rumor/.test(n.k); }).slice(-5).reverse();
-        if (mine.length) {
-          var c = mk('div', 'mh-clues');
-          c.style.width = 'min(30rem,100%)';
-          c.appendChild(mk('h4', '', '📌 Your clues'));
-          mine.forEach(function (n) { c.appendChild(mk('div', 'mh-clue', n.text)); });
-          x.appendChild(c);
-        }
+        var wrap = mk('div', 'mh-meet-grid one');
+        wrap.appendChild(caseNotes(v));
+        x.appendChild(wrap);
         return;
       }
       if (m.step === 'vote') {
@@ -742,31 +777,41 @@
         if (!v.alive) { x.appendChild(mk('p', '', 'Ghosts cannot vote. Watch the board!')); return; }
         if (v.myVote) {
           x.appendChild(mk('p', '', 'Your vote is in. ' + m.votesIn + ' of ' + m.of + ' votes in.'));
+          var w2 = mk('div', 'mh-meet-grid one');
+          w2.appendChild(caseNotes(v));
+          x.appendChild(w2);
           return;
         }
+        var grid = mk('div', 'mh-meet-grid');
+        var left = mk('div', 'mh-meet-main');
+        var sus = b.suspect || [], tru = b.trust || [];
+        left.appendChild(mk('p', 'mh-vote-key', '🚩 your suspects  ·  ✅ you trust  ·  ✓ on the Clear list'));
         var list = mk('div', 'mh-people mh-vote-list');
-        v.people.filter(function (p) { return p.alive; }).forEach(function (p) {
-          var b = mk('button', 'mh-person' + (p.clear ? ' clear' : '') + (p.mate ? ' mate' : ''));
-          b.type = 'button';
-          b.setAttribute('aria-pressed', String(voteFor === p.id));
-          b.appendChild(M.heroImg(p.hero));
-          b.appendChild(mk('span', '', p.name));
-          b.addEventListener('click', function () { voteFor = p.id; o.dataset.key = ''; drawOverlay(view); });
-          list.appendChild(b);
+        // Suspects first, then everyone else, then the ones trusted.
+        var rank = function (p) { return sus.indexOf(p.id) >= 0 ? 0 : tru.indexOf(p.id) >= 0 ? 2 : 1; };
+        v.people.filter(function (p) { return p.alive; }).sort(function (p, q) { return rank(p) - rank(q); }).forEach(function (p) {
+          var isSus = sus.indexOf(p.id) >= 0, isTru = tru.indexOf(p.id) >= 0;
+          var bt = mk('button', 'mh-person' + (p.clear ? ' clear' : '') + (p.mate ? ' mate' : '') + (isSus ? ' sus' : '') + (isTru ? ' tru' : ''));
+          bt.type = 'button';
+          bt.setAttribute('aria-pressed', String(voteFor === p.id));
+          bt.appendChild(M.heroImg(p.hero));
+          bt.appendChild(mk('span', '', (isSus ? '🚩 ' : isTru ? '✅ ' : '') + p.name));
+          bt.addEventListener('click', function () { voteFor = p.id; o.dataset.key = ''; drawOverlay(view); });
+          list.appendChild(bt);
         });
-        x.appendChild(list);
+        left.appendChild(list);
         if (voteFor) {
           var who = (v.people.filter(function (p) { return p.id === voteFor; })[0] || {}).name || '';
-          x.appendChild(mk('p', '', 'Why ' + who + '? Tap a reason (you can skip this).'));
+          left.appendChild(mk('p', '', 'Why ' + who + '? Tap a reason (you can skip this).'));
           var rs = mk('div', 'mh-reason-pick');
           [['scanned', '🔍 I scanned them'], ['fake', '🎭 Fake scan?'], ['quiet', '😴 Not answering'], ['clear', '🚫 Not on the Clear list'], ['hunch', '🤔 Just a hunch']].forEach(function (r) {
-            var b = mk('button', '', r[1]);
-            b.type = 'button';
-            b.setAttribute('aria-pressed', String(voteWhy === r[0]));
-            b.addEventListener('click', function () { voteWhy = voteWhy === r[0] ? '' : r[0]; o.dataset.key = ''; drawOverlay(view); });
-            rs.appendChild(b);
+            var rb = mk('button', '', r[1]);
+            rb.type = 'button';
+            rb.setAttribute('aria-pressed', String(voteWhy === r[0]));
+            rb.addEventListener('click', function () { voteWhy = voteWhy === r[0] ? '' : r[0]; o.dataset.key = ''; drawOverlay(view); });
+            rs.appendChild(rb);
           });
-          x.appendChild(rs);
+          left.appendChild(rs);
         }
         var go = mk('div', 'mh-vote-go');
         var vb = mk('button', 'btn lv-big', voteFor ? 'Vote for ' + ((v.people.filter(function (p) { return p.id === voteFor; })[0] || {}).name || '') : 'Pick someone above');
@@ -778,21 +823,30 @@
         sk.addEventListener('click', function () { send({ t: 'vote', target: 'skip' }); });
         go.appendChild(vb);
         go.appendChild(sk);
-        x.appendChild(go);
+        left.appendChild(go);
+        grid.appendChild(left);
+        grid.appendChild(caseNotes(v));
+        x.appendChild(grid);
         return;
       }
-      // The reveal: the board does the drum roll; the answer shows here a moment later.
-      revealShownAt = revealShownAt || Date.now();
-      x.className = 'mh-overlay mh-reveal';
-      x.appendChild(mk('h2', '', '👀 Look up at the board!'));
+      // The reveal, in step with the board: who the class voted for, the
+      // suspense, then the answer.
       var r = m.result || {};
-      var res = mk('p', 'mh-reveal-res');
-      res.style.fontSize = '1.4rem';
-      res.style.fontWeight = '800';
-      res.style.visibility = 'hidden';
-      res.textContent = r.out ? r.out.name + ' was ' + (r.wasMole ? 'A MOLE!' : 'not a Mole.') : 'Nobody left the lab.';
-      x.appendChild(res);
-      setTimeout(function () { res.style.visibility = 'visible'; }, 2200);
+      if (ph === 'tally') {
+        x.appendChild(mk('h2', '', '🗳️ The votes are in!'));
+        var t = mk('div', 'mh-tally');
+        (r.tally || []).slice(0, 6).forEach(function (y) { var c = M.chip(y); c.appendChild(mk('b', '', String(y.n))); t.appendChild(c); });
+        if (r.skip) t.appendChild(mk('span', 'mh-chip', 'Skipped ' + r.skip));
+        x.appendChild(t);
+        x.appendChild(mk('p', '', 'Look up at the board!'));
+        return;
+      }
+      if (r.out) {
+        x.appendChild(M.heroImg(r.out.hero, 'big'));
+        x.appendChild(mk('p', 'was', r.out.name + ' was...'));
+      } else x.appendChild(mk('p', 'was', r.tie ? 'It was a tie...' : 'Most of the class skipped...'));
+      if (ph === 'drum') { x.appendChild(mk('p', 'res mh-dots', '...')); return; }
+      x.appendChild(mk('p', 'res ' + (r.out && r.wasMole ? 'mole' : 'sci'), r.out ? (r.wasMole ? 'A MOLE!' : 'NOT a Mole.') : 'Nobody leaves the lab.'));
       if (r.out && r.out.id === v.me) x.appendChild(mk('p', '', 'You were voted out. ' + (v.opts.ghosts ? 'You will be a ghost: keep answering to help your team!' : 'Keep answering to practice!')));
     });
   }
@@ -847,6 +901,7 @@
     if (ml && v.meeting) ml.textContent = M.clock(local(v.meeting.endsAt) - now) + (v.meeting.step === 'talk' ? ' to talk' : ' to vote');
     var al = document.querySelector('.mh-alarm-left');
     if (al && v.emergency) al.textContent = '⏱ ' + M.clock(local(v.emergency.endsAt) - now);
+    if (v.meeting && v.meeting.step === 'reveal' && revealPhase(v.meeting) === 'drum' && $('mpOverlay').dataset.key.indexOf('"tally"') >= 0) drawOverlay(v);
     var fl = document.querySelector('.mh-freeze-left');
     if (fl && v.frozenUntil) {
       var left = local(v.frozenUntil) - now;

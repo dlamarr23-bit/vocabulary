@@ -44,7 +44,13 @@ const TICK_MS = 1000;
 const SWEEP_MS = 15 * 1000;
 const IDLE_MS = 5 * 60 * 1000;
 const STORY_MS = 16 * 1000;
-const REVEAL_MS = 9 * 1000;
+// The reveal (Donny, 2026-11-15: slower, "show who the class voted for and
+// then wait to build suspense"): the votes first, then a drum roll on the
+// student with the most votes, then whether they were a Mole, which then
+// stays up. The answer is only sent to screens when the drum roll ends.
+const REVEAL_TALLY_MS = 5000;
+const REVEAL_DRUM_MS = 4000;
+const REVEAL_MS = REVEAL_TALLY_MS + REVEAL_DRUM_MS + 9000;
 const EMERGENCY_MS = 45 * 1000;
 const EMERGENCY_GAP_MS = 90 * 1000;
 const POWERCUT_GAP_MS = 60 * 1000;
@@ -224,7 +230,7 @@ export const molehunt = {
     if (g.phase === 'play' && !g.paused) {
       // Pretend students act every second; otherwise only what is due.
       if (this.mhBots()) at = Math.min(at, now + TICK_MS);
-      const due = [g.storyEndsAt, g.endsAt && !g.timeUp ? g.endsAt : 0, g.meeting ? g.meeting.endsAt : 0,
+      const due = [g.storyEndsAt, g.endsAt && !g.timeUp ? g.endsAt : 0, g.meeting ? g.meeting.endsAt : 0, g.meeting && !g.meeting.shown ? g.meeting.resultAt : 0,
         g.emergency ? g.emergency.endsAt : 0, g.opts.rumors && g.stage === 'work' ? g.nextRumorAt : 0];
       due.forEach((t) => { if (t && t > 0) at = Math.min(at, t); });
       // Frozen students thaw on time.
@@ -266,6 +272,7 @@ export const molehunt = {
       if (g.stage !== 'meeting') this.mhFinish('mole', 'Time ran out with Moles still hiding in the lab.');
     }
     const m = g.meeting;
+    if (g.phase === 'play' && m && m.step === 'reveal' && !m.shown && now >= m.resultAt - 50) { this.mhRevealShow(); changed = true; }
     if (g.phase === 'play' && m && now >= m.endsAt - 50) {
       if (m.step === 'talk') this.mhStartVote(now);
       else if (m.step === 'vote') this.mhReveal(now);
@@ -777,20 +784,7 @@ export const molehunt = {
     if (top && !tie && tally[top] > skip) out = top;
     const reasons = {};
     Object.values(mt.reasons).forEach((r) => { reasons[r] = (reasons[r] || 0) + 1; });
-    // Each voter's record, for missions, awards and the report.
-    Object.keys(mt.votes).forEach((pid) => {
-      const v = g.players[pid];
-      const t = g.players[mt.votes[pid]];
-      if (!v) return;
-      v.votesMade += 1;
-      if (t && t.role === 'mole' && v.role === 'sci') { v.votesRight += 1; this.mhMission(v, 'voteMole', 1); }
-    });
     ranked.forEach((id) => { g.players[id].votesGot += tally[id]; });
-    this.mhAlive('mole').forEach((p) => {
-      if (p.id === out) return;
-      p.survived += 1;
-      if ((tally[p.id] || 0) >= 3) this.mhMission(p, 'survive3', 1);
-    });
     let wasMole = false;
     if (out) {
       const p = g.players[out];
@@ -799,16 +793,12 @@ export const molehunt = {
       p.ghost = !!g.opts.ghosts;
       p.outAt = mt.n;
       p.jar = 0;
-      this.mhLog('Meeting ' + mt.n + ': ' + p.name + ' was voted out. ' + (wasMole ? 'A MOLE!' : 'Not a Mole.'), false);
-      this.mhCase('Meeting ' + mt.n + ': ' + p.name + ' voted out (' + (wasMole ? 'a Mole, caught!' : 'not a Mole') + ')', wasMole ? out : '');
-      this.mhNote(p, 'You were voted out at meeting ' + mt.n + '.', 'meeting');
-    } else {
-      this.mhLog('Meeting ' + mt.n + ': nobody was voted out' + (tie ? ' (a tie).' : '.'), false);
-      this.mhCase('Meeting ' + mt.n + ': nobody voted out', '');
     }
-    g.order.forEach((id) => { const v = g.players[id]; if (v && v.id !== out) this.mhNote(v, out ? 'Meeting ' + mt.n + ': ' + g.players[out].name + ' got ' + plural(tally[out], 'vote') + ' and left the lab (' + (wasMole ? 'a Mole' : 'not a Mole') + ').' : 'Meeting ' + mt.n + ': nobody left the lab.', 'meeting', out); });
     mt.step = 'reveal';
-    mt.endsAt = now + REVEAL_MS;
+    mt.revealAt = now;
+    mt.resultAt = now + REVEAL_TALLY_MS + (out ? REVEAL_DRUM_MS : 1500);
+    mt.shown = false;
+    mt.endsAt = mt.resultAt + 9000;
     mt.result = {
       out,
       wasMole,
@@ -818,13 +808,47 @@ export const molehunt = {
       tally: ranked.map((id) => ({ id, n: tally[id] })),
       reasons,
       // Who voted for whom, only when the teacher wants it shown.
-      voters: g.opts.showVoters ? Object.keys(mt.votes).map((pid) => ({ id: pid, to: mt.votes[pid] })) : null
+      voters: g.opts.showVoters ? Object.keys(mt.votes).map((pid) => ({ id: pid, to: mt.votes[pid] })) : null,
+      outVotes: out ? tally[out] : 0,
+      counts: tally
     };
+  },
+  // The drum roll is over: everyone may know whether it was a Mole.
+  mhRevealShow() {
+    const g = this.game;
+    const mt = g.meeting;
+    if (!mt || !mt.result || mt.shown) return;
+    mt.shown = true;
+    const { out, wasMole, tie, outVotes } = mt.result;
+    const tally = mt.result.counts || {};
+    // Each voter's record, for missions, awards and the report.
+    Object.keys(mt.votes).forEach((pid) => {
+      const v = g.players[pid];
+      const t = g.players[mt.votes[pid]];
+      if (!v) return;
+      v.votesMade += 1;
+      if (t && t.role === 'mole' && v.role === 'sci') { v.votesRight += 1; this.mhMission(v, 'voteMole', 1); }
+    });
+    this.mhAlive('mole').forEach((x) => {
+      x.survived += 1;
+      if ((tally[x.id] || 0) >= 3) this.mhMission(x, 'survive3', 1);
+    });
+    const p = out && g.players[out];
+    if (p) {
+      this.mhLog('Meeting ' + mt.n + ': ' + p.name + ' was voted out. ' + (wasMole ? 'A MOLE!' : 'Not a Mole.'), false);
+      this.mhCase('Meeting ' + mt.n + ': ' + p.name + ' voted out (' + (wasMole ? 'a Mole, caught!' : 'not a Mole') + ')', wasMole ? out : '');
+      this.mhNote(p, 'You were voted out at meeting ' + mt.n + '.', 'meeting');
+    } else {
+      this.mhLog('Meeting ' + mt.n + ': nobody was voted out' + (tie ? ' (a tie).' : '.'), false);
+      this.mhCase('Meeting ' + mt.n + ': nobody voted out', '');
+    }
+    g.order.forEach((id) => { const v = g.players[id]; if (v && v.id !== out) this.mhNote(v, p ? 'Meeting ' + mt.n + ': ' + p.name + ' got ' + plural(outVotes, 'vote') + ' and left the lab (' + (wasMole ? 'a Mole' : 'not a Mole') + ').' : 'Meeting ' + mt.n + ': nobody left the lab.', 'meeting', out); });
   },
   mhAfterMeeting(now) {
     const g = this.game;
     const mt = g.meeting;
     if (!mt) return;
+    this.mhRevealShow();
     const moles = this.mhAlive('mole').length;
     const sci = this.mhAlive('sci').length;
     g.meeting = null;
@@ -917,7 +941,11 @@ export const molehunt = {
     out.sabotage.push(scanned ? 'At least one Mole has been scanned by a classmate.' : 'No Mole has been scanned yet.');
     const smudged = all.filter((p) => p.smudged).length;
     if (g.opts.smudge) out.sabotage.push(smudged ? plural(smudged, 'student is', 'students are') + ' smudged right now.' : 'Nobody is smudged right now.');
-    const pool = kind && out[kind] && out[kind].length ? out[kind] : [...out.names, ...out.answers, ...out.sabotage];
+    let pool = kind && out[kind] && out[kind].length ? out[kind] : [...out.names, ...out.answers, ...out.sabotage];
+    const told = new Set((g.rumors || []).map((r) => r.text));
+    const fresh = pool.filter((t) => !told.has(t));
+    if (fresh.length) pool = fresh;
+    else if (!kind) { const any = [...out.names, ...out.answers, ...out.sabotage].filter((t) => !told.has(t)); if (any.length) pool = any; }
     return pool[rand(pool.length)] || '';
   },
   mhRumor(kind, by, now) {
@@ -1093,6 +1121,7 @@ export const molehunt = {
   mhFinish(winner, why) {
     const g = this.game;
     if (g.phase !== 'play') return;
+    this.mhRevealShow();
     g.phase = 'done';
     g.stage = '';
     g.winner = winner;
@@ -1394,24 +1423,29 @@ export const molehunt = {
     const alive = this.mhAlive();
     const r = mt.result;
     const out = r && r.out && g.players[r.out] ? this.mhPerson(g.players[r.out]) : null;
+    const shown = !!mt.shown || !!secretToo;
     return {
       n: mt.n,
       by: mt.by,
       step: mt.step,
       endsAt: mt.endsAt,
+      revealAt: mt.revealAt || 0,
+      drumAt: mt.revealAt ? mt.revealAt + REVEAL_TALLY_MS : 0,
+      resultAt: mt.resultAt || 0,
+      shown: !!mt.shown,
       votesIn: Object.keys(mt.votes).filter((id) => g.players[id] && g.players[id].alive).length +
         (mt.step === 'vote' ? Object.keys(mt.botVotes || {}).filter((id) => !mt.votes[id] && mt.botVotes[id].at <= Date.now()).length : 0),
       of: alive.length,
       result: r ? {
         out,
-        wasMole: r.wasMole,
+        wasMole: shown ? r.wasMole : null,
         tie: r.tie,
         skip: r.skip,
         votes: r.votes,
         tally: r.tally.map((x) => ({ ...this.mhPerson(g.players[x.id] || { id: x.id, name: '?', hero: '' }), n: x.n })),
         reasons: Object.keys(r.reasons).map((k) => ({ k, text: REASONS[k], n: r.reasons[k] })).sort((x, y) => y.n - x.n),
         voters: r.voters,
-        molesLeft: this.mhAlive('mole').length,
+        molesLeft: shown ? this.mhAlive('mole').length : null,
         meetingsLeft: g.meetingsLeft
       } : null,
       votes: secretToo ? mt.votes : undefined
@@ -1419,8 +1453,11 @@ export const molehunt = {
   },
   mhStats() {
     const g = this.game;
+    // Before the drum roll ends, a Mole just voted out still counts.
+    const mt = g.meeting;
+    const hiding = mt && mt.result && !mt.shown && mt.result.out && g.players[mt.result.out] && g.players[mt.result.out].role === 'mole' ? 1 : 0;
     return {
-      molesLeft: this.mhAlive('mole').length,
+      molesLeft: this.mhAlive('mole').length + hiding,
       molesStart: g.molesStart || 0,
       meetingsLeft: g.meetingsLeft || 0,
       meetingsStart: g.meetingsStart || 0,
@@ -1601,7 +1638,7 @@ export const molehunt = {
       clear: g.clear || [],
       power: g.power ? { got: g.power.got, goal: g.power.goal } : null,
       emergency: g.emergency ? { kind: g.emergency.kind, name: EMERGENCIES[g.emergency.kind], need: g.emergency.need, got: g.emergency.got, endsAt: g.emergency.endsAt } : null,
-      rumors: (g.rumors || []).slice(-3),
+      rumors: (g.rumors || []).slice(-8),
       meeting: this.mhMeetingView(false),
       myVote: g.meeting ? g.meeting.votes[pid] || '' : '',
       whisper: p.ghost && p.role === 'sci' && !p.whispered,

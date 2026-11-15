@@ -474,7 +474,7 @@
     clearInterval(tickTimer);
     tickTimer = setInterval(tick, 250);
     tick();
-    if (was && was.meeting && b.meeting && was.meeting.step !== 'reveal' && b.meeting.step === 'reveal') drum();
+    // The drum roll plays when the reveal reaches it (tick()).
   }
 
   // The story, a meeting, the reveal, or paused: over the whole board.
@@ -526,18 +526,35 @@
         el.appendChild(mk('p', 'mh-timer-pill mh-meet-left', ''));
       });
     }
+    // The reveal, in three parts (Donny, 2026-11-15): who the class voted
+    // for, a drum roll on the student with the most votes, then the answer.
     var r = m.result || {};
-    return part('cover', 'reveal' + m.n, function (el) {
-      el.className = 'mh-part mh-cover mh-reveal';
+    var ph = revealPhase(m);
+    return part('cover', 'reveal' + m.n + ph, function (el) {
+      el.className = 'mh-part mh-cover mh-reveal mh-reveal-' + ph;
+      if (ph === 'tally') {
+        el.appendChild(mk('h2', '', '🗳️ The votes are in!'));
+        el.appendChild(mk('p', '', M.plural(r.votes || 0, 'student', 'students') + ' voted' + (r.skip ? ', ' + r.skip + ' skipped' : '') + '.'));
+        el.appendChild(voteBars(r));
+        if ((r.reasons || []).length) {
+          var rs0 = mk('div', 'mh-reasons');
+          r.reasons.slice(0, 4).forEach(function (x) { rs0.appendChild(mk('span', 'mh-reason', x.text + ' ×' + x.n)); });
+          el.appendChild(rs0);
+        }
+        return;
+      }
       if (r.out) {
         el.appendChild(M.heroImg(r.out.hero, 'big'));
+        el.appendChild(mk('p', 'was', r.out.name + ' got ' + M.plural(r.outVotes || (r.tally && r.tally[0] ? r.tally[0].n : 0), 'vote') + ' and leaves the lab.'));
         el.appendChild(mk('p', 'was', r.out.name + ' was...'));
+        if (ph === 'drum') { el.appendChild(mk('p', 'res mh-dots', '...')); return; }
         el.appendChild(mk('p', 'res ' + (r.wasMole ? 'mole' : 'sci'), r.wasMole ? 'A MOLE!' : 'NOT a Mole.'));
       } else {
         el.appendChild(mk('p', 'was', r.tie ? 'It was a tie...' : 'Most of the class skipped...'));
+        if (ph === 'drum') { el.appendChild(mk('p', 'res mh-dots', '...')); return; }
         el.appendChild(mk('p', 'res sci', 'Nobody leaves the lab.'));
       }
-      el.appendChild(mk('p', 'left', M.plural(r.molesLeft, 'Mole is', 'Moles are') + ' still in the lab · ' + M.plural(r.meetingsLeft, 'meeting') + ' left'));
+      el.appendChild(mk('p', 'left', r.molesLeft ? M.plural(r.molesLeft, 'Mole is', 'Moles are') + ' still in the lab · ' + M.plural(r.meetingsLeft, 'meeting') + ' left' : 'Every Mole has been caught!'));
       if (r.meetingsLeft < r.molesLeft) {
         el.appendChild(mk('p', 'mh-warn', board && board.power ? 'Not enough meetings left to vote out every Mole! Fill the Lab Power bar, or add a meeting (+1 meeting).' : 'Not enough meetings left to vote out every Mole! Add a meeting (+1 meeting) now, or the Moles win.'));
       }
@@ -560,25 +577,74 @@
     });
   }
 
-  function drum() {
+  // Which part of the reveal is showing: 'tally', 'drum' or 'result'.
+  function revealPhase(m) {
+    if (m.shown) return 'result';
+    var now = Date.now();
+    return now < local(m.drumAt || 0) ? 'tally' : 'drum';
+  }
+  // Who the class voted for: a bar for each student with votes, and Skip.
+  function voteBars(r) {
+    var box = mk('div', 'mh-bars');
+    var list = (r.tally || []).slice(0, 7);
+    var most = Math.max.apply(null, list.map(function (x) { return x.n; }).concat([r.skip || 0, 1]));
+    list.forEach(function (x, i) {
+      var row = mk('div', 'mh-bar-row' + (i === 0 && !r.tie ? ' top' : ''));
+      row.style.animationDelay = (i * 0.25) + 's';
+      row.appendChild(M.heroImg(x.hero, 'small'));
+      row.appendChild(mk('span', 'nm', x.name));
+      var bar = mk('span', 'bar');
+      var fill = mk('i');
+      fill.style.width = Math.round(100 * x.n / most) + '%';
+      fill.style.animationDelay = (i * 0.25) + 's';
+      bar.appendChild(fill);
+      row.appendChild(bar);
+      row.appendChild(mk('b', '', String(x.n)));
+      box.appendChild(row);
+    });
+    if (r.skip) {
+      var sk = mk('div', 'mh-bar-row skip');
+      sk.appendChild(mk('span', 'nm', 'Skipped'));
+      var b2 = mk('span', 'bar');
+      var f2 = mk('i');
+      f2.style.width = Math.round(100 * r.skip / most) + '%';
+      b2.appendChild(f2);
+      sk.appendChild(b2);
+      sk.appendChild(mk('b', '', String(r.skip)));
+      box.appendChild(sk);
+    }
+    if (!list.length && !r.skip) box.appendChild(mk('p', '', 'Nobody voted.'));
+    return box;
+  }
+  // A drum roll that speeds up for the length of the suspense, then a hit.
+  function drum(ms) {
     if (music.muted) return;
     try {
       var AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return;
       var ac = drum.ac = drum.ac || new AC();
-      for (var i = 0; i < 9; i++) {
-        var o = ac.createOscillator(), g = ac.createGain();
-        o.type = 'triangle';
-        o.frequency.value = i === 8 ? 220 : 90 + i * 4;
-        var t = ac.currentTime + i * 0.14 + (i === 8 ? 0.15 : 0);
-        g.gain.setValueAtTime(0.0001, t);
-        g.gain.exponentialRampToValueAtTime((music.volume / 100) * (i === 8 ? 0.5 : 0.25), t + 0.01);
-        g.gain.exponentialRampToValueAtTime(0.0001, t + (i === 8 ? 0.5 : 0.12));
-        o.connect(g); g.connect(ac.destination);
-        o.start(t); o.stop(t + 0.6);
+      var len = Math.max(1, (ms || 4000) / 1000);
+      var vol = music.volume / 100;
+      var t = 0, gap = 0.22;
+      while (t < len - 0.25) {
+        hit(ac, ac.currentTime + t, 95 + t * 12, vol * (0.12 + 0.18 * t / len), 0.1);
+        t += gap;
+        gap = Math.max(0.05, gap * 0.93);
       }
+      hit(ac, ac.currentTime + len, 210, vol * 0.55, 0.6);
     } catch (e) { /* no sound */ }
   }
+  function hit(ac, at, freq, vol, len) {
+    var o = ac.createOscillator(), g = ac.createGain();
+    o.type = 'triangle';
+    o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, at);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol), at + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + len);
+    o.connect(g); g.connect(ac.destination);
+    o.start(at); o.stop(at + len + 0.05);
+  }
+  var drummed = '';
 
   function tick() {
     var b = board;
@@ -602,7 +668,15 @@
     if (al && b.emergency) al.textContent = '⏱ ' + M.clock(local(b.emergency.endsAt) - now);
     var nx = q('.mh-next');
     if (nx) nx.textContent = b.nextRumorAt ? 'Next rumor in ' + M.clock(local(b.nextRumorAt) - now) : '';
+    // The reveal moves from the votes to the drum roll on this screen's clock.
+    if (m && m.step === 'reveal' && !b.paused) {
+      var ph = revealPhase(m);
+      var cover = parts.cover;
+      if (cover && cover.dataset.key !== 'reveal' + m.n + ph) drawPlay(b);
+      if (ph === 'drum' && drummed !== m.n + '|' + code0()) { drummed = m.n + '|' + code0(); drum(local(m.resultAt) - Date.now()); }
+    }
   }
+  function code0() { return board ? board.code : ''; }
 
   var CLOCKS = [['', 'Set the clock...'], [5, '5 minutes'], [10, '10 minutes'], [15, '15 minutes'], [20, '20 minutes'], [25, '25 minutes'], [30, '30 minutes'], [0, 'No clock']];
   (function () {
