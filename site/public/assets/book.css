@@ -366,7 +366,7 @@ table.data tbody tr:nth-child(even){ background:#fafafb; }
 .qfeedback.wrong{ background:var(--bad-tint); color:var(--bad-ink); }
 .quiz-actions{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-top:6px; }
 .btn{ border:none; background:var(--accent); color:#fff; font-weight:700; padding:12px 22px; border-radius:999px; cursor:pointer; font-size:.95rem; box-shadow:var(--shadow-sm); }
-.btn:hover{ background:var(--accent-dark); }
+.btn:hover{ background-color:var(--accent-dark); }
 .hero-actions{ margin:22px 0 0; }
 .hero-actions .btn{ display:inline-block; text-decoration:none; }
 .hero-join{ margin:22px 0 0; max-width:420px; min-width:0; }
@@ -500,3 +500,15 @@ svg .ttl{ font-size:15px; font-weight:700; }
 .pass-msg:empty{ display:none; }
 .pass-msg:not(:empty){ padding:8px 10px; border:1px solid var(--bad-tint); box-shadow:var(--shadow-sm); }
 @media (max-width:640px){ .pass-btn .pass-badge{ display:none; } .pass-btn{ padding:6px 12px; font-size:.82rem; } }
+
+/* painted look (Donny chose "Idea 2: Painted bar" for the class site, 2026-11-18): the solid accent fills get the
+   paper grain of the home banner's sky (paper-grain.png) and a lighter and a darker pool of paint, like the book's
+   pictures. Only the background pictures are set, so each rule keeps its own color; hovers change
+   background-color only. Rules that set background (white buttons, muted buttons) clear the paint. */
+.btn, .vface.back, .scientist-card .savatar{
+  background-image:url("paper-grain.png"),
+    radial-gradient(80% 170% at 6% 0%, rgba(255,255,255,.17), transparent 55%),
+    radial-gradient(70% 160% at 100% 100%, rgba(0,0,0,.2), transparent 60%);
+  background-size:1024px 512px, 100% 100%, 100% 100%;
+  background-repeat:repeat, no-repeat, no-repeat;
+}

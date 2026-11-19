@@ -188,7 +188,7 @@ a.fc-share-item{ text-decoration:none; }
 .fc-arrow.known:hover:not(:disabled){ background:var(--good-tint); color:var(--good-ink); border-color:var(--good); }
 .fc-tool{ display:inline-flex; align-items:center; gap:8px; border:1.5px solid var(--line); background:var(--card); color:var(--ink); border-radius:999px; padding:9px 16px; font:inherit; font-weight:600; font-size:.9rem; cursor:pointer; }
 .fc-tool:hover{ border-color:var(--accent); color:var(--accent-dark); }
-.fc-tool[aria-pressed="true"]{ background:var(--accent); border-color:var(--accent); color:#fff; }
+.fc-tool[aria-pressed="true"]{ background-color:var(--accent); border-color:var(--accent); color:#fff; }
 .fc-sortbar{ display:flex; justify-content:center; gap:10px; margin-top:12px; }
 .fc-pill{ display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:4px 12px; font-size:.84rem; font-weight:700; }
 .fc-pill.learning{ background:#fff4e5; color:#8a3f06; }
@@ -588,3 +588,15 @@ html[data-theme="dark"] .fx-more:hover, html[data-theme="dark"] .fx-more[aria-ex
 .fx-here-icon:has(.fx-pic){ width:56px; height:56px; }
 .fx-pick .fx-pic{ display:block; width:100%; height:100%; object-fit:contain; }
 html[data-theme="dark"] .fc-game-pic, html[data-theme="dark"] .fx-card-icon img.fx-pic, html[data-theme="dark"] .fx-here-icon img.fx-pic, html[data-theme="dark"] .fx-pick .fx-pic{ background:#f4efe6; border-radius:12px; padding:4px; box-sizing:border-box; }
+
+/* painted look (Donny chose "Idea 2: Painted bar" for the class site, 2026-11-18): the solid accent fills get the
+   paper grain of the home banner's sky (paper-grain.png) and a lighter and a darker pool of paint, like the book's
+   pictures. Only the background pictures are set, so each rule keeps its own color; hovers change
+   background-color only. Rules that set background (white buttons, muted buttons) clear the paint. */
+.fc-tool[aria-pressed="true"]{
+  background-image:url("paper-grain.png"),
+    radial-gradient(80% 170% at 6% 0%, rgba(255,255,255,.17), transparent 55%),
+    radial-gradient(70% 160% at 100% 100%, rgba(0,0,0,.2), transparent 60%);
+  background-size:1024px 512px, 100% 100%, 100% 100%;
+  background-repeat:repeat, no-repeat, no-repeat;
+}
