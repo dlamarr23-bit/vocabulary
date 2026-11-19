@@ -658,11 +658,24 @@
     if (board) { view.board = board; m.board = board; }
     send(m);
   }
+  // Tell the class (Donny, 2026-11-18): at a meeting, while the class talks
+  // or votes, a student can share a note. It shows on the projector and on
+  // every screen, a few at each meeting. null when they cannot now.
+  function tellNow(v) {
+    var m = v.meeting;
+    if (!m || (m.step !== 'talk' && m.step !== 'vote') || !v.opts.claims || !v.alive) return null;
+    var mine = (m.claims || []).filter(function (c) { return c.by.id === v.me; });
+    return { mine: mine, left: Math.max(0, (m.claimsEach || 2) - mine.length) };
+  }
+  function told(t, n) { return t && t.mine.some(function (c) { return c.who.id === n.who && c.v === n.v && c.why === n.why; }); }
+  function canTell(t, who) { return t && (t.left > 0 || t.mine.some(function (c) { return c.who.id === who; })); }
+  function tell(n) { send({ t: 'claim', who: n.who, v: n.v, why: n.why }); }
   function notesPanel(v, writer) {
     var box = mk('section', 'mh-mynotes');
     var head = mk('div', 'mh-mynotes-head');
     head.appendChild(mk('h4', '', '📝 My notes'));
-    head.appendChild(mk('span', '', 'A classmate who peeks can read these.'));
+    var t = writer ? tellNow(v) : null;
+    head.appendChild(mk('span', '', t ? '📣 Tell the class puts a note on the board (' + t.left + ' left at this meeting).' : 'A classmate who peeks can read these.'));
     box.appendChild(head);
     var by = {};
     v.people.forEach(function (p) { by[p.id] = p; });
@@ -673,6 +686,17 @@
       var row = mk('div', 'mh-note ' + n.v);
       row.appendChild(M.heroImg(p.hero, 'tiny', !p.alive));
       row.appendChild(mk('span', 'txt', M.noteText(p.name, n.v, n.why)));
+      if (t && p.alive) {
+        if (told(t, n)) row.appendChild(mk('span', 'mh-told', '📣 Told the class'));
+        else {
+          var tb = mk('button', 'mh-tell', '📣 Tell the class');
+          tb.type = 'button';
+          tb.disabled = !canTell(t, n.who);
+          if (tb.disabled) tb.title = 'You told the class ' + t.mine.length + ' notes at this meeting.';
+          tb.addEventListener('click', function () { tb.disabled = true; tell(n); });
+          row.appendChild(tb);
+        }
+      }
       if (writer) {
         var del = mk('button', 'mh-note-x', '✖');
         del.type = 'button';
@@ -736,19 +760,33 @@
       w.appendChild(why);
     }
     var go = mk('div', 'mh-nb-go');
-    var save = mk('button', 'btn', 'Save note');
-    save.type = 'button';
-    save.disabled = !(nb.who && nb.v);
-    save.addEventListener('click', function () {
+    var ready = !!(nb.who && nb.v);
+    function keepNote(andTell) {
       if (!nb.who || !nb.v || !view) return;
-      var list = (view.myNotes || []).filter(function (n) { return n.who !== nb.who; }).concat([{ who: nb.who, v: nb.v, why: nb.why }]);
+      var n = { who: nb.who, v: nb.v, why: nb.why };
+      var list = (view.myNotes || []).filter(function (x) { return x.who !== n.who; }).concat([n]);
       var s = boardState(view);
-      ['trust', 'unsure', 'suspect'].forEach(function (k) { s[k] = s[k].filter(function (x) { return x !== nb.who; }); });
-      s[M.NOTE_SAYS[nb.v].col].push(nb.who);
+      ['trust', 'unsure', 'suspect'].forEach(function (k) { s[k] = s[k].filter(function (x) { return x !== n.who; }); });
+      s[M.NOTE_SAYS[n.v].col].push(n.who);
       saveNotes(list, s);
+      if (andTell) tell(n);
       nbReset();
       redrawNotes();
-    });
+    }
+    // At a meeting the note can go straight to the board too.
+    var t = tellNow(v);
+    if (t) {
+      var both = mk('button', 'btn', '📣 Save and tell the class');
+      both.type = 'button';
+      both.disabled = !ready || !canTell(t, nb.who);
+      if (ready && both.disabled) both.title = 'You told the class ' + t.mine.length + ' notes at this meeting.';
+      both.addEventListener('click', function () { keepNote(true); });
+      go.appendChild(both);
+    }
+    var save = mk('button', t ? 'btn secondary' : 'btn', 'Save note');
+    save.type = 'button';
+    save.disabled = !ready;
+    save.addEventListener('click', function () { keepNote(false); });
     var cancel = mk('button', 'btn secondary', 'Cancel');
     cancel.type = 'button';
     cancel.addEventListener('click', function () { nbReset(); redrawNotes(); });
@@ -914,6 +952,23 @@
   function caseNotes(v, writer) {
     var box = mk('aside', 'mh-case');
     box.appendChild(notesPanel(v, writer));
+    // What classmates told the class at this meeting, newest first.
+    if (v.opts.claims && v.meeting) {
+      var said = mk('section', 'mh-case-sec mh-said');
+      said.appendChild(mk('h4', '', '📣 Told the class at this meeting'));
+      var cl = (v.meeting.claims || []).slice().reverse();
+      if (!cl.length) said.appendChild(mk('p', 'mh-empty', 'Nothing yet. Anyone can tap Tell the class on one of their notes.'));
+      cl.forEach(function (c) {
+        var it = mk('div', 'mh-said-one ' + c.v);
+        it.appendChild(M.heroImg(c.by.hero, 'tiny'));
+        var tx = mk('span', '');
+        tx.appendChild(mk('b', '', (c.by.id === v.me ? 'You' : c.by.name) + ': '));
+        tx.appendChild(document.createTextNode(M.noteText(c.who.name, c.v, c.why, c.who.id === v.me)));
+        it.appendChild(tx);
+        said.appendChild(it);
+      });
+      box.appendChild(said);
+    }
     var by = {};
     v.people.forEach(function (p) { by[p.id] = p; });
     var b = v.board || {};
@@ -970,7 +1025,8 @@
     var b = v.board || {};
     var ph = m.step === 'reveal' ? revealPhase(m) : '';
     var key = JSON.stringify(['meet', m.n, m.step, ph, v.myVote, voteFor, voteWhy, v.alive, m.step === 'vote' ? [m.votesIn, m.of] : 0,
-      m.step !== 'reveal' ? [v.people.map(function (p) { return [p.id, p.alive, p.clear]; }), b, (v.notes || []).length, (v.rumors || []).length, secretOpen, v.myNotes || [], nb] : 0,
+      m.step !== 'reveal' ? [v.people.map(function (p) { return [p.id, p.alive, p.clear]; }), b, (v.notes || []).length, (v.rumors || []).length, secretOpen, v.myNotes || [], nb,
+        (m.claims || []).map(function (c) { return c.at + c.by.id; })] : 0,
       m.result && m.result.out && m.result.out.id]);
     part(o, key, function (x) {
       x.className = 'mh-overlay mh-meeting-cover' + (m.step === 'reveal' ? ' mh-reveal' : ' mh-meet');

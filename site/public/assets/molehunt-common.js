@@ -86,11 +86,14 @@
     sci: [['scanYes', 'my scan said Clear'], ['onClear', 'they are on the Clear list'], ['busy', 'they answer a lot of questions'], ['vote', 'they voted for a Mole'], ['hunch', 'it is just a hunch']],
     unsure: [['scanNo', 'my scan said Not sure'], ['notScanned', 'nobody has scanned them yet'], ['rumor', 'a rumor could fit them'], ['hunch', 'it is just a hunch']]
   };
-  function noteText(name, v, why) {
+  // you: the note is about the student reading it ("I think you are a Mole
+  // because you are not answering questions.").
+  function noteText(name, v, why, you) {
     var says = NOTE_SAYS[v];
     if (!says) return '';
     var r = (NOTE_WHY[v] || []).filter(function (x) { return x[0] === why; })[0];
-    return stop('I think ' + name + ' ' + says.text + (r ? ' because ' + r[1] : ''));
+    var t = stop('I think ' + (you ? 'you' : name) + ' ' + says.text + (r ? ' because ' + r[1] : ''));
+    return you ? t.replace(/^I think you is /, 'I think you are ').replace(/ their /g, ' your ').replace(/ they /g, ' you ').replace(/ them/g, ' you') : t;
   }
 
   // "4:05" from milliseconds.

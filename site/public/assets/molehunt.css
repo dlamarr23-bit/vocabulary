@@ -486,3 +486,33 @@ html[data-theme="dark"] .mh-streak{ background:rgba(255,155,74,.15); color:#ff9b
 .mh-nb-people{ max-height:13rem; overflow:auto; padding:.1rem; }
 .mh-nb-go{ display:flex; gap:.5rem; flex-wrap:wrap; }
 .mh-nb-go .btn:disabled{ opacity:.5; cursor:not-allowed; }
+
+/* Tell the class (Donny, 2026-11-18): notes students share at a meeting, on
+   the projector and on every student's screen. */
+.mh-cover.mh-with-claims{ justify-content:flex-start; overflow:auto; padding-top:1rem; }
+.mh-cover.mh-with-claims{ gap:.3rem; }
+.mh-cover.mh-with-claims .ring{ display:none; }
+.mh-cover.mh-with-claims h2{ font-size:clamp(1.5rem, 3.2vw, 2.5rem); }
+.mh-cover.mh-with-claims > p{ font-size:clamp(.95rem, 1.4vw, 1.15rem); }
+.mh-meet-head{ display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:.4rem 1rem; }
+.mh-meet-head h2{ margin:0; }
+.mh-meet-head p.mh-vote-count, .mh-meet-head p.mh-timer-pill{ margin:0; font-size:clamp(1.05rem, 1.8vw, 1.4rem); }
+.mh-claims{ width:min(72rem, 100%); background:var(--mh-panel); border:1px solid var(--mh-line); border-radius:16px; padding:.75rem .9rem; text-align:left; margin-top:.4rem; box-shadow:var(--mh-shadow); }
+.mh-claims h3{ margin:0 0 .55rem; font-size:1rem; letter-spacing:.08em; text-transform:uppercase; color:var(--mh-muted); }
+.mh-claims .mh-empty{ font-size:1rem; max-width:none; }
+.mh-claim-grid{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:.5rem; }
+.mh-claim{ display:flex; align-items:center; gap:.65rem; background:var(--mh-panel2); border:1px solid var(--mh-line); border-left:6px solid var(--mh-line); border-radius:12px; padding:.5rem .75rem; }
+.mh-claim.mole{ border-left-color:var(--mh-mole); } .mh-claim.sci{ border-left-color:var(--mh-mint); } .mh-claim.unsure{ border-left-color:var(--mh-amber); }
+.mh-claim .rb-hero{ flex:none; border-radius:50%; }
+.mh-claim .txt{ min-width:0; }
+.mh-claim b{ display:block; font-size:.9rem; color:var(--mh-muted); }
+.mh-claim .txt span{ display:block; font-weight:700; font-size:clamp(1rem, .6rem + .7vw, 1.3rem); line-height:1.3; color:var(--mh-ink); }
+.mh-claim.new{ animation:mh-pop .45s ease; }
+@media (max-width:900px){ .mh-claim-grid{ grid-template-columns:1fr; } }
+.mh-tell{ flex:none; font:inherit; font-weight:800; font-size:.8rem; border:1px solid var(--mh-blue); background:var(--mh-blue-bg); color:var(--mh-blue); border-radius:99px; padding:.2rem .65rem; cursor:pointer; white-space:nowrap; }
+.mh-tell:hover{ background:var(--mh-blue); color:#fff; }
+.mh-tell:disabled{ opacity:.45; cursor:not-allowed; background:var(--mh-blue-bg); color:var(--mh-blue); }
+.mh-told{ flex:none; font-size:.78rem; font-weight:800; color:var(--mh-mint); white-space:nowrap; }
+.mh-said-one{ display:flex; align-items:flex-start; gap:.4rem; font-size:.9rem; line-height:1.35; margin-bottom:.35rem; padding-left:.45rem; border-left:3px solid var(--mh-line); }
+.mh-said-one.mole{ border-left-color:var(--mh-mole); } .mh-said-one.sci{ border-left-color:var(--mh-mint); } .mh-said-one.unsure{ border-left-color:var(--mh-amber); }
+.mh-said-one .rb-hero{ flex:none; border-radius:50%; }

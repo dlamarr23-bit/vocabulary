@@ -99,6 +99,7 @@ ${sel('mhMeetings', 'Lab Meetings', 'How many votes the class gets. Never fewer 
 ${sel('mhTalk', 'Talking time at a meeting', 'Then voting opens by itself. You can open it sooner.', [[30, '30 seconds'], [60, '1 minute'], [90, '1.5 minutes'], [120, '2 minutes'], [180, '3 minutes']], 60)}
 ${sel('mhVote', 'Voting time', 'Voting ends sooner once everyone has voted.', [[20, '20 seconds'], [30, '30 seconds'], [45, '45 seconds'], [60, '1 minute']], 30)}
 ${sw('mhShowVoters', 'Show who voted for whom', 'After each vote the board shows every student\'s vote. Off: only the totals.', false)}
+${sw('mhClaims', 'Students can tell the class at meetings', 'A student taps Tell the class on one of their notes, and it shows on this screen: "I think Ben C. is a Mole because my scan said Not sure." 2 for each student at each meeting. Moles can fib.', true)}
 </div></fieldset>
 
 <fieldset class="lv-group mh-box"><legend class="lv-q">Time, scans and prices</legend>

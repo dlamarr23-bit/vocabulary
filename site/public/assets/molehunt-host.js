@@ -84,7 +84,7 @@
   var TOOL_KEYS = ['scan', 'public', 'peek', 'studentMeetings', 'fake', 'cut', 'smudge', 'disguise'];
   var EXTRA_KEYS = ['power', 'emergencies', 'missions', 'roles', 'ghosts', 'rumors', 'second'];
   var JOB_KEYS = ['detective', 'medic', 'tech', 'hacker'];
-  var CHECKS = ['mhShowVoters', 'mhWrongCost', 'mhShowAnswer', 'mhJoinLate', 'mhSlow']
+  var CHECKS = ['mhShowVoters', 'mhClaims', 'mhWrongCost', 'mhShowAnswer', 'mhJoinLate', 'mhSlow']
     .concat(TOOL_KEYS.map(function (k) { return 'mhT-' + k; }), EXTRA_KEYS.map(function (k) { return 'mhX-' + k; }), JOB_KEYS.map(function (k) { return 'mhJ-' + k; }));
 
   function source() { var r = document.querySelector('input[name="mhSource"]:checked'); return r ? r.value : 'qset'; }
@@ -161,6 +161,7 @@
       prices: $('mhPrices').value,
       rumorEvery: Number($('mhRumorEvery').value),
       showVoters: $('mhShowVoters').checked,
+      claims: $('mhClaims').checked,
       wrongCost: $('mhWrongCost').checked,
       showAnswer: $('mhShowAnswer').checked,
       joinLate: $('mhJoinLate').checked,
@@ -507,9 +508,47 @@
     }
     var m = b.meeting;
     if (!m) return null;
+    // Tell the class (Donny, 2026-11-18): the notes students shared at this
+    // meeting, newest first, while the class talks and votes.
+    var claimsOn = !!(b.opts && b.opts.claims);
+    var saidKey = claimsOn ? (m.claims || []).map(function (c) { return c.at + c.by.id; }).join(',') : '';
+    function claimsBox(max) {
+      var box = mk('div', 'mh-claims');
+      box.appendChild(mk('h3', '', '📣 What the lab is saying'));
+      var list = (m.claims || []).slice().reverse();
+      if (!list.length) { box.appendChild(mk('p', 'mh-empty', 'Tap 📣 Tell the class on one of your notes to share it here.')); return box; }
+      var grid = mk('div', 'mh-claim-grid');
+      list.slice(0, max).forEach(function (c, i) {
+        var it = mk('div', 'mh-claim ' + c.v + (i === 0 && Date.now() - local(c.at) < 4000 ? ' new' : ''));
+        it.appendChild(M.heroImg(c.by.hero, 'small'));
+        var t = mk('div', 'txt');
+        t.appendChild(mk('b', '', c.by.name));
+        t.appendChild(mk('span', '', M.noteText(c.who.name, c.v, c.why)));
+        it.appendChild(t);
+        grid.appendChild(it);
+      });
+      box.appendChild(grid);
+      if (list.length > max) box.appendChild(mk('p', 'mh-empty', '+ ' + (list.length - max) + ' more on students\' screens'));
+      return box;
+    }
+    // With the shared notes on, the title and the clock share one line so
+    // the notes get the room.
+    function headRow(el, title, extra) {
+      var row = mk('div', 'mh-meet-head');
+      row.appendChild(mk('h2', '', title));
+      if (extra) row.appendChild(extra);
+      row.appendChild(mk('p', 'mh-timer-pill mh-meet-left', ''));
+      el.appendChild(row);
+    }
     if (m.step === 'talk') {
-      return part('cover', 'talk' + m.n, function (el) {
-        el.className = 'mh-part mh-cover mh-meeting-cover';
+      return part('cover', 'talk' + m.n + '|' + saidKey, function (el) {
+        el.className = 'mh-part mh-cover mh-meeting-cover' + (claimsOn ? ' mh-with-claims' : '');
+        if (claimsOn) {
+          headRow(el, '🔔 Lab Meeting ' + m.n);
+          el.appendChild(mk('p', '', 'Called by ' + m.by + '. Talk it over: who is a Mole?'));
+          el.appendChild(claimsBox(6));
+          return;
+        }
         el.appendChild(mk('div', 'ring', '🔔'));
         el.appendChild(mk('h2', '', 'Lab Meeting ' + m.n));
         el.appendChild(mk('p', '', 'Called by ' + m.by + '. Talk it over: who is a Mole? Look at the Clear list and the Lab log.'));
@@ -518,8 +557,14 @@
       });
     }
     if (m.step === 'vote') {
-      return part('cover', 'vote' + m.n + '|' + m.votesIn + '|' + m.of, function (el) {
-        el.className = 'mh-part mh-cover mh-meeting-cover';
+      return part('cover', 'vote' + m.n + '|' + m.votesIn + '|' + m.of + '|' + saidKey, function (el) {
+        var withClaims = claimsOn && (m.claims || []).length;
+        el.className = 'mh-part mh-cover mh-meeting-cover' + (withClaims ? ' mh-with-claims' : '');
+        if (withClaims) {
+          headRow(el, '🗳️ Vote on your screen!', mk('p', 'mh-vote-count', m.votesIn + ' of ' + m.of + ' votes in'));
+          el.appendChild(claimsBox(4));
+          return;
+        }
         el.appendChild(mk('div', 'ring', '🗳️'));
         el.appendChild(mk('h2', '', 'Vote on your screen!'));
         el.appendChild(mk('p', 'mh-vote-count', m.votesIn + ' of ' + m.of + ' votes in'));

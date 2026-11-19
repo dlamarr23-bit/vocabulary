@@ -100,6 +100,8 @@ const NOTE_WHY = {
   sci: ['scanYes', 'onClear', 'busy', 'vote', 'hunch'],
   unsure: ['scanNo', 'notScanned', 'rumor', 'hunch']
 };
+// Tell the class: how many notes a student can share at each meeting.
+const CLAIMS_EACH = 2;
 const REASONS = { scanned: 'I scanned them', fake: 'Fake scan?', quiet: 'Not answering', hunch: 'Just a hunch', clear: 'Not on the Clear list' };
 const DEMO_FIRST = ['Ava', 'Liam', 'Sofia', 'Noah', 'Mia', 'Mateo', 'Zoe', 'Ethan', 'Aaliyah', 'Lucas',
   'Isabella', 'Jayden', 'Emma', 'Diego', 'Chloe', 'Aiden', 'Priya', 'Elijah', 'Layla', 'Caleb',
@@ -201,7 +203,7 @@ export const molehunt = {
       who: 'pass', period: '', moles: 0, limit: 15, scans: 10, reliable: 'normal', meetings: 0, prices: 'normal',
       talk: 60, vote: 30, rumorEvery: 90,
       scan: true, public: true, peek: true, studentMeetings: true, fake: true, cut: true, smudge: true, disguise: true,
-      wrongCost: false, showAnswer: true, joinLate: true, showVoters: false, slow: true,
+      wrongCost: false, showAnswer: true, joinLate: true, showVoters: false, slow: true, claims: true,
       power: true, emergencies: true, missions: true, roles: true, ghosts: true, rumors: true, second: true,
       detective: true, medic: true, tech: true, hacker: true, demo: false
     };
@@ -222,7 +224,7 @@ export const molehunt = {
       rumorEvery: pickFrom(RUMOR_EVERY, w.rumorEvery, o.rumorEvery === undefined ? w.rumorEvery : o.rumorEvery),
       demo: was ? w.demo : o.demo === true
     };
-    ['scan', 'public', 'peek', 'studentMeetings', 'fake', 'cut', 'smudge', 'disguise', 'wrongCost', 'showAnswer', 'joinLate', 'showVoters', 'slow',
+    ['scan', 'public', 'peek', 'studentMeetings', 'fake', 'cut', 'smudge', 'disguise', 'wrongCost', 'showAnswer', 'joinLate', 'showVoters', 'slow', 'claims',
       'power', 'emergencies', 'missions', 'roles', 'ghosts', 'rumors', 'second', 'detective', 'medic', 'tech', 'hacker']
       .forEach((k) => { out[k] = flag(o[k], w[k]); });
     return out;
@@ -392,6 +394,7 @@ export const molehunt = {
     if (m.t === 'answer') return this.mhAnswer(pid, m);
     if (m.t === 'tool') return this.mhTool(pid, m);
     if (m.t === 'vote') return this.mhVote(pid, m);
+    if (m.t === 'claim') return this.mhClaim(pid, m);
     if (m.t === 'give') return this.mhGive(pid, m);
     if (m.t === 'whisper') return this.mhWhisper(pid);
   },
@@ -429,13 +432,11 @@ export const molehunt = {
     // Tapped notes (2026-11-18): one for each classmate, the newest last.
     if (Array.isArray(m.list)) {
       const kept = new Map();
-      m.list.slice(-MAX_PLAYERS).forEach((n) => {
-        const who = String((n && n.who) || '');
-        const v = String((n && n.v) || '');
-        if (!g.players[who] || who === pid || !Object.prototype.hasOwnProperty.call(NOTE_WHY, v)) return;
-        const why = NOTE_WHY[v].includes(String(n.why || '')) ? String(n.why) : '';
-        kept.delete(who);
-        kept.set(who, { who, v, why });
+      m.list.slice(-MAX_PLAYERS).forEach((x) => {
+        const n = this.mhNoteFrom(pid, x);
+        if (!n) return;
+        kept.delete(n.who);
+        kept.set(n.who, n);
       });
       p.myNotes = [...kept.values()];
     }
@@ -449,6 +450,15 @@ export const molehunt = {
     }
     this.mhSaveSoon();
     if (m.board || m.list) this.toPlayer(pid);
+  },
+  // One tapped note, checked: { who, v, why } or null.
+  mhNoteFrom(pid, x) {
+    const g = this.game;
+    const who = String((x && x.who) || '');
+    const v = String((x && x.v) || '');
+    if (!g.players[who] || who === pid || !Object.prototype.hasOwnProperty.call(NOTE_WHY, v)) return null;
+    const why = NOTE_WHY[v].includes(String(x.why || '')) ? String(x.why) : '';
+    return { who, v, why };
   },
 
   /* ---------------- questions ---------------- */
@@ -750,9 +760,70 @@ export const molehunt = {
     }
     g.stage = 'meeting';
     g.workPausedAt = now;
-    g.meeting = { n: g.meetingsUsed, by, step: 'talk', at: now, endsAt: now + g.opts.talk * 1000, votes: {}, reasons: {}, result: null };
+    g.meeting = { n: g.meetingsUsed, by, step: 'talk', at: now, endsAt: now + g.opts.talk * 1000, votes: {}, reasons: {}, result: null, claims: [] };
     this.mhLog('Lab Meeting ' + g.meetingsUsed + ', called by ' + by + '.', false);
+    this.mhBotClaims(now);
     return true;
+  },
+  // Tell the class (Donny, 2026-11-18): at a meeting a student shares one of
+  // their tapped notes, and it shows on the projector and on every screen.
+  // CLAIMS_EACH at each meeting; a new one about the same classmate takes the
+  // old one's place. Moles can fib.
+  async mhClaim(pid, m) {
+    const g = this.game;
+    const mt = g.meeting;
+    const p = g.players[pid];
+    if (!g.opts.claims || !mt || (mt.step !== 'talk' && mt.step !== 'vote') || !p.alive) return;
+    const n = this.mhNoteFrom(pid, m);
+    if (!n || !g.players[n.who].alive) return;
+    if (!this.mhAddClaim(mt, pid, n, Date.now())) {
+      this.notice(pid, 'You already told the class ' + CLAIMS_EACH + ' notes at this meeting.');
+      return;
+    }
+    // It is one of their notes too.
+    p.myNotes = (p.myNotes || []).filter((x) => x.who !== n.who).concat([n]);
+    await this.save();
+    this.toEveryone();
+  },
+  mhAddClaim(mt, pid, n, now) {
+    mt.claims = mt.claims || [];
+    const same = mt.claims.findIndex((c) => c.by === pid && c.who === n.who);
+    if (same < 0 && mt.claims.filter((c) => c.by === pid).length >= CLAIMS_EACH) return false;
+    if (same >= 0) mt.claims.splice(same, 1);
+    mt.claims.push({ by: pid, who: n.who, v: n.v, why: n.why, at: now });
+    mt.claims = mt.claims.slice(-80);
+    return true;
+  },
+  // Pretend students (demo mode) tell the class now and then while the class
+  // talks: a Scientist what a scan said, a Mole a made-up suspicion.
+  mhBotClaims(now) {
+    const g = this.game;
+    const mt = g.meeting;
+    if (!mt || !g.opts.claims) return;
+    const alive = this.mhAlive();
+    const span = Math.max(4000, g.opts.talk * 1000 - 3000);
+    mt.botClaims = [];
+    alive.filter((p) => p.bot && rand(100) < 25).forEach((p) => {
+      const others = alive.filter((x) => x.id !== p.id);
+      let n = null;
+      if (p.role === 'mole') {
+        const sci = others.filter((x) => x.role === 'sci' && !g.clear.includes(x.id));
+        const t = sci[rand(sci.length)];
+        if (t) {
+          const v = rand(100) < 75 ? 'mole' : 'unsure';
+          n = { who: t.id, v, why: NOTE_WHY[v][rand(NOTE_WHY[v].length)] };
+        }
+      } else {
+        const ids = Object.keys(p.scanned || {}).filter((id) => others.some((x) => x.id === id));
+        const id = ids[rand(ids.length)];
+        if (id) n = p.scanned[id] === 'clear' ? { who: id, v: 'sci', why: 'scanYes' } : { who: id, v: 'mole', why: 'scanNo' };
+        else {
+          const t = others[rand(others.length)];
+          if (t) n = { who: t.id, v: 'unsure', why: 'notScanned' };
+        }
+      }
+      if (n) mt.botClaims.push({ by: p.id, ...n, at: now + 1500 + rand(span) });
+    });
   },
   mhStartVote(now) {
     const m = this.game.meeting;
@@ -1197,6 +1268,17 @@ export const molehunt = {
     if (g.phase !== 'play') return false;
     let changed = false;
     const bots = g.order.map((id) => g.players[id]).filter((p) => p && p.bot);
+    const mt0 = g.stage === 'meeting' && g.meeting;
+    if (mt0 && (mt0.step === 'talk' || mt0.step === 'vote') && (mt0.botClaims || []).length) {
+      const due = mt0.botClaims.filter((c) => now >= c.at);
+      if (due.length) {
+        mt0.botClaims = mt0.botClaims.filter((c) => now < c.at);
+        due.forEach((c) => {
+          const p = g.players[c.by];
+          if (p && p.alive && g.players[c.who] && g.players[c.who].alive && this.mhAddClaim(mt0, c.by, c, now)) changed = true;
+        });
+      }
+    }
     if (g.stage === 'meeting' && g.meeting && g.meeting.step === 'vote') {
       const mt = g.meeting;
       Object.keys(mt.botVotes || {}).forEach((pid) => {
@@ -1210,7 +1292,7 @@ export const molehunt = {
       if (changed && this.mhAllVoted()) this.mhReveal(now);
       return changed;
     }
-    if (g.stage !== 'work') return false;
+    if (g.stage !== 'work') return changed;
     let meetingCalled = false;
     for (const p of bots) {
       if (g.phase !== 'play' || g.stage !== 'work') break;
@@ -1468,6 +1550,10 @@ export const molehunt = {
         molesLeft: shown ? this.mhAlive('mole').length : null,
         meetingsLeft: g.meetingsLeft
       } : null,
+      // Tell the class: what students shared at this meeting (oldest first).
+      claims: (mt.claims || []).filter((c) => g.players[c.by] && g.players[c.who]).slice(-30)
+        .map((c) => ({ by: this.mhPerson(g.players[c.by]), who: this.mhPerson(g.players[c.who]), v: c.v, why: c.why, at: c.at })),
+      claimsEach: CLAIMS_EACH,
       votes: secretToo ? mt.votes : undefined
     };
   },
@@ -1623,7 +1709,7 @@ export const molehunt = {
       opts: {
         scan: g.opts.scan, public: g.opts.public, peek: g.opts.peek, studentMeetings: g.opts.studentMeetings, fake: g.opts.fake, cut: g.opts.cut,
         smudge: g.opts.smudge, disguise: g.opts.disguise, power: g.opts.power, emergencies: g.opts.emergencies, missions: g.opts.missions,
-        ghosts: g.opts.ghosts, rumors: g.opts.rumors, second: g.opts.second, showAnswer: g.opts.showAnswer, wrongCost: g.opts.wrongCost, reliable: g.opts.reliable
+        ghosts: g.opts.ghosts, rumors: g.opts.rumors, second: g.opts.second, showAnswer: g.opts.showAnswer, wrongCost: g.opts.wrongCost, reliable: g.opts.reliable, claims: g.opts.claims
       }
     };
     if (g.phase !== 'done') out.taken = g.order.filter((id) => id !== pid && g.players[id] && g.players[id].hero).map((id) => g.players[id].hero);
