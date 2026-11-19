@@ -93,6 +93,13 @@ const EMERGENCIES = {
   power: 'Power outage',
   gas: 'Gas leak'
 };
+// A student's notes, made with taps (2026-11-18): what they think of a
+// classmate and why. The words are in site/public/assets/molehunt-common.js.
+const NOTE_WHY = {
+  mole: ['scanNo', 'quiet', 'fake', 'noClear', 'vote', 'rumor', 'hunch'],
+  sci: ['scanYes', 'onClear', 'busy', 'vote', 'hunch'],
+  unsure: ['scanNo', 'notScanned', 'rumor', 'hunch']
+};
 const REASONS = { scanned: 'I scanned them', fake: 'Fake scan?', quiet: 'Not answering', hunch: 'Just a hunch', clear: 'Not on the Clear list' };
 const DEMO_FIRST = ['Ava', 'Liam', 'Sofia', 'Noah', 'Mia', 'Mateo', 'Zoe', 'Ethan', 'Aaliyah', 'Lucas',
   'Isabella', 'Jayden', 'Emma', 'Diego', 'Chloe', 'Aiden', 'Priya', 'Elijah', 'Layla', 'Caleb',
@@ -148,7 +155,7 @@ const fresh = () => ({
   role: 'sci', job: '', alive: true, ghost: false, outAt: 0, energy: 0, earned: 0, jar: 0, given: 0,
   right: 0, wrong: 0, answered: 0, streak: 0, best: 0, qa: {}, q: null, deck: [], retry: [], last: null,
   scans: 0, pubs: 0, scansOnMoles: 0, fakes: 0, votesRight: 0, votesMade: 0, votesGot: 0, survived: 0,
-  notesText: '', board: { trust: [], unsure: [], suspect: [] }, notes: [], pop: null,
+  notesText: '', myNotes: [], board: { trust: [], unsure: [], suspect: [] }, notes: [], pop: null,
   smudged: false, disguise: false, protectedRound: 0, protectRound: 0, freeScanAt: 0, whispered: false,
   missions: [], done: 0, badges: [], frozenUntil: 0, late: false, botAt: 0, sus: {}, scanned: {}, wrongAt: [], slowUntil: 0, slowed: 0
 });
@@ -419,6 +426,19 @@ export const molehunt = {
     const g = this.game;
     const p = g.players[pid];
     if (typeof m.text === 'string') p.notesText = m.text.replace(/[\u0000-\u0008\u000b-\u001f]/g, '').slice(0, 1500);
+    // Tapped notes (2026-11-18): one for each classmate, the newest last.
+    if (Array.isArray(m.list)) {
+      const kept = new Map();
+      m.list.slice(-MAX_PLAYERS).forEach((n) => {
+        const who = String((n && n.who) || '');
+        const v = String((n && n.v) || '');
+        if (!g.players[who] || who === pid || !Object.prototype.hasOwnProperty.call(NOTE_WHY, v)) return;
+        const why = NOTE_WHY[v].includes(String(n.why || '')) ? String(n.why) : '';
+        kept.delete(who);
+        kept.set(who, { who, v, why });
+      });
+      p.myNotes = [...kept.values()];
+    }
     if (m.board && typeof m.board === 'object') {
       const ok = (list) => (Array.isArray(list) ? list.map(String).filter((id) => g.players[id] && id !== pid).slice(0, MAX_PLAYERS) : []);
       const seen = new Set();
@@ -428,7 +448,7 @@ export const molehunt = {
       this.mhMission(p, 'board', b.trust.length + b.suspect.length, true);
     }
     this.mhSaveSoon();
-    if (m.board) this.toPlayer(pid);
+    if (m.board || m.list) this.toPlayer(pid);
   },
 
   /* ---------------- questions ---------------- */
@@ -630,7 +650,7 @@ export const molehunt = {
       p.pop = { t: 'scan', name: t.name, hero: t.hero, clear, pub: key === 'public', at: now };
     } else if (key === 'peek') {
       const names = (list) => (list || []).map((id) => (g.players[id] ? g.players[id].name : '')).filter(Boolean);
-      p.pop = { t: 'peek', name: t.name, hero: t.hero, text: t.notesText || '', board: { trust: names(t.board.trust), unsure: names(t.board.unsure), suspect: names(t.board.suspect) }, at: now };
+      p.pop = { t: 'peek', name: t.name, hero: t.hero, text: t.notesText || '', notes: (t.myNotes || []).filter((n) => g.players[n.who]).map((n) => ({ name: g.players[n.who].name, v: n.v, why: n.why })), board: { trust: names(t.board.trust), unsure: names(t.board.unsure), suspect: names(t.board.suspect) }, at: now };
       this.mhNote(t, 'Someone peeked at your notes.', 'peeked');
       this.mhNote(p, 'You peeked at ' + t.name + '\'s notes.', 'peek', t.id);
       secret(p.name + ' peeked at ' + t.name + '\'s notes');
@@ -1631,6 +1651,7 @@ export const molehunt = {
       pop: p.pop,
       notes: p.notes,
       notesText: p.notesText,
+      myNotes: p.myNotes || [],
       board: p.board,
       missions: p.missions || [],
       badges: p.badges || [],

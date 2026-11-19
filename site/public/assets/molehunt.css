@@ -31,6 +31,10 @@ html[data-theme="dark"] .mh-page{
 .mh-page .mh-t-sci{ color:var(--mh-mint); }
 .mh-page .mh-t-mole{ color:var(--mh-mole); }
 .mh-mole{ display:block; width:100%; height:100%; }
+/* The hand-drawn mole (Donny, 2026-11-18). Its black lines vanish on navy, so
+   on a dark background it sits on a light tile, like the Host a game pictures. */
+.mh-mole-pic{ object-fit:contain; }
+html[data-theme="dark"] .mh-mole-wrap .mh-mole-pic, html[data-theme="dark"] .mh-brand .mh-mole-pic{ background:#f4efe6; border-radius:22%; padding:6%; box-sizing:border-box; }
 .mh-mole-wrap{ display:inline-block; width:2rem; height:2rem; vertical-align:middle; }
 .rb-hero.tiny{ width:1.6rem; height:1.6rem; }
 .rb-hero.small{ width:2.4rem; height:2.4rem; }
@@ -40,7 +44,8 @@ html[data-theme="dark"] .mh-page{
 .mh-hero-head h1{ color:#fff; margin:0 0 .25rem; }
 .mh-hero-head .lv-lede{ color:#d8e6ff; margin:0; }
 .mh-hero-head .mh-t-sci{ color:#33e0a0; } .mh-hero-head .mh-t-mole{ color:#ff7a8e; }
-.mh-logo{ width:5.5rem; height:5.5rem; flex:none; border-radius:1.4rem; background:radial-gradient(circle at 50% 40%,#2a4d7a,#0e1d33); padding:.6rem; }
+.mh-logo{ width:14.5rem; flex:none; border-radius:1.7rem; background:#f4efe6; padding:.6rem .75rem .45rem; box-shadow:0 10px 24px -10px rgba(0,0,0,.55); }
+.mh-logo .mh-mole{ height:auto; }
 .mh-box{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:1rem 1.25rem .5rem; }
 .mh-box > legend{ float:left; width:100%; padding:0; margin:0 0 .4rem; font-size:1.1rem; }
 .mh-box > legend + *{ clear:both; }
@@ -50,7 +55,7 @@ html[data-theme="dark"] .mh-page{
 .mh-sub .rb-radio{ display:inline-flex; align-items:center; gap:.35rem; margin:.2rem 1.2rem .2rem 0; font-size:.93rem; }
 .mh-sub .lv-opt{ border:0; padding:.2rem 0; }
 .mh-always{ margin:0 0 .4rem; }
-@media (max-width:760px){ .mh-two{ grid-template-columns:1fr; } .mh-hero-head{ flex-direction:column; text-align:center; } }
+@media (max-width:760px){ .mh-two{ grid-template-columns:1fr; } .mh-hero-head{ flex-direction:column; text-align:center; } .mh-logo{ width:10rem; } }
 
 /* ---------------- the projector ---------------- */
 .mh-arena{ background:var(--mh-bg); color:var(--mh-ink); border-radius:var(--radius); padding:.75rem; display:flex; flex-direction:column; gap:.6rem; min-height:calc(100vh - 7rem); position:relative; }
@@ -59,7 +64,7 @@ body.mh-full .topbar, body.mh-full .site-footer, body.mh-full footer{ display:no
 body.mh-full main.mh-page{ max-width:none; padding:0; }
 .mh-bar{ display:flex; align-items:center; gap:.75rem; flex-wrap:wrap; background:var(--mh-panel); border:1px solid var(--mh-line); border-radius:14px; padding:.5rem .8rem; }
 .mh-brand{ display:flex; align-items:center; gap:.45rem; font-weight:800; font-size:1.15rem; }
-.mh-brand .mh-mole{ width:2.1rem; height:2.1rem; }
+.mh-brand .mh-mole{ width:auto; height:2.5rem; }
 .mh-phase{ margin:0; font-weight:700; color:var(--mh-muted); flex:1 1 10rem; min-width:0; }
 .mh-clock-box{ display:flex; align-items:center; gap:.4rem; border:2px solid var(--mh-en-line); border-radius:12px; padding:.2rem .3rem; background:var(--mh-panel2); }
 .mh-clock{ font-weight:800; font-size:1.55rem; font-variant-numeric:tabular-nums; min-width:4.6rem; text-align:center; }
@@ -127,7 +132,7 @@ body.mh-full main.mh-page{ max-width:none; padding:0; }
 .mh-story .line{ color:var(--mh-ink); font-size:clamp(1.3rem, 3vw, 2.2rem); font-weight:700; line-height:1.4; max-width:52rem; }
 .mh-story .line i{ font-style:normal; color:var(--mh-mole); }
 .mh-story .who{ display:flex; align-items:center; gap:.7rem; font-weight:800; }
-.mh-story .who .mh-mole-wrap{ width:3.4rem; height:3.4rem; }
+.mh-story .who .mh-mole-wrap{ width:4.4rem; height:4rem; }
 .mh-meeting-cover{ background:radial-gradient(ellipse at 50% 30%, var(--mh-blue-bg), transparent 70%), var(--mh-bg); }
 .mh-meeting-cover .ring{ font-size:3rem; }
 .mh-vote-count{ font-size:clamp(2rem, 6vw, 4rem); font-weight:800; color:var(--mh-ink); font-variant-numeric:tabular-nums; }
@@ -227,7 +232,7 @@ body.mh-full main.mh-page{ max-width:none; padding:0; }
 /* Messages on the teacher's screen show at the top, clear of the control bar. */
 .mh-page .lv-toast{ top:5rem; bottom:auto; left:50%; transform:translate(-50%, -.75rem); text-align:center; }
 .mh-page .lv-toast.show{ transform:translate(-50%, 0); }
-.mh-done-head h2 .mh-mole-wrap{ width:1.1em; height:1.1em; vertical-align:-.12em; }
+.mh-done-head h2 .mh-mole-wrap{ width:1.5em; height:1.3em; vertical-align:-.25em; margin-right:.2em; }
 
 /* ---------------- the students' screen ---------------- */
 /* It fills the window: wider than the site's pages, as tall as the screen,
@@ -242,7 +247,8 @@ html.in-book body.mh-body .mh-game{ min-height:calc(100vh - 1.2rem); min-height:
 .mh-pane-q .mh-ans{ flex:1 1 auto; grid-auto-rows:minmax(4.4rem, 1fr); max-height:30rem; }
 .mh-pane-q .mh-ans button{ min-height:0; }
 .mh-play .rp-me-card, .mh-me-card{ background:linear-gradient(135deg,#0c1829,#18325a); }
-.mh-me-mole{ width:4rem; height:4rem; margin-left:auto; flex:none; }
+.mh-me-mole{ width:7rem; margin-left:auto; flex:none; background:#f4efe6; border-radius:1.1rem; padding:.5rem .55rem .35rem; }
+.mh-me-mole .mh-mole{ height:auto; }
 .mh-game{ background:var(--mh-bg); color:var(--mh-ink); border-radius:var(--radius); padding:.6rem; display:flex; flex-direction:column; gap:.5rem; position:relative; min-height:calc(100vh - 7rem); }
 .mh-me-bar{ display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; background:var(--mh-panel); border:1px solid var(--mh-line); border-radius:12px; padding:.4rem .6rem; }
 .mh-me-bar .who{ display:flex; align-items:center; gap:.4rem; font-weight:800; min-width:0; }
@@ -361,7 +367,7 @@ html[data-theme="dark"] .mh-streak{ background:rgba(255,155,74,.15); color:#ff9b
 .mh-rolecard ul{ text-align:left; margin:.4rem 0 .7rem; padding-left:1.2rem; color:var(--mh-ink); }
 .mh-rolecard li{ margin:.2rem 0; }
 .mh-rolecard .job{ background:var(--mh-blue-bg); color:var(--mh-blue); border-radius:12px; padding:.45rem .6rem; font-weight:700; margin:.3rem 0 .6rem; text-align:left; }
-.mh-rolecard .mole-ic{ width:4rem; height:4rem; margin:0 auto; }
+.mh-rolecard .mole-ic{ display:block; width:6rem; height:5.2rem; margin:0 auto; }
 .mh-vote-list{ width:min(40rem, 100%); }
 .mh-meet-grid{ width:100%; max-width:84rem; display:grid; grid-template-columns:minmax(0, 1.7fr) minmax(16rem, 1fr); gap:1rem; text-align:left; align-items:start; }
 .mh-meet-grid.one{ grid-template-columns:1fr; max-width:46rem; }
@@ -443,3 +449,40 @@ html[data-theme="dark"] .mh-streak{ background:rgba(255,155,74,.15); color:#ff9b
   .mh-awards{ grid-template-columns:1fr; }
   .mh-cb{ min-width:5.2rem; }
 }
+
+/* ---------------- secrets and tapped notes (Donny, 2026-11-18) ---------------- */
+/* The role, Lab tools, Missions and fellow Moles stay covered until the
+   student taps: the same covered box on every screen. */
+.mh-role .mh-hide-left, .mh-secret .mh-hide-left{ text-transform:none; letter-spacing:0; font-weight:700; opacity:.85; }
+.mh-lock{ margin:auto; width:min(30rem, 100%); display:flex; flex-direction:column; align-items:center; gap:.55rem; text-align:center; background:var(--mh-panel); border:2px dashed var(--mh-line); border-radius:18px; padding:1.4rem 1.2rem; }
+.mh-lock .ic{ font-size:2.6rem; line-height:1; }
+.mh-lock h3{ margin:0; font-size:1.35rem; color:var(--mh-ink); }
+.mh-lock p{ margin:0; color:var(--mh-muted); }
+.mh-secret{ display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:.5rem .8rem; width:min(46rem, 100%); }
+.mh-secret.open{ background:var(--mh-panel); border:2px solid var(--mh-line); border-radius:14px; padding:.45rem .8rem; }
+.mh-secret.open.sci{ border-color:var(--mh-mint-line); } .mh-secret.open.mole{ border-color:var(--mh-mole-line); }
+.mh-secret .txt{ font-weight:800; color:var(--mh-ink); }
+.mh-secret.open.sci .txt{ color:var(--mh-mint); } .mh-secret.open.mole .txt{ color:var(--mh-mole); }
+.mh-secret-btn{ font:inherit; font-weight:800; font-size:.92rem; border:1px solid var(--mh-line); background:var(--mh-panel2); color:var(--mh-ink); border-radius:99px; padding:.35rem .9rem; cursor:pointer; }
+.mh-secret-btn:hover{ background:var(--mh-blue-bg); }
+
+/* My notes: sentences made with taps. */
+.mh-mynotes{ background:var(--mh-panel); border:1px solid var(--mh-line); border-radius:12px; padding:.6rem .7rem; display:flex; flex-direction:column; gap:.45rem; text-align:left; }
+.mh-case .mh-mynotes{ border:0; padding:0; background:transparent; }
+.mh-mynotes-head{ display:flex; flex-wrap:wrap; align-items:baseline; gap:.2rem .6rem; }
+.mh-mynotes-head h4{ margin:0; font-size:.78rem; letter-spacing:.09em; text-transform:uppercase; color:var(--mh-muted); }
+.mh-mynotes-head span{ font-size:.8rem; color:var(--mh-muted); }
+.mh-note{ display:flex; align-items:center; gap:.45rem; background:var(--mh-panel2); border:1px solid var(--mh-line); border-left:4px solid var(--mh-line); border-radius:10px; padding:.3rem .4rem .3rem .5rem; font-weight:700; font-size:.92rem; color:var(--mh-ink); }
+.mh-note.mole{ border-left-color:var(--mh-mole); } .mh-note.sci{ border-left-color:var(--mh-mint); } .mh-note.unsure{ border-left-color:var(--mh-amber); }
+.mh-note .rb-hero{ border-radius:50%; flex:none; }
+.mh-note .txt{ flex:1 1 auto; min-width:0; }
+.mh-note-x{ flex:none; font:inherit; font-size:.8rem; border:0; background:transparent; color:var(--mh-muted); cursor:pointer; padding:.2rem .4rem; border-radius:6px; }
+.mh-note-x:hover{ background:var(--mh-mole-bg); color:var(--mh-mole); }
+.mh-note-add{ align-self:flex-start; }
+.mh-nb{ display:flex; flex-direction:column; gap:.45rem; border:2px solid var(--mh-blue); border-radius:12px; padding:.6rem .7rem; background:var(--mh-panel); }
+.mh-nb .mh-nb-say{ margin:0; max-width:none; font-weight:800; font-size:1.05rem; background:var(--mh-paper); color:var(--mh-paper-ink); border-radius:8px; padding:.45rem .6rem; }
+.mh-nb .mh-nb-step{ margin:.2rem 0 0; max-width:none; font-weight:800; font-size:.85rem; color:var(--mh-muted); }
+.mh-nb .mh-reason-pick{ justify-content:flex-start; }
+.mh-nb-people{ max-height:13rem; overflow:auto; padding:.1rem; }
+.mh-nb-go{ display:flex; gap:.5rem; flex-wrap:wrap; }
+.mh-nb-go .btn:disabled{ opacity:.5; cursor:not-allowed; }

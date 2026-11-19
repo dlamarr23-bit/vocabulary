@@ -10,8 +10,12 @@
    - Lab tools: Scientists scan, peek and call meetings; Moles fake scans,
      cut scans, smudge, disguise, cut the power and sound alarms.
    - Evidence Board: drag classmates into Trust, Not sure and Suspect; every
-     scan and clue pins itself on as a card; notes.
+     scan and clue pins itself on as a card; notes made with taps ("I think
+     ___ is a Mole because my scan said Not sure"), no typing.
    - Missions: three secret side quests a round, and badges.
+   The role, the Lab tools, the Missions and the fellow Moles stay covered
+   until the student taps to see them (2026-11-18), so every screen looks
+   the same from across the room.
    At a meeting they talk, then vote with a reason. A student voted out
    becomes a ghost: they keep answering to fill a jar of energy for their team.
    The game code, the player number and the hero picked are kept in this
@@ -195,6 +199,7 @@
     var was = view;
     view = v;
     clearInterval(tickTimer);
+    if (v.phase !== 'play' && secretOpen) shut();
     if (v.phase === 'lobby') { show('mpLobby'); drawLobby(v); return; }
     if (v.phase === 'done') { show('mpDone'); drawDone(v, was); return; }
     if (v.paused) { show('mpPaused'); return; }
@@ -247,9 +252,63 @@
   }
   function seenKey() { return code + '|' + (view && view.me) + '|' + (view && view.role) + '|' + (view && view.job); }
   function roleSeen() { return readSaved().seen === seenKey(); }
-  var hideRole = false;
+
+  // Secrets stay covered until the student taps to see them (Donny,
+  // 2026-11-18: "It should be hidden by default and then they can check when
+  // they are positioning their computers away from others"): the role, the
+  // Lab tools and Missions (a Mole's are different), scan results, and who
+  // the fellow Moles are. Until a tap, every student's screen looks the same.
+  // They cover again after 20 seconds without a tap, on the Questions tab,
+  // and when a meeting starts, moves on to the vote, or ends.
+  var SECRET_MS = 20000;
+  var secretOpen = false, secretUntil = 0, secretTimer = null, popSecret = false, meetAt = '';
+  function armSecret() {
+    secretUntil = Date.now() + SECRET_MS;
+    clearTimeout(secretTimer);
+    secretTimer = setTimeout(closeSecret, SECRET_MS);
+  }
+  function openSecret() {
+    secretOpen = true;
+    armSecret();
+    redrawAll();
+  }
+  function shut() {
+    clearTimeout(secretTimer);
+    secretOpen = false;
+    picking = '';
+    if (popSecret) { $('mpPopBack').hidden = true; popSecret = false; }
+  }
+  function closeSecret() {
+    if (!secretOpen) return;
+    shut();
+    redrawAll();
+  }
+  function redrawAll() {
+    if (!view || view.phase !== 'play') return;
+    Object.keys(panes).forEach(function (k) { panes[k].dataset.key = ''; });
+    $('mpBar').dataset.key = '';
+    $('mpOverlay').dataset.key = '';
+    drawGame(view);
+  }
+  // Any tap while the secrets show keeps them up a while longer.
+  document.addEventListener('click', function () { if (secretOpen) armSecret(); }, true);
+  // The same covered box on every student's screen, Scientist or Mole.
+  function lockBox(title, btn, note) {
+    var box = mk('div', 'mh-lock');
+    box.appendChild(mk('div', 'ic', '🔒'));
+    box.appendChild(mk('h3', '', title));
+    box.appendChild(mk('p', '', 'Turn your screen so nobody else can see it, then tap the button. It covers up again by itself.'));
+    var b = mk('button', 'btn lv-big', '👀 ' + btn);
+    b.type = 'button';
+    b.addEventListener('click', openSecret);
+    box.appendChild(b);
+    if (note) box.appendChild(mk('p', 'lv-small', note));
+    return box;
+  }
 
   function drawGame(v, was) {
+    var at = v.meeting ? v.meeting.n + ':' + v.meeting.step : '';
+    if (at !== meetAt) { meetAt = at; if (secretOpen) shut(); }
     drawBar(v);
     drawBanners(v);
     drawTabs(v);
@@ -263,16 +322,17 @@
   }
 
   function drawBar(v) {
-    part($('mpBar'), JSON.stringify([v.name, v.hero, v.role, v.job, v.alive, v.ghost, hideRole, v.energy, v.jar, v.streak, !!v.endsAt]), function (el) {
+    part($('mpBar'), JSON.stringify([v.name, v.hero, v.role, v.job, v.alive, v.ghost, secretOpen, v.energy, v.jar, v.streak, !!v.endsAt]), function (el) {
       var who = mk('span', 'who');
       who.appendChild(M.heroImg(v.hero, '', !v.alive));
       who.appendChild(mk('span', '', v.name));
       el.appendChild(who);
-      var r = mk('button', 'mh-role ' + (hideRole ? 'hidden' : v.ghost ? 'ghost' : v.role));
+      var r = mk('button', 'mh-role ' + (secretOpen ? (v.ghost ? 'ghost' : v.role) : 'hidden'));
       r.type = 'button';
-      r.title = hideRole ? 'Tap to show your role' : 'Tap to hide your role';
-      r.textContent = hideRole ? 'Role hidden' : (v.ghost ? 'Ghost ' : '') + (v.role === 'mole' ? 'Mole (secret)' : 'Scientist') + (v.job && M.JOBS[v.job] ? ' · ' + M.JOBS[v.job].name : '');
-      r.addEventListener('click', function () { hideRole = !hideRole; drawBar(view); });
+      r.title = secretOpen ? 'Tap to cover your role now' : 'Make sure nobody can see your screen, then tap';
+      r.textContent = secretOpen ? (v.ghost ? 'Ghost ' : '') + (v.role === 'mole' ? 'Mole (secret)' : 'Scientist') + (v.job && M.JOBS[v.job] ? ' · ' + M.JOBS[v.job].name : '') : '🔒 Tap to see your role';
+      if (secretOpen) r.appendChild(mk('span', 'mh-hide-left', ''));
+      r.addEventListener('click', function () { if (secretOpen) closeSecret(); else openSecret(); });
       el.appendChild(r);
       el.appendChild(mk('span', 'grow'));
       if (v.streak >= 2 && v.opts.second) el.appendChild(mk('span', 'mh-streak', '🔥 ' + v.streak + ' in a row'));
@@ -288,7 +348,8 @@
     part($('mpBanners'), JSON.stringify([e && [e.kind, e.got, e.need], fresh && r.n, v.power && Math.round(100 * v.power.got / v.power.goal)]), function (el) {
       if (e) {
         var b = mk('div', 'mh-banner alarm');
-        b.appendChild(mk('span', '', (M.EMERGENCY[e.kind] || '🚨') + ' ' + e.name + '! ' + (v.role === 'mole' ? 'Look busy: answer questions.' : 'Every right answer helps fix it.')));
+        // The same words on every screen, so the banner gives no Mole away.
+        b.appendChild(mk('span', '', (M.EMERGENCY[e.kind] || '🚨') + ' ' + e.name + '! Every right answer helps fix it.'));
         var bar = mk('span', 'bar');
         var i = mk('i');
         i.style.width = Math.min(100, Math.round(100 * e.got / e.need)) + '%';
@@ -332,7 +393,13 @@
         b.setAttribute('role', 'tab');
         b.setAttribute('aria-selected', String(tab === x[0]));
         if (x[0] === 'missions' && open) b.appendChild(mk('span', 'dot', String(open)));
-        b.addEventListener('click', function () { tab = x[0]; picking = ''; drawGame(view); });
+        b.addEventListener('click', function () {
+          tab = x[0];
+          picking = '';
+          // Back to the questions, the screen anyone might see: secrets cover up.
+          if (tab === 'q' && secretOpen) { closeSecret(); return; }
+          drawGame(view);
+        });
         el.appendChild(b);
       });
     });
@@ -443,6 +510,12 @@
   function drawTools(v) {
     var el = pane('tools');
     var now = Date.now();
+    if (!secretOpen) {
+      part(el, JSON.stringify(['lock', v.energy, v.scansLeft, v.stats.meetingsLeft]), function (x) {
+        x.appendChild(lockBox('Your lab tools are secret', 'Show my lab tools', 'You have ' + v.energy + ' energy. The class has ' + M.plural(v.scansLeft || 0, 'scan') + ' and ' + M.plural(v.stats.meetingsLeft, 'meeting') + ' left.'));
+      });
+      return el;
+    }
     var freeReady = v.job === 'detective' && v.freeScanAt && now >= local(v.freeScanAt);
     var key = JSON.stringify([v.tools, v.energy, picking, freeReady, v.canProtect, v.people.map(function (p) { return [p.id, p.alive, p.clear]; }), v.stats, v.scansLeft]);
     part(el, key, function (x) {
@@ -503,7 +576,6 @@
   /* -------- the Evidence Board (idea 1) -------- */
 
   var boardSel = '';
-  var notesTimer = null;
   function boardState(v) {
     var b = v.board || {};
     var trust = (b.trust || []).slice(), suspect = (b.suspect || []).slice();
@@ -524,8 +596,7 @@
   function drawBoard(v) {
     var el = pane('board');
     var s = boardState(v);
-    var key = JSON.stringify([s, boardSel, (v.notes || []).length, v.people.map(function (p) { return [p.id, p.alive, p.clear]; })]);
-    if (document.activeElement && document.activeElement.classList.contains('mh-notes') && el.contains(document.activeElement)) return el;
+    var key = JSON.stringify([s, boardSel, (v.notes || []).length, v.people.map(function (p) { return [p.id, p.alive, p.clear]; }), secretOpen, v.myNotes || [], nb]);
     part(el, key, function (x) {
       x.appendChild(mk('p', 'mh-board-help', 'Drag a classmate to another column, or tap a name and then tap a column. Your clue cards pin themselves on.'));
       var grid = mk('div', 'mh-board');
@@ -537,7 +608,7 @@
         s[c[0]].forEach(function (id) {
           var p = by[id];
           if (!p) return;
-          var ch = M.chip(p, (boardSel === id ? 'sel' : '') + (p.mate ? ' mole' : ''));
+          var ch = M.chip(p, (boardSel === id ? 'sel' : '') + (secretOpen && p.mate ? ' mole' : ''));
           ch.draggable = true;
           ch.tabIndex = 0;
           ch.setAttribute('role', 'button');
@@ -561,26 +632,143 @@
         c.appendChild(document.createTextNode(n.text));
         clues.appendChild(c);
       });
-      var ta = mk('textarea', 'mh-notes');
-      ta.placeholder = 'My notes (a classmate who peeks can read these)';
-      ta.value = v.notesText || '';
-      ta.maxLength = 1500;
-      ta.addEventListener('input', function () {
-        clearTimeout(notesTimer);
-        var val = ta.value;
-        notesTimer = setTimeout(function () { if (view) view.notesText = val; send({ t: 'notes', text: val }); }, 700);
-      });
-      clues.appendChild(ta);
       grid.appendChild(clues);
       x.appendChild(grid);
+      x.appendChild(notesPanel(v, true));
     });
     return el;
+  }
+
+  // My notes (Donny, 2026-11-18: "I would prefer if they just could click on
+  // things instead like 'i think ____ is the mole' because i scanned..."):
+  // sentences made with taps, no typing. One note for each classmate; a new
+  // one about the same classmate takes the old one's place. Saving a note
+  // also moves that classmate to the matching Evidence Board column. A
+  // classmate who peeks reads them. On the Evidence Board and at meetings.
+  var nb = { open: false, who: '', v: '', why: '' };
+  function nbReset() { nb = { open: false, who: '', v: '', why: '' }; }
+  function redrawNotes() {
+    pane('board').dataset.key = '';
+    $('mpOverlay').dataset.key = '';
+    if (view) drawGame(view);
+  }
+  function saveNotes(list, board) {
+    view.myNotes = list;
+    var m = { t: 'notes', list: list };
+    if (board) { view.board = board; m.board = board; }
+    send(m);
+  }
+  function notesPanel(v, writer) {
+    var box = mk('section', 'mh-mynotes');
+    var head = mk('div', 'mh-mynotes-head');
+    head.appendChild(mk('h4', '', '📝 My notes'));
+    head.appendChild(mk('span', '', 'A classmate who peeks can read these.'));
+    box.appendChild(head);
+    var by = {};
+    v.people.forEach(function (p) { by[p.id] = p; });
+    var list = (v.myNotes || []).filter(function (n) { return by[n.who]; });
+    if (!list.length && !nb.open) box.appendChild(mk('p', 'mh-empty', writer ? 'No notes yet. Tap Write a note: no typing, just tap.' : 'No notes yet.'));
+    list.forEach(function (n) {
+      var p = by[n.who];
+      var row = mk('div', 'mh-note ' + n.v);
+      row.appendChild(M.heroImg(p.hero, 'tiny', !p.alive));
+      row.appendChild(mk('span', 'txt', M.noteText(p.name, n.v, n.why)));
+      if (writer) {
+        var del = mk('button', 'mh-note-x', '✖');
+        del.type = 'button';
+        del.title = 'Remove this note';
+        del.setAttribute('aria-label', 'Remove the note about ' + p.name);
+        del.addEventListener('click', function () { saveNotes((view.myNotes || []).filter(function (x) { return x.who !== n.who; })); redrawNotes(); });
+        row.appendChild(del);
+      }
+      box.appendChild(row);
+    });
+    if (!writer) return box;
+    if (!nb.open) {
+      var add = mk('button', 'btn fc-small mh-note-add', '➕ Write a note');
+      add.type = 'button';
+      add.addEventListener('click', function () { nbReset(); nb.open = true; redrawNotes(); });
+      box.appendChild(add);
+      return box;
+    }
+    box.appendChild(noteBuilder(v));
+    return box;
+  }
+  // Three taps: who, what you think, and why (the why can be skipped).
+  function noteBuilder(v) {
+    var w = mk('div', 'mh-nb');
+    var who = v.people.filter(function (p) { return p.id === nb.who; })[0];
+    w.appendChild(mk('p', 'mh-nb-say', who ? (nb.v ? M.noteText(who.name, nb.v, nb.why) : 'I think ' + who.name + ' ...') : 'I think ...'));
+    w.appendChild(mk('p', 'mh-nb-step', '1. Who?'));
+    var ppl = mk('div', 'mh-people mh-nb-people');
+    v.people.filter(function (p) { return p.alive; }).forEach(function (p) {
+      var b = mk('button', 'mh-person' + (p.clear ? ' clear' : ''));
+      b.type = 'button';
+      b.setAttribute('aria-pressed', String(nb.who === p.id));
+      b.appendChild(M.heroImg(p.hero));
+      b.appendChild(mk('span', '', p.name));
+      b.addEventListener('click', function () { nb.who = p.id; redrawNotes(); });
+      ppl.appendChild(b);
+    });
+    w.appendChild(ppl);
+    if (nb.who) {
+      w.appendChild(mk('p', 'mh-nb-step', '2. What do you think?'));
+      var says = mk('div', 'mh-reason-pick');
+      ['mole', 'sci', 'unsure'].forEach(function (k) {
+        var b = mk('button', '', M.NOTE_SAYS[k].icon + ' ' + M.NOTE_SAYS[k].text);
+        b.type = 'button';
+        b.setAttribute('aria-pressed', String(nb.v === k));
+        b.addEventListener('click', function () { if (nb.v !== k) nb.why = ''; nb.v = k; redrawNotes(); });
+        says.appendChild(b);
+      });
+      w.appendChild(says);
+    }
+    if (nb.v) {
+      w.appendChild(mk('p', 'mh-nb-step', '3. Because... (you can skip this)'));
+      var why = mk('div', 'mh-reason-pick');
+      M.NOTE_WHY[nb.v].forEach(function (r) {
+        var b = mk('button', '', r[1]);
+        b.type = 'button';
+        b.setAttribute('aria-pressed', String(nb.why === r[0]));
+        b.addEventListener('click', function () { nb.why = nb.why === r[0] ? '' : r[0]; redrawNotes(); });
+        why.appendChild(b);
+      });
+      w.appendChild(why);
+    }
+    var go = mk('div', 'mh-nb-go');
+    var save = mk('button', 'btn', 'Save note');
+    save.type = 'button';
+    save.disabled = !(nb.who && nb.v);
+    save.addEventListener('click', function () {
+      if (!nb.who || !nb.v || !view) return;
+      var list = (view.myNotes || []).filter(function (n) { return n.who !== nb.who; }).concat([{ who: nb.who, v: nb.v, why: nb.why }]);
+      var s = boardState(view);
+      ['trust', 'unsure', 'suspect'].forEach(function (k) { s[k] = s[k].filter(function (x) { return x !== nb.who; }); });
+      s[M.NOTE_SAYS[nb.v].col].push(nb.who);
+      saveNotes(list, s);
+      nbReset();
+      redrawNotes();
+    });
+    var cancel = mk('button', 'btn secondary', 'Cancel');
+    cancel.type = 'button';
+    cancel.addEventListener('click', function () { nbReset(); redrawNotes(); });
+    go.appendChild(save);
+    go.appendChild(cancel);
+    w.appendChild(go);
+    return w;
   }
 
   /* -------- missions (idea 4) -------- */
 
   function drawMissions(v) {
     var el = pane('missions');
+    if (!secretOpen) {
+      var left = (v.missions || []).filter(function (x) { return !x.done; }).length;
+      part(el, JSON.stringify(['lock', left]), function (x) {
+        x.appendChild(lockBox('Your missions are secret', 'Show my missions', left ? M.plural(left, 'mission') + ' to go this round.' : 'All done this round! New missions after the next Lab Meeting.'));
+      });
+      return el;
+    }
     part(el, JSON.stringify([v.missions, v.badges, v.round]), function (x) {
       var box = mk('div', 'mh-missions');
       box.appendChild(mk('h4', '', '🎯 Secret missions · round ' + v.round));
@@ -607,7 +795,9 @@
 
   function drawGhost(v) {
     var el = pane('ghost');
-    part(el, JSON.stringify([v.jar, v.whisper, v.people.map(function (p) { return [p.id, p.alive, p.clear, p.mate]; }), v.stage]), function (x) {
+    // Fellow Moles are marked (and listed first) only while secrets show.
+    var mate = function (p) { return secretOpen && p.mate; };
+    part(el, JSON.stringify([v.jar, v.whisper, v.people.map(function (p) { return [p.id, p.alive, p.clear, mate(p)]; }), v.stage, secretOpen]), function (x) {
       var top = mk('div', 'mh-ghost-top');
       top.appendChild(M.heroImg(v.hero, 'big'));
       var t = mk('div');
@@ -624,8 +814,8 @@
       var give = mk('div', 'mh-pickwho');
       give.appendChild(mk('h4', '', v.jar ? 'Give your jar (' + v.jar + ' ⚡) to someone still in the lab' : 'Answer questions to fill your jar, then give it away here.'));
       var ppl = mk('div', 'mh-people');
-      v.people.filter(function (p) { return p.alive; }).sort(function (a, b) { return (b.mate ? 1 : 0) - (a.mate ? 1 : 0) || (b.clear ? 1 : 0) - (a.clear ? 1 : 0); }).forEach(function (p) {
-        var b = mk('button', 'mh-person' + (p.clear ? ' clear' : '') + (p.mate ? ' mate' : ''));
+      v.people.filter(function (p) { return p.alive; }).sort(function (a, b) { return (mate(b) ? 1 : 0) - (mate(a) ? 1 : 0) || (b.clear ? 1 : 0) - (a.clear ? 1 : 0); }).forEach(function (p) {
+        var b = mk('button', 'mh-person' + (p.clear ? ' clear' : '') + (mate(p) ? ' mate' : ''));
         b.type = 'button';
         b.disabled = !v.jar || v.stage !== 'work';
         b.appendChild(M.heroImg(p.hero));
@@ -695,7 +885,7 @@
       var n = v.stats.molesStart;
       (mole ? [
         'Sabotage the lab without getting caught.',
-        v.mates.length ? 'Your fellow Moles: ' + v.mates.map(function (m) { return m.name; }).join(', ') + '. Keep it secret!' : 'You are the only Mole. Good luck!',
+        v.mates.length ? M.stop('Your fellow Moles: ' + v.mates.map(function (m) { return m.name; }).join(', ')) + ' Keep it secret!' : 'You are the only Mole. Good luck!',
         'Answer questions for energy, then use your Lab tools: fake scans, cutting scans, smudges, disguises.',
         'At meetings, blend in and vote for a Scientist.'
       ] : [
@@ -719,8 +909,11 @@
   // Beside the vote (Donny, 2026-11-15: "allow rumors and suspects to be
   // seen"): the student's own suspects and trusted classmates from their
   // Evidence Board, what their scans said, and every rumor so far.
-  function caseNotes(v) {
+  // writer: the student can write notes here too (talking time, and after
+  // voting); during the vote itself the notes only show.
+  function caseNotes(v, writer) {
     var box = mk('aside', 'mh-case');
+    box.appendChild(notesPanel(v, writer));
     var by = {};
     v.people.forEach(function (p) { by[p.id] = p; });
     var b = v.board || {};
@@ -732,7 +925,7 @@
       if (!chips.children.length) sec.appendChild(mk('p', 'mh-empty', empty)); else sec.appendChild(chips);
       box.appendChild(sec);
     }
-    group('🚩 My suspects', 'sus', b.suspect || [], 'Nobody yet. Drag names to Suspect on your Evidence Board.');
+    group('🚩 My suspects', 'sus', b.suspect || [], 'Nobody yet. Write a note, or drag names to Suspect on your Evidence Board.');
     group('✅ I trust', 'tru', b.trust || [], 'Nobody yet.');
     var scans = (v.notes || []).filter(function (n) { return n.k === 'scan' || n.k === 'scanned' || n.k === 'peek'; }).slice(-6).reverse();
     var sec = mk('section', 'mh-case-sec');
@@ -754,11 +947,30 @@
     if (m.shown) return 'result';
     return Date.now() < local(m.drumAt || 0) ? 'tally' : 'drum';
   }
+  // At a meeting every screen shows the same button. A tap shows the
+  // student's role and, for a Mole, the fellow Moles (marked in the vote list
+  // too) until they cover it or 20 seconds pass (Donny, 2026-11-18: "keep
+  // them hidden and the mole can click somehow to reveal it privately").
+  function secretStrip(v) {
+    var box = mk('div', 'mh-secret' + (secretOpen ? ' open ' + v.role : ''));
+    var b = mk('button', 'mh-secret-btn', secretOpen ? '🔒 Cover it' : '🔒 Tap to see your secret role');
+    b.type = 'button';
+    if (secretOpen) {
+      var mole = v.role === 'mole';
+      box.appendChild(mk('span', 'txt', mole
+        ? 'You are a Mole. ' + (v.mates.length ? M.stop('Your fellow Moles: ' + v.mates.map(function (x) { return x.name + (x.alive ? '' : ' (caught)'); }).join(', ')) : 'You are the only Mole.')
+        : 'You are a Scientist' + (v.job && M.JOBS[v.job] ? ' (' + M.JOBS[v.job].name + ')' : '') + '.'));
+      b.appendChild(mk('span', 'mh-hide-left', ''));
+      b.addEventListener('click', closeSecret);
+    } else b.addEventListener('click', openSecret);
+    box.appendChild(b);
+    return box;
+  }
   function drawMeeting(o, v, m) {
     var b = v.board || {};
     var ph = m.step === 'reveal' ? revealPhase(m) : '';
     var key = JSON.stringify(['meet', m.n, m.step, ph, v.myVote, voteFor, voteWhy, v.alive, m.step === 'vote' ? [m.votesIn, m.of] : 0,
-      m.step !== 'reveal' ? [v.people.map(function (p) { return [p.id, p.alive, p.clear]; }), b, (v.notes || []).length, (v.rumors || []).length] : 0,
+      m.step !== 'reveal' ? [v.people.map(function (p) { return [p.id, p.alive, p.clear]; }), b, (v.notes || []).length, (v.rumors || []).length, secretOpen, v.myNotes || [], nb] : 0,
       m.result && m.result.out && m.result.out.id]);
     part(o, key, function (x) {
       x.className = 'mh-overlay mh-meeting-cover' + (m.step === 'reveal' ? ' mh-reveal' : ' mh-meet');
@@ -766,8 +978,9 @@
         x.appendChild(mk('h2', '', '🔔 Lab Meeting ' + m.n));
         x.appendChild(mk('p', '', 'Called by ' + m.by + '. Talk it over: who is a Mole? Share what your scans said, or keep it to yourself.'));
         x.appendChild(mk('p', 'mh-timer-pill mh-meet-left', ''));
+        x.appendChild(secretStrip(v));
         var wrap = mk('div', 'mh-meet-grid one');
-        wrap.appendChild(caseNotes(v));
+        wrap.appendChild(caseNotes(v, true));
         x.appendChild(wrap);
         return;
       }
@@ -775,27 +988,29 @@
         x.appendChild(mk('h2', '', '🗳️ Vote: who is a Mole?'));
         x.appendChild(mk('p', 'mh-timer-pill mh-meet-left', ''));
         if (!v.alive) { x.appendChild(mk('p', '', 'Ghosts cannot vote. Watch the board!')); return; }
+        x.appendChild(secretStrip(v));
         if (v.myVote) {
           x.appendChild(mk('p', '', 'Your vote is in. ' + m.votesIn + ' of ' + m.of + ' votes in.'));
           var w2 = mk('div', 'mh-meet-grid one');
-          w2.appendChild(caseNotes(v));
+          w2.appendChild(caseNotes(v, true));
           x.appendChild(w2);
           return;
         }
         var grid = mk('div', 'mh-meet-grid');
         var left = mk('div', 'mh-meet-main');
         var sus = b.suspect || [], tru = b.trust || [];
-        left.appendChild(mk('p', 'mh-vote-key', '🚩 your suspects  ·  ✅ you trust  ·  ✓ on the Clear list'));
+        var showMates = secretOpen && v.role === 'mole';
+        left.appendChild(mk('p', 'mh-vote-key', '🚩 your suspects  ·  ✅ you trust  ·  ✓ on the Clear list' + (showMates ? '  ·  🕳️ a fellow Mole' : '')));
         var list = mk('div', 'mh-people mh-vote-list');
         // Suspects first, then everyone else, then the ones trusted.
         var rank = function (p) { return sus.indexOf(p.id) >= 0 ? 0 : tru.indexOf(p.id) >= 0 ? 2 : 1; };
         v.people.filter(function (p) { return p.alive; }).sort(function (p, q) { return rank(p) - rank(q); }).forEach(function (p) {
-          var isSus = sus.indexOf(p.id) >= 0, isTru = tru.indexOf(p.id) >= 0;
-          var bt = mk('button', 'mh-person' + (p.clear ? ' clear' : '') + (p.mate ? ' mate' : '') + (isSus ? ' sus' : '') + (isTru ? ' tru' : ''));
+          var isSus = sus.indexOf(p.id) >= 0, isTru = tru.indexOf(p.id) >= 0, isMate = showMates && p.mate;
+          var bt = mk('button', 'mh-person' + (p.clear ? ' clear' : '') + (isMate ? ' mate' : '') + (isSus ? ' sus' : '') + (isTru ? ' tru' : ''));
           bt.type = 'button';
           bt.setAttribute('aria-pressed', String(voteFor === p.id));
           bt.appendChild(M.heroImg(p.hero));
-          bt.appendChild(mk('span', '', (isSus ? '🚩 ' : isTru ? '✅ ' : '') + p.name));
+          bt.appendChild(mk('span', '', (isMate ? '🕳️ ' : isSus ? '🚩 ' : isTru ? '✅ ' : '') + p.name));
           bt.addEventListener('click', function () { voteFor = p.id; o.dataset.key = ''; drawOverlay(view); });
           list.appendChild(bt);
         });
@@ -825,7 +1040,7 @@
         go.appendChild(sk);
         left.appendChild(go);
         grid.appendChild(left);
-        grid.appendChild(caseNotes(v));
+        grid.appendChild(caseNotes(v, false));
         x.appendChild(grid);
         return;
       }
@@ -860,6 +1075,10 @@
     keep(function (s) { s.pop = p.at; });
     var box = $('mpPop');
     box.textContent = '';
+    // A Mole's missions are different, so with the secrets covered a finished
+    // mission says only the energy. Everything else here is the student's own
+    // private result: it closes when the secrets cover up.
+    popSecret = p.t !== 'mission' || secretOpen;
     if (p.t === 'scan') {
       box.appendChild(mk('div', 'big', p.clear ? '✅' : '❔'));
       box.appendChild(mk('h3', p.clear ? 'ok' : 'no', p.clear ? 'Clear!' : 'Not sure'));
@@ -868,12 +1087,13 @@
       box.appendChild(mk('div', 'big', '📓'));
       box.appendChild(mk('h3', '', p.name + '\'s notes'));
       var d = mk('div', 'peek');
-      d.textContent = 'Trust: ' + (p.board.trust.join(', ') || 'nobody') + '\nSuspect: ' + (p.board.suspect.join(', ') || 'nobody') + '\n\n' + (p.text || '(no notes written)');
+      var said = (p.notes || []).map(function (n) { return M.noteText(n.name, n.v, n.why); }).concat(p.text ? [p.text] : []);
+      d.textContent = 'Trust: ' + (p.board.trust.join(', ') || 'nobody') + '\nSuspect: ' + (p.board.suspect.join(', ') || 'nobody') + '\n\n' + (said.length ? said.join('\n') : '(no notes yet)');
       box.appendChild(d);
     } else if (p.t === 'mission') {
       box.appendChild(mk('div', 'big', '🎯'));
       box.appendChild(mk('h3', 'ok', 'Mission complete!'));
-      box.appendChild(mk('p', '', p.text + ': +' + p.reward + ' ⚡'));
+      box.appendChild(mk('p', '', secretOpen ? p.text + ': +' + p.reward + ' ⚡' : '+' + p.reward + ' ⚡. Your missions are on the Missions tab.'));
     } else if (p.t === 'protect') {
       box.appendChild(mk('div', 'big', '🩹'));
       box.appendChild(mk('h3', 'ok', 'Protected'));
@@ -884,7 +1104,7 @@
     }
     var ok = mk('button', 'btn', 'OK');
     ok.type = 'button';
-    ok.addEventListener('click', function () { $('mpPopBack').hidden = true; });
+    ok.addEventListener('click', function () { $('mpPopBack').hidden = true; popSecret = false; });
     box.appendChild(ok);
     $('mpPopBack').hidden = false;
     ok.focus();
@@ -895,6 +1115,10 @@
     var v = view;
     if (!v || v.phase !== 'play') return;
     var now = Date.now();
+    if (secretOpen) {
+      var hides = ' · hides in ' + Math.max(0, Math.ceil((secretUntil - now) / 1000)) + 's';
+      [].forEach.call(document.querySelectorAll('.mh-hide-left'), function (e) { e.textContent = hides; });
+    }
     var c = document.querySelector('.mh-mini-clock');
     if (c && v.endsAt) c.textContent = '⏱ ' + M.clock(v.stage === 'story' && v.storyEndsAt ? v.endsAt - v.storyEndsAt : local(v.endsAt) - now);
     var ml = document.querySelector('.mh-meet-left');

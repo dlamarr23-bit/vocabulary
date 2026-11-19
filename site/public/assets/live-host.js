@@ -185,6 +185,18 @@
     lastKind = kind;
   }
   document.querySelectorAll('input[name="lvTeams"], input[name="lvGame"]').forEach(function (r) { r.addEventListener('change', syncOptions); });
+  // Each game has its own address (Donny, 2026-11-18: "it would be nice if all
+  // the games had their own url"): picking one puts it in the address
+  // (live/?game=blast), which the physical science site's Review page shows as
+  // /flashcards?go=blast. Opening that address picks the game again.
+  document.querySelectorAll('input[name="lvGame"]').forEach(function (r) {
+    r.addEventListener('change', function () {
+      if (!r.checked) return;
+      var q = new URLSearchParams(location.search);
+      q.set('game', r.value);
+      try { history.replaceState(null, '', location.pathname + '?' + q.toString() + location.hash); } catch (e) { /* the address stays */ }
+    });
+  });
   $('lvPowers').addEventListener('change', syncOptions);
 
 

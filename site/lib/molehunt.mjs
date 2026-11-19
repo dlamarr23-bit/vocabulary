@@ -17,8 +17,11 @@ const HOST_FILES = ['flashcards.css', 'live.css', 'royale.css', 'molehunt.css', 
 const PLAY_FILES = ['flashcards.css', 'live.css', 'royale.css', 'molehunt.css', 'live-celebrate.js', 'heroes.js', 'royale-zoom.js', 'molehunt-common.js', 'molehunt-play.js'];
 const REMOTE_FILES = ['flashcards.css', 'live.css', 'royale.css', 'molehunt.css', 'editor.js', 'heroes.js', 'molehunt-common.js', 'molehunt-remote.js'];
 
-// The game's mole, in a lab coat and goggles.
-export const MOLE_SVG = '<svg class="mh-mole" viewBox="0 0 40 40" aria-hidden="true"><ellipse cx="20" cy="36.5" rx="18" ry="3.5" fill="#6e4a2f"/><path d="M7 37c0-17 6-27 13-27s13 10 13 27z" fill="#5e4b41"/><path d="M12 37c0-6 3.5-12 8-12s8 6 8 12z" fill="#e9edf5"/><path d="M17 25.5 20 30l3-4.5" fill="none" stroke="#8a97ad" stroke-width="1.2"/><rect x="10" y="12" width="20" height="2.6" rx="1.2" fill="#22324d"/><circle cx="15.5" cy="13.2" r="3.2" fill="#ffd9a8" stroke="#22324d" stroke-width="1.4"/><circle cx="24.5" cy="13.2" r="3.2" fill="#ffd9a8" stroke="#22324d" stroke-width="1.4"/><circle cx="16" cy="19" r="1.4" fill="#111"/><circle cx="24" cy="19" r="1.4" fill="#111"/><ellipse cx="20" cy="22.3" rx="3.2" ry="2.3" fill="#ff8fa3"/><path d="M10.5 31.5l-3 2.2M11.5 33l-2.4 2.8M29.5 31.5l3 2.2M28.5 33l2.4 2.8" stroke="#f3d3c3" stroke-width="1.3" stroke-linecap="round"/></svg>';
+// The game's mole: the hand-drawn Mole Hunt picture from Host a game (Donny,
+// 2026-11-18: "change the mole to match the muted one"). up: the way back to
+// the site's top folder.
+const MOLE_PIC = 'review-icons/mole-hunt.webp';
+const molePic = (up) => `<img class="mh-mole mh-mole-pic" src="${up}assets/${MOLE_PIC}?v=${assetVersion(MOLE_PIC)}" alt="">`;
 
 export function renderMoleHost(chapters) {
   const depth = 1;
@@ -68,7 +71,7 @@ const HOST = `<main id="main" class="container lv-page mh-page mh-host">
 
 <section class="lv-step" id="mhSetup" hidden>
 <div class="mh-hero-head">
-<div class="mh-logo">${MOLE_SVG}</div>
+<div class="mh-logo">${molePic('../')}</div>
 <div>
 <h1>Mole Hunt</h1>
 <p class="lv-lede">Somebody in the lab is a mole. Most of the class are <strong class="mh-t-sci">Scientists</strong>; a few secret <strong class="mh-t-mole">Moles</strong> try to sabotage the lab. Everyone answers your questions to earn energy, then spends it on lab tools. Scientists scan classmates and vote the Moles out at Lab Meetings.</p>
@@ -187,7 +190,7 @@ ${lobbyRoll('mh')}
 
 <section class="lv-step mh-arena" id="mhPlay" hidden>
 <header class="mh-bar">
-<div class="mh-brand">${MOLE_SVG}<span>Mole Hunt</span></div>
+<div class="mh-brand">${molePic('../')}<span>Mole Hunt</span></div>
 <p class="mh-phase" id="mhPhase"></p>
 <div class="mh-clock-box" id="mhClockBox">
 <button type="button" class="mh-tb" id="mhMinus" title="Take a minute off the clock">&minus;1 min</button>
@@ -301,7 +304,7 @@ ${passStep('mp')}
 <p class="rp-me-name" id="mpMeName"></p>
 <p class="lv-small" id="mpWaitText">Pick your hero. Your teacher will start the game soon.</p>
 </div>
-<div class="mh-me-mole">${MOLE_SVG}</div>
+<div class="mh-me-mole">${molePic('../../')}</div>
 </div>
 <div class="rp-picker" id="mpPicker">
 <h2 class="rp-pick-title">Pick your hero</h2>

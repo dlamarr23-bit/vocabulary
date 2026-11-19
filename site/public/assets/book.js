@@ -542,7 +542,7 @@
   };
   if (inBook) {
     var tellBook = function () {
-      try { window.parent.postMessage({ vocabSite: { path: window.vocabAddress(), hash: location.hash, title: document.title } }, BOOK_SITE); } catch (e) { /* nothing to tell */ }
+      try { window.parent.postMessage({ vocabSite: { path: window.vocabAddress(), search: location.search, hash: location.hash, title: document.title } }, BOOK_SITE); } catch (e) { /* nothing to tell */ }
     };
     ['pushState', 'replaceState'].forEach(function (k) {
       var was = history[k];
