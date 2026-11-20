@@ -123,3 +123,26 @@ html[data-theme="dark"] .rg-ttext .rg-warn, html[data-theme="dark"] .rg-ttable .
   background-size:1024px 512px, 100% 100%, 100% 100%;
   background-repeat:repeat, no-repeat, no-repeat;
 }
+
+/* Warm paper, hand-drawn trophy and muted editorial colors. */
+.rg, .rg.rg-soon, .rg.rg-over{ background:#f6f1e6; color:#26333c; border:1px solid #d8d1c2; box-shadow:0 8px 24px -18px #394750; }
+.rg::after{ display:none; }
+.rg-art{ background:none; border-radius:0; } .rg-art img{ display:block; width:120px; height:120px; object-fit:cover; }
+.rg .rg-title{ color:#26333c; } .rg-kicker, .rg-soon .rg-kicker, .rg-over .rg-kicker{ color:#705214; }
+.rg-meta{ color:#495b64; opacity:1; } .rg-list, .rg-race{ background:#e4e9e5; border:1px solid #cbd4cd; }
+.rg-race-h, .rg-soon .rg-race-h, .rg-lane.mine, .rg-soon .rg-lane.mine{ color:#36533f; }
+.rg-track{ background:#cad2ca; } .rg-track i, .rg-soon .rg-track i, .rg-over .rg-track i{ background:#78909a; }
+.rg-lane.mine .rg-track i, .rg-soon .rg-lane.mine .rg-track i{ background:#647e51; }
+.rg .rg-play{ background:#edbf59; border:1px solid #bd9035; border-radius:12px; box-shadow:none; }
+.rg .rg-play:hover, .rg .rg-play:focus-visible{ background:#f2cc77; color:#26333c; } .rg .rg-play:focus-visible{ outline-color:#365766; }
+.rg-tile{ background:#fffaf0; color:#365766; border:1px solid #d8d1c2; } .rg-side-h{ opacity:1; color:#495b64; }
+.rg-foot{ background:#e7dfce; } .rg-foot .rg-ok{ color:#36533f; } .rg-nolink{ color:#705214; }
+.rg.rg-soon{ border-top:5px solid #bb6745; } .rg-soon .rg-kicker{ color:#97482d; }
+.rg.rg-over{ border-top:5px solid #7c827d; } .rg-stamp{ border-color:#6c7470; color:#4e5753; }
+html[data-theme="dark"] .rg{ background-color:#262b2d; border-color:#4a504c; color:#f3ecdd; }
+html[data-theme="dark"] .rg .rg-title{ color:#f3ecdd; } html[data-theme="dark"] .rg-meta, html[data-theme="dark"] .rg-side-h{ color:#d4d8d2; }
+html[data-theme="dark"] .rg-kicker, html[data-theme="dark"] .rg-nolink{ color:#edbf59; }
+html[data-theme="dark"] .rg-art{ background:#f6f1e6; border-radius:14px; }
+html[data-theme="dark"] .rg-list, html[data-theme="dark"] .rg-race{ background:#333f3d; border-color:#53615b; }
+html[data-theme="dark"] .rg-race-h, html[data-theme="dark"] .rg-lane.mine, html[data-theme="dark"] .rg-foot .rg-ok{ color:#c2d5a8; }
+html[data-theme="dark"] .rg-foot{ background:#343c38; } html[data-theme="dark"] .rg-stamp{ color:#d4d8d2; border-color:#a6b0a8; }

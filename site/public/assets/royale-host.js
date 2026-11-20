@@ -106,14 +106,6 @@
   function secs(ms) { return (ms / 1000).toFixed(2) + 's'; }
   function ordinal(n) { var t = n % 100, o = n % 10; return n + (t > 10 && t < 14 ? 'th' : o === 1 ? 'st' : o === 2 ? 'nd' : o === 3 ? 'rd' : 'th'); }
 
-  // A strip of heroes across the top of the setup screen.
-  (function strip() {
-    var box = $('rbStrip');
-    if (!box || !AV) return;
-    ['batman', 'wonder-woman', 'spider-man', 'storm', 'black-panther', 'captain-marvel', 'hulk', 'ms-marvel', 'flash', 'supergirl'].forEach(function (k) {
-      if (heroByKey[k]) box.appendChild(heroImg(k));
-    });
-  })();
   $('rbTemplate').href = TEMPLATE;
 
   /* ---------------- getting in ---------------- */

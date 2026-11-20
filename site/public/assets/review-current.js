@@ -26,6 +26,7 @@
   var tbox = document.getElementById('rgTeacher');
   if (!box) return;
 
+  var ART_BASE = document.currentScript.src;
   var DAY = 86400000;
   var data = null;        // the banner's data, or null when nothing is showing
   var offset = 0;         // the site's clock minus this computer's
@@ -62,12 +63,6 @@
     var p = parts(ms);
     return (p.d ? p.d + 'd ' : '') + p.h + 'h ' + pad(p.m) + 'm';
   }
-
-  var TROPHY = '<svg viewBox="0 0 64 64" width="84" height="84" aria-hidden="true" focusable="false"><g stroke="#12376e" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round">' +
-    '<path d="M19 13h-6a7 7 0 0 0 8 12" fill="none"/><path d="M45 13h6a7 7 0 0 1-8 12" fill="none"/>' +
-    '<path d="M19 8h26v15a13 13 0 0 1-26 0z" fill="#f2b705"/><path d="M32 36v7" fill="none"/><path d="M25 50h14l-2-7h-10z" fill="#f2b705"/>' +
-    '<rect x="20" y="50" width="24" height="7" rx="2" fill="#12376e"/>' +
-    '<path d="M32 13.5l2.1 4.3 4.7.7-3.4 3.3.8 4.7-4.2-2.2-4.2 2.2.8-4.7-3.4-3.3 4.7-.7z" fill="#fff" stroke-width="1.6"/></g></svg>';
 
   /* ---------------- the banner ---------------- */
 
@@ -153,7 +148,12 @@
     var sec = mk('section', 'rg rg-' + v.st);
     sec.setAttribute('aria-label', 'Current review game');
     var art = mk('div', 'rg-art');
-    art.innerHTML = TROPHY;
+    var trophy = mk('img');
+    trophy.src = new URL('review-icons/review-trophy.webp', ART_BASE).href;
+    trophy.alt = '';
+    trophy.width = 120;
+    trophy.height = 120;
+    art.appendChild(trophy);
     sec.appendChild(art);
 
     var main = mk('div', 'rg-main');

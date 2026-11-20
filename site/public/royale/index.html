@@ -12,17 +12,17 @@
 <script>/* student view, only inside the physical science site: its page says ?sv=1 (the teacher is looking the way a student does) or ?sv=0; editor.js then keeps the teacher's tools hidden */(function(){if(window.parent===window)return;try{var s=new URLSearchParams(location.search).get("sv");if(s==="1"||s==="0")localStorage.setItem("vocab-student-view",s)}catch(e){}})()</script>
 <script src="../assets/icons.js" defer></script>
 <script src="../assets/book.js" defer></script>
-<script src="../assets/pass.js?v=f773610b" defer></script>
-<link rel="stylesheet" href="../assets/flashcards.css?v=d063d058">
-<link rel="stylesheet" href="../assets/live.css?v=918be3fb">
-<link rel="stylesheet" href="../assets/royale.css?v=25d98cba">
-<script src="../assets/editor.js?v=9c741fe5" defer></script>
-<script src="../assets/vendor/qrcode.js?v=18ae399f" defer></script>
-<script src="../assets/live-celebrate.js?v=b55c9a9c" defer></script>
-<script src="../assets/heroes.js?v=eb09730e" defer></script>
-<script src="../assets/live-roster.js?v=647187a7" defer></script>
-<script src="../assets/royale-zoom.js?v=d62e9324" defer></script>
-<script src="../assets/royale-host.js?v=bfa8a1de" defer></script>
+<script src="../assets/pass.js?v=11aa8f89" defer></script>
+<link rel="stylesheet" href="../assets/flashcards.css?v=228ef98d">
+<link rel="stylesheet" href="../assets/live.css?v=0ef08dc6">
+<link rel="stylesheet" href="../assets/royale.css?v=9ac2dc58">
+<script src="../assets/editor.js?v=0dc7395b" defer></script>
+<script src="../assets/vendor/qrcode.js?v=4b6133cb" defer></script>
+<script src="../assets/live-celebrate.js?v=457dddd6" defer></script>
+<script src="../assets/heroes.js?v=668330c3" defer></script>
+<script src="../assets/live-roster.js?v=ed68e869" defer></script>
+<script src="../assets/royale-zoom.js?v=459261f4" defer></script>
+<script src="../assets/royale-host.js?v=35f25c58" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to the page</a><div class="topbar"><div class="topbar-inner">
@@ -54,9 +54,9 @@
 
 <section class="lv-step" id="rbSetup" hidden>
 <div class="rb-hero-head">
-<div class="rb-hero-strip" id="rbStrip" aria-hidden="true"></div>
-<h1>Battle Royale</h1>
-<p class="lv-lede">Everyone starts with the same HP (health points). Each round, students face random classmates on the same question. The fastest right answer wins; a wrong or slower answer costs 1 HP. The last hero standing wins.</p>
+<img class="editorial-game-art" src="../assets/review-icons/battle-royale.webp?v=12be1ee7" width="160" height="150" alt="">
+<div><h1>Battle Royale</h1>
+<p class="lv-lede">Everyone starts with the same HP (health points). Each round, students face random classmates on the same question. The fastest right answer wins; a wrong or slower answer costs 1 HP. The last hero standing wins.</p></div>
 </div>
 <div class="lv-resume" id="rbResume" hidden><span id="rbResumeText"></span> <button type="button" class="btn fc-small" id="rbResumeBtn">Go back to it</button></div>
 

@@ -53,7 +53,7 @@ const HOST = `<main id="main" class="container lv-page lv-host sg-page sg-host">
 
 <section class="lv-step" id="sgSetup" hidden>
 <div class="sg-setup-head">
-<span class="sg-bolt" aria-hidden="true">⚡</span>
+<img class="editorial-game-art" src="../assets/review-icons/surge-showdown.webp?v=${assetVersion('review-icons/surge-showdown.webp')}" width="160" height="150" alt="">
 <div><h1 id="sgSetupTitle">Surge Showdown</h1>
 <p class="lv-lede">Teams answer questions to earn energy, then spend it to attack other teams, heal and shield their own. As the clock runs down every power-up gets stronger. The top 3 teams go on the podium.</p></div>
 </div>

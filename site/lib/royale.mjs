@@ -46,9 +46,9 @@ const HOST = `<main id="main" class="container lv-page rb-page rb-host">
 
 <section class="lv-step" id="rbSetup" hidden>
 <div class="rb-hero-head">
-<div class="rb-hero-strip" id="rbStrip" aria-hidden="true"></div>
-<h1>Battle Royale</h1>
-<p class="lv-lede">Everyone starts with the same HP (health points). Each round, students face random classmates on the same question. The fastest right answer wins; a wrong or slower answer costs 1 HP. The last hero standing wins.</p>
+<img class="editorial-game-art" src="../assets/review-icons/battle-royale.webp?v=${assetVersion('review-icons/battle-royale.webp')}" width="160" height="150" alt="">
+<div><h1>Battle Royale</h1>
+<p class="lv-lede">Everyone starts with the same HP (health points). Each round, students face random classmates on the same question. The fastest right answer wins; a wrong or slower answer costs 1 HP. The last hero standing wins.</p></div>
 </div>
 <div class="lv-resume" id="rbResume" hidden><span id="rbResumeText"></span> <button type="button" class="btn fc-small" id="rbResumeBtn">Go back to it</button></div>
 

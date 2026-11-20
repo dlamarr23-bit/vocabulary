@@ -958,3 +958,20 @@ html[data-theme="dark"] .lv-choice:has(input:checked){
     radial-gradient(80% 120% at 8% 0%, rgba(255,255,255,.07), transparent 60%),
     radial-gradient(75% 110% at 100% 100%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%);
 }
+
+/* Editorial setup headers: the same artwork as the game picker. */
+.lv-page .rb-hero-head, .lv-page .sg-setup-head, .lv-page .mh-hero-head{
+ display:flex; align-items:center; gap:1.5rem; text-align:left; padding:1.5rem;
+ margin:0 0 1.5rem; background:#f6f1e6;
+ border:1px solid #d8d1c2; border-radius:18px; box-shadow:none; color:#26333c;
+}
+.lv-page .editorial-game-art, .lv-page .mh-logo{ width:10rem; height:9.5rem; object-fit:contain; flex:none; background:none; border:0; border-radius:0; box-shadow:none; padding:0; }
+.lv-page .mh-logo .mh-mole{ width:100%; height:100%; object-fit:contain; }
+.lv-page .rb-hero-head h1, .lv-page .sg-setup-head h1, .lv-page .mh-hero-head h1{ color:inherit; margin:0 0 .35rem; }
+.lv-page .rb-hero-head .lv-lede, .lv-page .sg-setup-head .lv-lede, .lv-page .mh-hero-head .lv-lede{ color:#495b64; margin:0; max-width:48rem; }
+.lv-page .mh-hero-head .mh-t-sci{ color:#426449; } .lv-page .mh-hero-head .mh-t-mole{ color:#a6412d; }
+html[data-theme="dark"] .lv-page .rb-hero-head, html[data-theme="dark"] .lv-page .sg-setup-head, html[data-theme="dark"] .lv-page .mh-hero-head{ background-color:#262b2d; border-color:#4a504c; color:#f3ecdd; }
+html[data-theme="dark"] .lv-page .editorial-game-art, html[data-theme="dark"] .lv-page .mh-logo{ background:#f6f1e6; border-radius:14px; padding:.5rem; box-sizing:border-box; }
+html[data-theme="dark"] .lv-page .rb-hero-head .lv-lede, html[data-theme="dark"] .lv-page .sg-setup-head .lv-lede, html[data-theme="dark"] .lv-page .mh-hero-head .lv-lede{ color:#d4d8d2; }
+html[data-theme="dark"] .lv-page .mh-hero-head .mh-t-sci{ color:#b2ca96; } html[data-theme="dark"] .lv-page .mh-hero-head .mh-t-mole{ color:#f3a483; }
+@media(max-width:600px){ .lv-page .rb-hero-head, .lv-page .sg-setup-head, .lv-page .mh-hero-head{ flex-direction:column; align-items:flex-start; gap:1rem; padding:1.25rem; } .lv-page .editorial-game-art, .lv-page .mh-logo{ width:7.5rem; height:7rem; } }
