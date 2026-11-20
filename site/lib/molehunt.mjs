@@ -199,7 +199,7 @@ ${lobbyRoll('mh')}
 <button type="button" class="mh-tb" id="mhPlus" title="Add a minute to the clock">+1 min</button>
 <label class="mh-clock-set"><span class="rb-sr">Set the game clock</span><select id="mhClockSet" aria-label="Set the game clock"></select></label>
 </div>
-<div class="mh-bar-right">
+<div class="mh-bar-right" id="mhBarRight">
 <span class="mh-codechip">Code <strong class="mh-mini-code"></strong></span>
 <button type="button" class="mh-tool" id="mhRemoteBtn" aria-expanded="false">📱 Remote</button>
 <button type="button" class="mh-tool" id="mhRosterBtn" aria-expanded="false" aria-controls="mhRoster">👥 Players</button>
@@ -263,11 +263,11 @@ ${lobbyRoll('mh')}
 </div>
 </section>
 
-<div class="rb-music" id="mhMusic" hidden>
+<div id="mhMusicHome"><div class="rb-music" id="mhMusic" hidden>
 <span class="lv-music-label" id="mhMusicLabel">Music</span>
 <button type="button" class="lv-music-btn" id="mhMute" aria-pressed="false">Mute</button>
 <input type="range" id="mhVolume" min="0" max="100" value="60" aria-label="Music volume" title="Volume">
-</div>
+</div></div>
 <p class="lv-toast" id="mhToast" role="status" aria-live="polite"></p>
 <p class="lv-status" id="mhStatus" role="status" aria-live="polite"></p>
 </main>`;

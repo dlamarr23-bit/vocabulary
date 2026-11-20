@@ -25,6 +25,14 @@
   function show(id) {
     STEPS.forEach(function (s) { $(s).hidden = s !== id; });
     document.body.setAttribute('data-mh-step', id);
+    // The projector (Donny, 2026-11-19: "the bottom gets cut off and the sides
+    // of the screen are not used"): during the game the board fills the whole
+    // window and everything grows with it. The music buttons ride along in its
+    // top bar.
+    var playing = id === 'mhPlay';
+    document.documentElement.classList.toggle('mh-projecting', playing);
+    var mu = $('mhMusic'), spot = playing ? $('mhBarRight') : $('mhMusicHome');
+    if (mu && spot && mu.parentNode !== spot) spot.appendChild(mu);
   }
   function status(text) { $('mhStatus').textContent = text || ''; }
   function toast(text) {
@@ -394,88 +402,98 @@
         el.appendChild(s);
       });
     }));
+    // The alarm, Lab Power and the three panels are built once and then
+    // changed in place, so they never flash or lose their place.
     if (b.emergency) {
-      order.push(part('alarm', JSON.stringify([b.emergency.kind, b.emergency.got, b.emergency.need]), function (el) {
+      var em = b.emergency;
+      var al = part('alarm', em.kind + '|' + em.need, function (el) {
         el.className = 'mh-part mh-alarm';
-        el.appendChild(mk('span', 'big', (M.EMERGENCY[b.emergency.kind] || '⚠️') + ' ' + b.emergency.name.toUpperCase() + '!'));
-        el.appendChild(mk('span', '', 'Answer together: ' + b.emergency.need + ' right answers.'));
+        el.appendChild(mk('span', 'big', (M.EMERGENCY[em.kind] || '⚠️') + ' ' + em.name.toUpperCase() + '!'));
+        el.appendChild(mk('span', '', 'Answer together: ' + em.need + ' right answers.'));
         var bar = mk('span', 'bar');
-        var fill = mk('i');
-        fill.style.width = Math.min(100, Math.round(100 * b.emergency.got / b.emergency.need)) + '%';
-        bar.appendChild(fill);
+        bar.appendChild(mk('i'));
         el.appendChild(bar);
-        el.appendChild(mk('span', 'n', b.emergency.got + ' / ' + b.emergency.need));
+        el.appendChild(mk('span', 'n mh-alarm-got', ''));
         el.appendChild(mk('span', 'n mh-alarm-left', ''));
-      }));
+      });
+      al.querySelector('.bar i').style.width = Math.min(100, Math.round(100 * em.got / em.need)) + '%';
+      al.querySelector('.mh-alarm-got').textContent = em.got + ' / ' + em.need;
+      order.push(al);
     }
     if (b.power) {
-      order.push(part('power', JSON.stringify(b.power), function (el) {
+      var pw = part('power', 'bar', function (el) {
         el.className = 'mh-part mh-power';
         var h = mk('div', 'mh-pw-head');
         h.appendChild(mk('b', '', '⚡ LAB POWER'));
         h.appendChild(mk('span', '', 'Every right answer from a Scientist fills it. Fill it to the flag and the Scientists win!'));
         el.appendChild(h);
         var bar = mk('div', 'mh-pw-bar');
-        var fill = mk('div', 'mh-pw-fill');
-        var pct = Math.round(100 * b.power.got / Math.max(1, b.power.goal));
-        fill.style.width = 'calc(' + pct + '% - 6px)';
-        bar.appendChild(fill);
-        bar.appendChild(mk('span', 'mh-pw-pct', pct + '%'));
+        bar.appendChild(mk('div', 'mh-pw-fill'));
+        bar.appendChild(mk('span', 'mh-pw-pct', ''));
         bar.appendChild(mk('span', 'mh-pw-flag', '🏁'));
         el.appendChild(bar);
-      }));
+      });
+      var pct = Math.round(100 * b.power.got / Math.max(1, b.power.goal));
+      pw.querySelector('.mh-pw-fill').style.width = 'calc(' + Math.min(100, pct) + '% - 6px)';
+      pw.querySelector('.mh-pw-pct').textContent = pct + '%';
+      order.push(pw);
     }
-    var clearKey = JSON.stringify([(b.players || []).filter(function (p) { return p.clear; }).map(function (p) { return [p.id, p.alive, p.hero]; })]);
-    var logKey = JSON.stringify((b.log || []).slice(-30));
-    var rumorKey = JSON.stringify([b.rumors, b.opts.rumors]);
-    var main = part('main', clearKey + logKey + rumorKey, function (el) {
+    var main = part('main', 'panels', function (el) {
       el.className = 'mh-part mh-main';
-      var c = mk('section', 'mh-panel');
-      c.appendChild(mk('h3', '', '✅ Clear list'));
-      var clear = b.players.filter(function (p) { return p.clear; });
-      if (!clear.length) c.appendChild(mk('p', 'mh-empty', 'Nobody yet. A public scan that comes back Clear puts a name here.'));
-      var chips = mk('div', 'mh-chips');
-      clear.forEach(function (p) { chips.appendChild(M.chip(p)); });
-      c.appendChild(chips);
-      el.appendChild(c);
-      var l = mk('section', 'mh-panel');
-      l.appendChild(mk('h3', '', '🧪 Lab log'));
-      var ul = mk('ul', 'mh-log');
-      (b.log || []).slice(-30).reverse().forEach(function (x) {
-        var li = mk('li');
-        li.appendChild(mk('span', 't', ago(x.at)));
-        var cls = /ALARM|lost|Power cut|A MOLE/.test(x.text) ? 'alarm' : /Clear|Fixed|Not a Mole/.test(x.text) ? 'good' : /teacher/i.test(x.text) ? 'teach' : '';
-        li.appendChild(mk('span', cls, x.text));
-        ul.appendChild(li);
+      [['clear', '✅ Clear list', 'div', 'mh-chips'], ['log', '🧪 Lab log', 'ul', 'mh-log'], ['radio', '📡 Lab radio', 'div', 'mh-rumors']].forEach(function (x) {
+        var s = mk('section', 'mh-panel mh-p-' + x[0]);
+        s.appendChild(mk('h3', '', x[1]));
+        s.appendChild(mk('p', 'mh-empty', ''));
+        s.appendChild(mk(x[2], x[3]));
+        if (x[0] === 'radio') s.appendChild(mk('p', 'mh-next', ''));
+        el.appendChild(s);
       });
-      l.appendChild(ul);
-      el.appendChild(l);
-      var r = mk('section', 'mh-panel');
-      r.appendChild(mk('h3', '', '📡 Lab radio'));
-      var box = mk('div', 'mh-rumors');
-      var rumors = (b.rumors || []).slice().reverse();
-      if (!rumors.length) box.appendChild(mk('p', 'mh-empty', b.opts.rumors ? 'The first rumor comes soon. Rumors are always true.' : 'Drop a rumor from the bar below. Rumors are always true.'));
-      rumors.forEach(function (x, i) {
-        var d = mk('div', 'mh-rumor' + (i === 0 && Date.now() - local(x.at) < 20000 ? ' new' : ''));
-        d.appendChild(mk('b', '', x.by ? 'A ghost whispers' : 'Rumor ' + x.n));
-        d.appendChild(document.createTextNode(x.text));
-        box.appendChild(d);
-      });
-      r.appendChild(box);
-      r.appendChild(mk('p', 'mh-next', ''));
-      el.appendChild(r);
     });
+    fillPanels(main, b);
     order.push(main);
     var cover = drawCover(b);
     if (cover) order.push(cover);
-    // Put the parts in order, and take away the ones not showing now.
+    // Put the parts in order, and take away the ones not showing now. A part
+    // already in its place is left alone: moving it would start its
+    // animation again, and the board would flash.
     [].slice.call(stage.children).forEach(function (n) { if (order.indexOf(n) < 0) n.remove(); });
-    order.forEach(function (n) { stage.appendChild(n); });
+    order.forEach(function (n, i) { if (stage.children[i] !== n) stage.insertBefore(n, stage.children[i] || null); });
     drawControls(b);
     clearInterval(tickTimer);
     tickTimer = setInterval(tick, 250);
     tick();
     // The drum roll plays when the reveal reaches it (tick()).
+  }
+
+  // The Clear list, the Lab log and the Lab radio: a new name, line or rumor
+  // slides in; everything already showing stays where it is (and the log
+  // keeps its place if the teacher scrolled it).
+  function fillPanels(el, b) {
+    function panel(name) { return el.querySelector('.mh-p-' + name); }
+    function empty(sec, text) { var e = sec.querySelector('.mh-empty'); e.textContent = text || ''; e.hidden = !text; }
+    var c = panel('clear');
+    var clear = b.players.filter(function (p) { return p.clear; });
+    M.syncList(c.querySelector('.mh-chips'), clear, function (p) { return p.id + '|' + (p.alive !== false) + '|' + p.hero; }, function (p) { return M.chip(p); });
+    empty(c, clear.length ? '' : 'Nobody yet. A public scan that comes back Clear puts a name here.');
+    var l = panel('log');
+    var log = (b.log || []).slice(-60).reverse();
+    M.syncList(l.querySelector('.mh-log'), log, function (x) { return x.at + '|' + x.text; }, function (x) {
+      var li = mk('li');
+      li.appendChild(mk('span', 't', ago(x.at)));
+      var cls = /ALARM|lost|Power cut|A MOLE/.test(x.text) ? 'alarm' : /Clear|Fixed|Not a Mole/.test(x.text) ? 'good' : /teacher/i.test(x.text) ? 'teach' : '';
+      li.appendChild(mk('span', cls, x.text));
+      return li;
+    });
+    empty(l, log.length ? '' : 'Scans and sabotage show up here as they happen.');
+    var r = panel('radio');
+    var rumors = (b.rumors || []).slice().reverse();
+    M.syncList(r.querySelector('.mh-rumors'), rumors, function (x) { return x.n + '|' + x.at + '|' + x.text; }, function (x) {
+      var d = mk('div', 'mh-rumor');
+      d.appendChild(mk('b', '', x.by ? 'A ghost whispers' : 'Rumor ' + x.n));
+      d.appendChild(document.createTextNode(x.text));
+      return d;
+    });
+    empty(r, rumors.length ? '' : b.opts.rumors ? 'The first rumor comes soon. Rumors are always true.' : 'Drop a rumor from the bar below. Rumors are always true.');
   }
 
   // The story, a meeting, the reveal, or paused: over the whole board.
@@ -508,68 +526,16 @@
     }
     var m = b.meeting;
     if (!m) return null;
-    // Tell the class (Donny, 2026-11-18): the notes students shared at this
-    // meeting, newest first, while the class talks and votes.
-    var claimsOn = !!(b.opts && b.opts.claims);
-    var saidKey = claimsOn ? (m.claims || []).map(function (c) { return c.at + c.by.id; }).join(',') : '';
-    function claimsBox(max) {
-      var box = mk('div', 'mh-claims');
-      box.appendChild(mk('h3', '', '📣 What the lab is saying'));
-      var list = (m.claims || []).slice().reverse();
-      if (!list.length) { box.appendChild(mk('p', 'mh-empty', 'Tap 📣 Tell the class on one of your notes to share it here.')); return box; }
-      var grid = mk('div', 'mh-claim-grid');
-      list.slice(0, max).forEach(function (c, i) {
-        var it = mk('div', 'mh-claim ' + c.v + (i === 0 && Date.now() - local(c.at) < 4000 ? ' new' : ''));
-        it.appendChild(M.heroImg(c.by.hero, 'small'));
-        var t = mk('div', 'txt');
-        t.appendChild(mk('b', '', c.by.name));
-        t.appendChild(mk('span', '', M.noteText(c.who.name, c.v, c.why)));
-        it.appendChild(t);
-        grid.appendChild(it);
-      });
-      box.appendChild(grid);
-      if (list.length > max) box.appendChild(mk('p', 'mh-empty', '+ ' + (list.length - max) + ' more on students\' screens'));
-      return box;
-    }
-    // With the shared notes on, the title and the clock share one line so
-    // the notes get the room.
-    function headRow(el, title, extra) {
-      var row = mk('div', 'mh-meet-head');
-      row.appendChild(mk('h2', '', title));
-      if (extra) row.appendChild(extra);
-      row.appendChild(mk('p', 'mh-timer-pill mh-meet-left', ''));
-      el.appendChild(row);
-    }
-    if (m.step === 'talk') {
-      return part('cover', 'talk' + m.n + '|' + saidKey, function (el) {
-        el.className = 'mh-part mh-cover mh-meeting-cover' + (claimsOn ? ' mh-with-claims' : '');
-        if (claimsOn) {
-          headRow(el, '🔔 Lab Meeting ' + m.n);
-          el.appendChild(mk('p', '', 'Called by ' + m.by + '. Talk it over: who is a Mole?'));
-          el.appendChild(claimsBox(6));
-          return;
-        }
-        el.appendChild(mk('div', 'ring', '🔔'));
-        el.appendChild(mk('h2', '', 'Lab Meeting ' + m.n));
-        el.appendChild(mk('p', '', 'Called by ' + m.by + '. Talk it over: who is a Mole? Look at the Clear list and the Lab log.'));
-        el.appendChild(mk('p', 'mh-timer-pill mh-meet-left', ''));
-        el.appendChild(mk('p', '', 'Voting opens when the time is up, or press Start voting.'));
-      });
-    }
-    if (m.step === 'vote') {
-      return part('cover', 'vote' + m.n + '|' + m.votesIn + '|' + m.of + '|' + saidKey, function (el) {
-        var withClaims = claimsOn && (m.claims || []).length;
-        el.className = 'mh-part mh-cover mh-meeting-cover' + (withClaims ? ' mh-with-claims' : '');
-        if (withClaims) {
-          headRow(el, '🗳️ Vote on your screen!', mk('p', 'mh-vote-count', m.votesIn + ' of ' + m.of + ' votes in'));
-          el.appendChild(claimsBox(4));
-          return;
-        }
-        el.appendChild(mk('div', 'ring', '🗳️'));
-        el.appendChild(mk('h2', '', 'Vote on your screen!'));
-        el.appendChild(mk('p', 'mh-vote-count', m.votesIn + ' of ' + m.of + ' votes in'));
-        el.appendChild(mk('p', 'mh-timer-pill mh-meet-left', ''));
-      });
+    // Talking and voting (Donny, 2026-11-19: "the screen keeps flashing when
+    // something new is added... you can't see older notes when newer notes
+    // get posted"): the screen is built once for each step, then a new vote
+    // only changes the count and a new note slides in at the end of the list.
+    // Every note stays, oldest first, and Names on the table adds them all up.
+    if (m.step === 'talk' || m.step === 'vote') {
+      var claimsOn = !!(b.opts && b.opts.claims);
+      var cv = part('cover', 'meet' + m.n + '|' + m.step + '|' + claimsOn, function (el) { buildMeeting(el, m, claimsOn); });
+      fillMeeting(cv, m, claimsOn);
+      return cv;
     }
     // The reveal, in three parts (Donny, 2026-11-15): who the class voted
     // for, a drum roll on the student with the most votes, then the answer.
@@ -622,11 +588,133 @@
     });
   }
 
-  // Which part of the reveal is showing: 'tally', 'drum' or 'result'.
+  function buildMeeting(el, m, claimsOn) {
+    var talk = m.step === 'talk';
+    el.className = 'mh-part mh-cover mh-meeting-cover' + (claimsOn ? ' mh-with-claims' : '');
+    function voteMeter(row) {
+      row.appendChild(mk('p', 'mh-vote-count', ''));
+      var bar = mk('span', 'mh-vote-bar');
+      bar.appendChild(mk('i'));
+      row.appendChild(bar);
+    }
+    if (!claimsOn) {
+      el.appendChild(mk('div', 'ring', talk ? '🔔' : '🗳️'));
+      el.appendChild(mk('h2', '', talk ? 'Lab Meeting ' + m.n : 'Vote on your screen!'));
+      if (talk) el.appendChild(mk('p', '', 'Called by ' + m.by + '. Talk it over: who is a Mole? Look at the Clear list and the Lab log.'));
+      else voteMeter(el);
+      el.appendChild(mk('p', 'mh-timer-pill mh-meet-left', ''));
+      if (talk) el.appendChild(mk('p', '', 'Voting opens when the time is up, or press Start voting.'));
+      return;
+    }
+    var head = mk('div', 'mh-meet-head');
+    head.appendChild(mk('h2', '', talk ? '🔔 Lab Meeting ' + m.n : '🗳️ Vote on your screen!'));
+    if (!talk) voteMeter(head);
+    head.appendChild(mk('p', 'mh-timer-pill mh-meet-left', ''));
+    el.appendChild(head);
+    el.appendChild(mk('p', 'mh-meet-sub', talk ? 'Called by ' + m.by + '. Talk it over: who is a Mole?' : 'Lab Meeting ' + m.n + ': everyone votes on their own screen. The notes stay up.'));
+    var body = mk('div', 'mh-meet-body');
+    var said = mk('section', 'mh-claims');
+    var h = mk('h3', '', '📣 What the lab is saying ');
+    h.appendChild(mk('span', 'mh-claims-n', ''));
+    said.appendChild(h);
+    said.appendChild(mk('p', 'mh-empty', 'Nothing yet. On their own screens, students tap 📣 Tell the class on one of their notes to share it here.'));
+    var feed = mk('div', 'mh-claim-feed');
+    said.appendChild(feed);
+    var more = mk('button', 'mh-feed-more', 'New notes below ↓');
+    more.type = 'button';
+    more.hidden = true;
+    more.addEventListener('click', function () { feed.scrollTo({ top: feed.scrollHeight, behavior: 'smooth' }); });
+    said.appendChild(more);
+    // Scrolled to the bottom: new notes keep it there. Scrolled up to read
+    // older notes: it stays put, and a button says there is more below.
+    feed.addEventListener('scroll', function () {
+      feed.dataset.pinned = feed.scrollTop + feed.clientHeight >= feed.scrollHeight - 24 ? '1' : '0';
+      if (feed.dataset.pinned === '1') more.hidden = true;
+    });
+    feed.dataset.pinned = '1';
+    body.appendChild(said);
+    var named = mk('section', 'mh-named');
+    named.appendChild(mk('h3', '', '🧾 Names on the table'));
+    named.appendChild(mk('p', 'mh-empty', 'Every classmate the notes name shows up here once, with how many said Mole and how many said Scientist.'));
+    named.appendChild(mk('div', 'mh-named-list'));
+    body.appendChild(named);
+    el.appendChild(body);
+  }
+
+  function fillMeeting(el, m, claimsOn) {
+    var vc = el.querySelector('.mh-vote-count');
+    if (vc) {
+      vc.textContent = m.votesIn + ' of ' + m.of + ' votes in';
+      el.querySelector('.mh-vote-bar i').style.width = Math.round(100 * m.votesIn / Math.max(1, m.of)) + '%';
+    }
+    if (!claimsOn) return;
+    var list = m.claims || [];
+    var feed = el.querySelector('.mh-claim-feed');
+    el.querySelector('.mh-claims-n').textContent = list.length ? '(' + list.length + ')' : '';
+    el.querySelector('.mh-claims .mh-empty').hidden = !!list.length;
+    var made = M.syncList(feed, list, function (c) { return c.by.id + '|' + c.who.id + '|' + c.at; }, function (c) {
+      var it = mk('div', 'mh-claim ' + c.v);
+      it.appendChild(M.heroImg(c.by.hero, 'small'));
+      var t = mk('div', 'txt');
+      t.appendChild(mk('b', '', c.by.name));
+      t.appendChild(mk('span', '', M.noteText(c.who.name, c.v, c.why)));
+      it.appendChild(t);
+      return it;
+    });
+    [].forEach.call(feed.children, function (n, i) { n.classList.toggle('newest', i === feed.children.length - 1 && list.length > 1); });
+    feed.setAttribute('data-n', list.length > 8 ? 'many' : list.length > 4 ? 'some' : 'few');
+    if (made.length) {
+      if (feed.dataset.pinned !== '0') feed.scrollTo({ top: feed.scrollHeight, behavior: 'smooth' });
+      else el.querySelector('.mh-feed-more').hidden = false;
+    }
+    // Names on the table: each classmate the notes name, once, most
+    // suspected first.
+    var by = {}, order = [];
+    list.forEach(function (c) {
+      var x = by[c.who.id];
+      if (!x) { x = by[c.who.id] = { who: c.who, mole: 0, sci: 0, unsure: 0 }; order.push(x); }
+      x[c.v] = (x[c.v] || 0) + 1;
+    });
+    order.sort(function (a, b2) { return (b2.mole * 2 + b2.unsure - b2.sci) - (a.mole * 2 + a.unsure - a.sci) || b2.mole + b2.sci + b2.unsure - a.mole - a.sci - a.unsure; });
+    var box = el.querySelector('.mh-named-list');
+    el.querySelector('.mh-named .mh-empty').hidden = !!order.length;
+    M.syncList(box, order, function (x) { return x.who.id + '|' + x.mole + '|' + x.sci + '|' + x.unsure; }, function (x) {
+      var row = mk('div', 'mh-nrow');
+      row.dataset.total = x.mole + x.sci + x.unsure;
+      row.appendChild(M.heroImg(x.who.hero, 'small'));
+      var t = mk('div', 'txt');
+      t.appendChild(mk('b', '', x.who.name));
+      var says = mk('span', 'says');
+      if (x.mole) says.appendChild(mk('span', 'mole', x.mole + (x.mole === 1 ? ' says' : ' say') + ' Mole'));
+      if (x.unsure) says.appendChild(mk('span', 'unsure', x.unsure + (x.unsure === 1 ? ' says' : ' say') + ' might be'));
+      if (x.sci) says.appendChild(mk('span', 'sci', x.sci + (x.sci === 1 ? ' says' : ' say') + ' Scientist'));
+      t.appendChild(says);
+      row.appendChild(t);
+      var bar = mk('span', 'tally');
+      [['mole', x.mole], ['unsure', x.unsure], ['sci', x.sci]].forEach(function (s) { if (s[1]) { var i = mk('i', s[0]); i.style.flexGrow = s[1]; bar.appendChild(i); } });
+      row.appendChild(bar);
+      return row;
+    });
+    // Each bar is as long as that classmate's share of the most-named one.
+    var most = Math.max.apply(null, [1].concat([].map.call(box.children, function (r) { return Number(r.dataset.total) || 0; })));
+    [].forEach.call(box.children, function (r) { r.querySelector('.tally').style.width = Math.max(12, Math.round(100 * (Number(r.dataset.total) || 0) / most)) + '%'; });
+  }
+
+  // Which part of the reveal is showing: 'tally', 'drum' or 'result'. The
+  // answer waits for the drum roll's last hit on this screen's speakers
+  // (Donny, 2026-11-19: "the reveal happens before the end of the
+  // drumroll"), however late the sound comes out.
+  var heardAt = { n: '', at: 0 };
   function revealPhase(m) {
-    if (m.shown) return 'result';
     var now = Date.now();
-    return now < local(m.drumAt || 0) ? 'tally' : 'drum';
+    if (now < local(m.drumAt || 0) && !m.shown) return 'tally';
+    if (m.shown && now >= revealAt(m)) return 'result';
+    return 'drum';
+  }
+  function revealAt(m) {
+    var at = local(m.resultAt || 0);
+    if (heardAt.n === m.n + '|' + code0()) at = Math.max(at, Math.min(heardAt.at, at + 2500));
+    return at;
   }
   // Who the class voted for: a bar for each student with votes, and Skip.
   function voteBars(r) {
@@ -661,23 +749,60 @@
     if (!list.length && !r.skip) box.appendChild(mk('p', '', 'Nobody voted.'));
     return box;
   }
-  // A drum roll that speeds up for the length of the suspense, then a hit.
-  function drum(ms) {
+  // The sound for the drum roll. It is made on the teacher's first click, so
+  // it is awake and on time when the first reveal comes.
+  function audio() {
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    try { drum.ac = drum.ac || new AC(); } catch (e) { return null; }
+    if (drum.ac.state === 'suspended' && drum.ac.resume) drum.ac.resume().catch(function () { /* needs a click */ });
+    return drum.ac;
+  }
+  document.addEventListener('pointerdown', function () { audio(); }, { once: true });
+  // A drum roll that speeds up through the suspense, then a hit and a crash
+  // right as the answer shows (Donny, 2026-11-19: "the reveal happens before
+  // the end of the drumroll"). Speakers play sound a little after it is made
+  // (more with Bluetooth or a projector), so the roll is timed by when the
+  // sound really comes out, and heardAt tells revealPhase() to hold the answer
+  // until the last hit is heard.
+  function drum(m) {
     if (music.muted) return;
+    var ac = audio();
+    if (!ac) return;
     try {
-      var AC = window.AudioContext || window.webkitAudioContext;
-      if (!AC) return;
-      var ac = drum.ac = drum.ac || new AC();
-      var len = Math.max(1, (ms || 4000) / 1000);
+      // How long after now a sound made now is heard.
+      var lagMs = ((ac.outputLatency || 0) + (ac.baseLatency || 0)) * 1000 || 60;
+      var ts = ac.getOutputTimestamp ? ac.getOutputTimestamp() : null;
+      if (ts && ts.performanceTime > 0 && ts.contextTime > 0) lagMs = ts.performanceTime + (ac.currentTime - ts.contextTime) * 1000 - performance.now();
+      if (!(lagMs >= 0 && lagMs < 1500)) lagMs = 60;
+      var t0 = ac.currentTime + 0.02;
+      var len = Math.max(0.6, (local(m.resultAt) - Date.now() - lagMs) / 1000 - 0.02);
+      heardAt = { n: m.n + '|' + code0(), at: Date.now() + (len + 0.02) * 1000 + lagMs };
       var vol = music.volume / 100;
-      var t = 0, gap = 0.22;
-      while (t < len - 0.25) {
-        hit(ac, ac.currentTime + t, 95 + t * 12, vol * (0.12 + 0.18 * t / len), 0.1);
+      var t = 0, gap = 0.2;
+      while (t < len - 0.14) {
+        hit(ac, t0 + t, 95 + t * 12, vol * (0.12 + 0.2 * t / len), 0.1);
         t += gap;
-        gap = Math.max(0.05, gap * 0.93);
+        gap = Math.max(0.045, gap * 0.92);
       }
-      hit(ac, ac.currentTime + len, 210, vol * 0.55, 0.6);
+      hit(ac, t0 + len, 210, vol * 0.55, 0.6);
+      crash(ac, t0 + len, vol * 0.3);
     } catch (e) { /* no sound */ }
+  }
+  function crash(ac, at, vol) {
+    var n = Math.round(ac.sampleRate * 1.4);
+    var buf = ac.createBuffer(1, n, ac.sampleRate);
+    var d = buf.getChannelData(0);
+    for (var i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    var src = ac.createBufferSource(), hp = ac.createBiquadFilter(), g = ac.createGain();
+    src.buffer = buf;
+    hp.type = 'highpass';
+    hp.frequency.value = 4500;
+    g.gain.setValueAtTime(0.0001, at);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol), at + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + 1.3);
+    src.connect(hp); hp.connect(g); g.connect(ac.destination);
+    src.start(at); src.stop(at + 1.4);
   }
   function hit(ac, at, freq, vol, len) {
     var o = ac.createOscillator(), g = ac.createGain();
@@ -718,7 +843,12 @@
       var ph = revealPhase(m);
       var cover = parts.cover;
       if (cover && cover.dataset.key !== 'reveal' + m.n + ph) drawPlay(b);
-      if (ph === 'drum' && drummed !== m.n + '|' + code0()) { drummed = m.n + '|' + code0(); drum(local(m.resultAt) - Date.now()); }
+      if (ph === 'drum' && drummed !== m.n + '|' + code0()) {
+        drummed = m.n + '|' + code0();
+        drum(m);
+        // Show the answer right on the last hit, not at the next tick.
+        setTimeout(tick, Math.max(0, revealAt(m) - Date.now()) + 5);
+      }
     }
   }
   function code0() { return board ? board.code : ''; }

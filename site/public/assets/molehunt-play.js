@@ -276,6 +276,7 @@
     clearTimeout(secretTimer);
     secretOpen = false;
     picking = '';
+    drawer = false;
     if (popSecret) { $('mpPopBack').hidden = true; popSecret = false; }
   }
   function closeSecret() {
@@ -396,6 +397,7 @@
         b.addEventListener('click', function () {
           tab = x[0];
           picking = '';
+          drawer = false;
           // Back to the questions, the screen anyone might see: secrets cover up.
           if (tab === 'q' && secretOpen) { closeSecret(); return; }
           drawGame(view);
@@ -506,7 +508,9 @@
 
   /* -------- lab tools -------- */
 
-  var picking = ''; // the tool waiting for a classmate to be picked
+  var picking = ''; // the tool waiting for a classmate to be picked ('freescan': the Detective's free scan)
+  var drawer = false; // the Secret tools drawer is open
+  function toolOf(k) { return k === 'freescan' ? 'scan' : k; }
   function drawTools(v) {
     var el = pane('tools');
     var now = Date.now();
@@ -516,59 +520,93 @@
       });
       return el;
     }
+    // Every student's Lab tools look the same (Donny, 2026-11-19: "a moles
+    // lab tools are different than a scientist so anyone peeking can figure
+    // this out"): the same four tools, the same colors, the same prices, and
+    // a Secret tools button on every screen. Only inside that drawer does a
+    // Mole find the sabotage tools (and a Medic or Detective their job).
     var freeReady = v.job === 'detective' && v.freeScanAt && now >= local(v.freeScanAt);
-    var key = JSON.stringify([v.tools, v.energy, picking, freeReady, v.canProtect, v.people.map(function (p) { return [p.id, p.alive, p.clear]; }), v.stats, v.scansLeft]);
+    var secret = (v.secret || []).slice();
+    if (v.job === 'medic') secret.unshift({ key: 'protect', cost: 0 });
+    var key = JSON.stringify([v.tools, secret, v.energy, picking, drawer, freeReady, v.canProtect, v.people.map(function (p) { return [p.id, p.alive, p.clear]; }), v.stats, v.scansLeft]);
+    function toolBtn(t, freeNow, pickKey) {
+      var d = M.TOOLS[t.key];
+      pickKey = pickKey || t.key;
+      var cost = freeNow ? 0 : t.cost;
+      var can = v.energy >= cost && (t.key !== 'protect' || v.canProtect) && !((t.key === 'scan' || t.key === 'public') && !freeNow && !v.scansLeft) && !(t.key === 'meeting' && !v.stats.meetingsLeft);
+      var b = mk('button', 'mh-toolbtn' + (picking === pickKey ? ' picked' : ''));
+      b.type = 'button';
+      var det = pickKey === 'freescan';
+      b.disabled = !can || (det && !freeNow);
+      b.appendChild(mk('span', 'ic', det ? M.JOBS.detective.icon : d.icon));
+      var tx = mk('span');
+      tx.appendChild(mk('b', '', det ? 'Free Detective scan' : d.name));
+      tx.appendChild(mk('small', '', t.key === 'protect' && !v.canProtect ? 'Used this round. You can protect again after the next meeting.' : det ? (freeNow ? 'Ready! A private scan that costs nothing.' : 'One every 2 minutes. The next one is on its way.') : d.text));
+      b.appendChild(tx);
+      b.appendChild(mk('span', 'price', cost ? cost + ' ⚡' : 'Free'));
+      b.addEventListener('click', function () {
+        if (d.target) { picking = picking === pickKey ? '' : pickKey; drawGame(view); return; }
+        send({ t: 'tool', key: t.key });
+        picking = '';
+        drawer = false;
+      });
+      return b;
+    }
+    function picker(markMates) {
+      var pk = mk('div', 'mh-pickwho');
+      var pt = M.TOOLS[toolOf(picking)];
+      pk.appendChild(mk('h4', '', pt.icon + ' ' + (picking === 'freescan' ? 'Free Detective scan' : pt.name) + ': pick a classmate'));
+      var ppl = mk('div', 'mh-people');
+      v.people.filter(function (p) { return p.alive; }).forEach(function (p) {
+        var b = mk('button', 'mh-person' + (p.clear ? ' clear' : '') + (markMates && p.mate ? ' mate' : ''));
+        b.type = 'button';
+        b.appendChild(M.heroImg(p.hero));
+        b.appendChild(mk('span', '', p.name));
+        b.addEventListener('click', function () { send({ t: 'tool', key: toolOf(picking), target: p.id }); picking = ''; drawer = false; drawGame(view); });
+        ppl.appendChild(b);
+      });
+      pk.appendChild(ppl);
+      var cancel = mk('button', 'btn secondary fc-small', 'Cancel');
+      cancel.type = 'button';
+      cancel.style.marginTop = '.5rem';
+      cancel.addEventListener('click', function () { picking = ''; drawGame(view); });
+      pk.appendChild(cancel);
+      return pk;
+    }
     part(el, key, function (x) {
       var info = mk('p', 'lv-small');
       info.textContent = 'You have ' + v.energy + ' energy. The class has ' + M.plural(v.scansLeft || 0, 'scan') + ' and ' + M.plural(v.stats.meetingsLeft, 'meeting') + ' left.';
       x.appendChild(info);
-      if (v.role === 'mole' && v.mates.length) x.appendChild(mk('p', 'mh-mates', '🕳️ Your fellow Moles: ' + v.mates.map(function (m) { return m.name + (m.alive ? '' : ' (caught)'); }).join(', ')));
       var grid = mk('div', 'mh-tools');
-      var tools = (v.tools || []).slice();
-      if (v.job === 'medic') tools.unshift({ key: 'protect', cost: 0 });
-      tools.forEach(function (t) {
-        var d = M.TOOLS[t.key];
-        var free = t.key === 'scan' && freeReady;
-        var cost = free ? 0 : t.cost;
-        var can = v.energy >= cost && (t.key !== 'protect' || v.canProtect) && !((t.key === 'scan' || t.key === 'public') && !free && !v.scansLeft) && !(t.key === 'meeting' && !v.stats.meetingsLeft);
-        var b = mk('button', 'mh-toolbtn' + (v.role === 'mole' ? ' mole' : '') + (free ? ' free' : '') + (picking === t.key ? ' picked' : ''));
-        b.type = 'button';
-        b.disabled = !can;
-        b.appendChild(mk('span', 'ic', d.icon));
-        var tx = mk('span');
-        tx.appendChild(mk('b', '', d.name + (free ? ' (free!)' : '')));
-        tx.appendChild(mk('small', '', t.key === 'protect' && !v.canProtect ? 'Used this round. You can protect again after the next meeting.' : d.text));
-        b.appendChild(tx);
-        b.appendChild(mk('span', 'price', cost ? cost + ' ⚡' : 'Free'));
-        b.addEventListener('click', function () {
-          if (d.target) { picking = picking === t.key ? '' : t.key; drawGame(view); return; }
-          send({ t: 'tool', key: t.key });
-          picking = '';
-        });
-        grid.appendChild(b);
-      });
+      var shared = v.tools || [];
+      shared.forEach(function (t) { grid.appendChild(toolBtn(t, false)); });
+      var db = mk('button', 'mh-toolbtn mh-drawer-btn' + (drawer ? ' picked' : ''));
+      db.type = 'button';
+      db.setAttribute('aria-expanded', String(drawer));
+      db.appendChild(mk('span', 'ic', '🗝️'));
+      var dt = mk('span');
+      dt.appendChild(mk('b', '', 'Secret tools'));
+      dt.appendChild(mk('small', '', 'Only some players have secret tools. Everyone has this button, so nobody can tell by looking.'));
+      db.appendChild(dt);
+      db.appendChild(mk('span', 'price', drawer ? 'Close' : 'Open'));
+      db.addEventListener('click', function () { drawer = !drawer; picking = ''; drawGame(view); });
+      grid.appendChild(db);
       x.appendChild(grid);
-      if (picking && M.TOOLS[picking]) {
-        var pk = mk('div', 'mh-pickwho');
-        pk.appendChild(mk('h4', '', M.TOOLS[picking].icon + ' ' + M.TOOLS[picking].name + ': pick a classmate'));
-        var ppl = mk('div', 'mh-people');
-        v.people.filter(function (p) { return p.alive; }).forEach(function (p) {
-          var b = mk('button', 'mh-person' + (p.clear ? ' clear' : '') + (p.mate ? ' mate' : ''));
-          b.type = 'button';
-          b.appendChild(M.heroImg(p.hero));
-          b.appendChild(mk('span', '', p.name));
-          b.addEventListener('click', function () { send({ t: 'tool', key: picking, target: p.id }); picking = ''; drawGame(view); });
-          ppl.appendChild(b);
-        });
-        pk.appendChild(ppl);
-        var cancel = mk('button', 'btn secondary fc-small', 'Cancel');
-        cancel.type = 'button';
-        cancel.style.marginTop = '.5rem';
-        cancel.addEventListener('click', function () { picking = ''; drawGame(view); });
-        pk.appendChild(cancel);
-        x.appendChild(pk);
-      }
-      if (v.job === 'detective' && !freeReady && v.freeScanAt) x.appendChild(mk('p', 'lv-small mh-free-left', ''));
+      var sharedPick = picking && shared.some(function (t) { return t.key === picking; });
+      if (sharedPick && !drawer) x.appendChild(picker(false));
+      if (!drawer) return;
+      var box = mk('div', 'mh-drawer');
+      box.appendChild(mk('h4', '', '🗝️ Your secret tools'));
+      if (v.role === 'mole' && v.mates.length) box.appendChild(mk('p', 'mh-mates', '🕳️ Your fellow Moles: ' + v.mates.map(function (m) { return m.name + (m.alive ? '' : ' (caught)'); }).join(', ')));
+      var sg = mk('div', 'mh-tools');
+      if (v.job === 'detective') sg.appendChild(toolBtn({ key: 'scan', cost: 0 }, freeReady, 'freescan'));
+      secret.forEach(function (t) { sg.appendChild(toolBtn(t, false)); });
+      if (sg.children.length) box.appendChild(sg);
+      if (v.job === 'detective' && !freeReady && v.freeScanAt) box.appendChild(mk('p', 'lv-small mh-free-left', ''));
+      if (v.job === 'tech') box.appendChild(mk('p', '', M.JOBS.tech.icon + ' Lab Tech: ' + M.JOBS.tech.text + ' Nothing to tap.'));
+      if (!sg.children.length && v.job !== 'tech') box.appendChild(mk('p', '', 'You have no secret tools. Use the lab tools above, answer questions, and keep your eyes open.'));
+      if (picking && !sharedPick) box.appendChild(picker(true));
+      x.appendChild(box);
     });
     return el;
   }
@@ -898,7 +936,7 @@
     if (m) { o.hidden = false; drawMeeting(o, v, m); return; }
     voteFor = ''; voteWhy = '';
     o.hidden = true;
-    o.dataset.key = '';
+    o.dataset.key = o.dataset.step = o.dataset.ph = '';
   }
 
   var revealing = false;
@@ -953,20 +991,12 @@
     var box = mk('aside', 'mh-case');
     box.appendChild(notesPanel(v, writer));
     // What classmates told the class at this meeting, newest first.
+    // Filled by fillSaid(), in place, so a new note does not redraw the screen.
     if (v.opts.claims && v.meeting) {
       var said = mk('section', 'mh-case-sec mh-said');
       said.appendChild(mk('h4', '', '📣 Told the class at this meeting'));
-      var cl = (v.meeting.claims || []).slice().reverse();
-      if (!cl.length) said.appendChild(mk('p', 'mh-empty', 'Nothing yet. Anyone can tap Tell the class on one of their notes.'));
-      cl.forEach(function (c) {
-        var it = mk('div', 'mh-said-one ' + c.v);
-        it.appendChild(M.heroImg(c.by.hero, 'tiny'));
-        var tx = mk('span', '');
-        tx.appendChild(mk('b', '', (c.by.id === v.me ? 'You' : c.by.name) + ': '));
-        tx.appendChild(document.createTextNode(M.noteText(c.who.name, c.v, c.why, c.who.id === v.me)));
-        it.appendChild(tx);
-        said.appendChild(it);
-      });
+      said.appendChild(mk('p', 'mh-empty', 'Nothing yet. Anyone can tap Tell the class on one of their notes.'));
+      said.appendChild(mk('div', 'mh-said-list'));
       box.appendChild(said);
     }
     var by = {};
@@ -996,11 +1026,33 @@
     box.appendChild(rs);
     return box;
   }
+  // What classmates told the class at this meeting, newest first: a new one
+  // slides in at the top and the rest stay as they are.
+  function fillSaid(o, v) {
+    var list = o.querySelector('.mh-said-list');
+    if (!list || !v.meeting) return;
+    var cl = (v.meeting.claims || []).slice().reverse();
+    list.parentNode.querySelector('.mh-empty').hidden = !!cl.length;
+    M.syncList(list, cl, function (c) { return c.by.id + '|' + c.who.id + '|' + c.at; }, function (c) {
+      var it = mk('div', 'mh-said-one ' + c.v);
+      it.appendChild(M.heroImg(c.by.hero, 'tiny'));
+      var tx = mk('span', '');
+      tx.appendChild(mk('b', '', (c.by.id === v.me ? 'You' : c.by.name) + ': '));
+      tx.appendChild(document.createTextNode(M.noteText(c.who.name, c.v, c.why, c.who.id === v.me)));
+      it.appendChild(tx);
+      return it;
+    });
+  }
   // Which part of the reveal is showing: 'tally' (who the class voted for),
   // 'drum' (the suspense) or 'result'.
+  // The answer comes a moment after the board's drum roll ends, never before
+  // it (Donny, 2026-11-19: "the reveal happens before the end of the
+  // drumroll").
+  var REVEAL_AFTER_MS = 300;
   function revealPhase(m) {
-    if (m.shown) return 'result';
-    return Date.now() < local(m.drumAt || 0) ? 'tally' : 'drum';
+    var now = Date.now();
+    if (!m.shown) return now < local(m.drumAt || 0) ? 'tally' : 'drum';
+    return now >= local(m.resultAt || 0) + REVEAL_AFTER_MS ? 'result' : 'drum';
   }
   // At a meeting every screen shows the same button. A tap shows the
   // student's role and, for a Mole, the fellow Moles (marked in the vote list
@@ -1024,10 +1076,23 @@
   function drawMeeting(o, v, m) {
     var b = v.board || {};
     var ph = m.step === 'reveal' ? revealPhase(m) : '';
-    var key = JSON.stringify(['meet', m.n, m.step, ph, v.myVote, voteFor, voteWhy, v.alive, m.step === 'vote' ? [m.votesIn, m.of] : 0,
+    o.dataset.ph = ph;
+    if (ph === 'drum' && m.shown) {
+      clearTimeout(drawMeeting.timer);
+      drawMeeting.timer = setTimeout(function () { if (view) drawOverlay(view); }, Math.max(0, local(m.resultAt || 0) + REVEAL_AFTER_MS - Date.now()) + 5);
+    }
+    // A classmate's vote or note does not draw the screen again (Donny,
+    // 2026-11-19: "the screen keeps flashing when something new is added"):
+    // the vote count and the told-the-class list change in place below, and
+    // the student keeps their place in the list.
+    var key = JSON.stringify(['meet', m.n, m.step, ph, v.myVote, voteFor, voteWhy, v.alive,
       m.step !== 'reveal' ? [v.people.map(function (p) { return [p.id, p.alive, p.clear]; }), b, (v.notes || []).length, (v.rumors || []).length, secretOpen, v.myNotes || [], nb,
-        (m.claims || []).map(function (c) { return c.at + c.by.id; })] : 0,
+        (m.claims || []).filter(function (c) { return c.by.id === v.me; }).map(function (c) { return c.who.id + '|' + c.at; })] : 0,
       m.result && m.result.out && m.result.out.id]);
+    var step = m.n + '|' + m.step, top = o.dataset.step === step ? o.scrollTop : 0;
+    var caseEl = o.querySelector('.mh-case'), caseTop = top && caseEl ? caseEl.scrollTop : 0;
+    var redrawn = o.dataset.key !== key;
+    o.dataset.step = step;
     part(o, key, function (x) {
       x.className = 'mh-overlay mh-meeting-cover' + (m.step === 'reveal' ? ' mh-reveal' : ' mh-meet');
       if (m.step === 'talk') {
@@ -1046,7 +1111,9 @@
         if (!v.alive) { x.appendChild(mk('p', '', 'Ghosts cannot vote. Watch the board!')); return; }
         x.appendChild(secretStrip(v));
         if (v.myVote) {
-          x.appendChild(mk('p', '', 'Your vote is in. ' + m.votesIn + ' of ' + m.of + ' votes in.'));
+          var vin = mk('p', '', 'Your vote is in. ');
+          vin.appendChild(mk('span', 'mh-votes-in', ''));
+          x.appendChild(vin);
           var w2 = mk('div', 'mh-meet-grid one');
           w2.appendChild(caseNotes(v, true));
           x.appendChild(w2);
@@ -1120,6 +1187,14 @@
       x.appendChild(mk('p', 'res ' + (r.out && r.wasMole ? 'mole' : 'sci'), r.out ? (r.wasMole ? 'A MOLE!' : 'NOT a Mole.') : 'Nobody leaves the lab.'));
       if (r.out && r.out.id === v.me) x.appendChild(mk('p', '', 'You were voted out. ' + (v.opts.ghosts ? 'You will be a ghost: keep answering to help your team!' : 'Keep answering to practice!')));
     });
+    if (redrawn && top) {
+      o.scrollTop = top;
+      var c2 = o.querySelector('.mh-case');
+      if (c2 && caseTop) c2.scrollTop = caseTop;
+    }
+    var vi = o.querySelector('.mh-votes-in');
+    if (vi) vi.textContent = m.votesIn + ' of ' + m.of + ' votes in.';
+    fillSaid(o, v);
   }
 
   /* -------- pop-ups: a scan result, a peek, a mission -------- */
@@ -1181,7 +1256,7 @@
     if (ml && v.meeting) ml.textContent = M.clock(local(v.meeting.endsAt) - now) + (v.meeting.step === 'talk' ? ' to talk' : ' to vote');
     var al = document.querySelector('.mh-alarm-left');
     if (al && v.emergency) al.textContent = '⏱ ' + M.clock(local(v.emergency.endsAt) - now);
-    if (v.meeting && v.meeting.step === 'reveal' && revealPhase(v.meeting) === 'drum' && $('mpOverlay').dataset.key.indexOf('"tally"') >= 0) drawOverlay(v);
+    if (v.meeting && v.meeting.step === 'reveal' && $('mpOverlay').dataset.ph !== revealPhase(v.meeting)) drawOverlay(v);
     var fl = document.querySelector('.mh-freeze-left');
     if (fl && v.frozenUntil) {
       var left = local(v.frozenUntil) - now;

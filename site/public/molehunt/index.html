@@ -12,18 +12,18 @@
 <script>/* student view, only inside the physical science site: its page says ?sv=1 (the teacher is looking the way a student does) or ?sv=0; editor.js then keeps the teacher's tools hidden */(function(){if(window.parent===window)return;try{var s=new URLSearchParams(location.search).get("sv");if(s==="1"||s==="0")localStorage.setItem("vocab-student-view",s)}catch(e){}})()</script>
 <script src="../assets/icons.js" defer></script>
 <script src="../assets/book.js" defer></script>
-<script src="../assets/pass.js?v=11aa8f89" defer></script>
-<link rel="stylesheet" href="../assets/flashcards.css?v=228ef98d">
-<link rel="stylesheet" href="../assets/live.css?v=0ef08dc6">
-<link rel="stylesheet" href="../assets/royale.css?v=9ac2dc58">
-<link rel="stylesheet" href="../assets/molehunt.css?v=8e046c8b">
-<script src="../assets/editor.js?v=0dc7395b" defer></script>
-<script src="../assets/vendor/qrcode.js?v=4b6133cb" defer></script>
-<script src="../assets/live-celebrate.js?v=457dddd6" defer></script>
-<script src="../assets/heroes.js?v=668330c3" defer></script>
-<script src="../assets/live-roster.js?v=ed68e869" defer></script>
-<script src="../assets/molehunt-common.js?v=701420ac" defer></script>
-<script src="../assets/molehunt-host.js?v=97024aae" defer></script>
+<script src="../assets/pass.js?v=f773610b" defer></script>
+<link rel="stylesheet" href="../assets/flashcards.css?v=d063d058">
+<link rel="stylesheet" href="../assets/live.css?v=3e6a2ab6">
+<link rel="stylesheet" href="../assets/royale.css?v=25d98cba">
+<link rel="stylesheet" href="../assets/molehunt.css?v=0b0a8f98">
+<script src="../assets/editor.js?v=9c741fe5" defer></script>
+<script src="../assets/vendor/qrcode.js?v=18ae399f" defer></script>
+<script src="../assets/live-celebrate.js?v=b55c9a9c" defer></script>
+<script src="../assets/heroes.js?v=eb09730e" defer></script>
+<script src="../assets/live-roster.js?v=647187a7" defer></script>
+<script src="../assets/molehunt-common.js?v=faa87e16" defer></script>
+<script src="../assets/molehunt-host.js?v=f84bff66" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to the page</a><div class="topbar"><div class="topbar-inner">
@@ -211,7 +211,7 @@
 <button type="button" class="mh-tb" id="mhPlus" title="Add a minute to the clock">+1 min</button>
 <label class="mh-clock-set"><span class="rb-sr">Set the game clock</span><select id="mhClockSet" aria-label="Set the game clock"></select></label>
 </div>
-<div class="mh-bar-right">
+<div class="mh-bar-right" id="mhBarRight">
 <span class="mh-codechip">Code <strong class="mh-mini-code"></strong></span>
 <button type="button" class="mh-tool" id="mhRemoteBtn" aria-expanded="false">📱 Remote</button>
 <button type="button" class="mh-tool" id="mhRosterBtn" aria-expanded="false" aria-controls="mhRoster">👥 Players</button>
@@ -275,11 +275,11 @@
 </div>
 </section>
 
-<div class="rb-music" id="mhMusic" hidden>
+<div id="mhMusicHome"><div class="rb-music" id="mhMusic" hidden>
 <span class="lv-music-label" id="mhMusicLabel">Music</span>
 <button type="button" class="lv-music-btn" id="mhMute" aria-pressed="false">Mute</button>
 <input type="range" id="mhVolume" min="0" max="100" value="60" aria-label="Music volume" title="Volume">
-</div>
+</div></div>
 <p class="lv-toast" id="mhToast" role="status" aria-live="polite"></p>
 <p class="lv-status" id="mhStatus" role="status" aria-live="polite"></p>
 </main><footer><div class="container">Vocabulary &middot; Flashcards and live vocabulary games </div></footer>

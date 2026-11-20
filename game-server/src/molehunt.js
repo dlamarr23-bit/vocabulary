@@ -614,8 +614,10 @@ export const molehunt = {
     if (g.stage !== 'work') return 'Tools work between meetings.';
     if (!p.alive) return 'You are out of the lab. Help your team from the ghost jar instead.';
     const mole = p.role === 'mole';
+    // The lab tools are everyone's, Moles too (so their screens look the same);
+    // the sabotage tools are only the Moles'.
     const sciTool = SCI_TOOLS.includes(key) || key === 'protect';
-    if ((mole && !MOLE_TOOLS.includes(key)) || (!mole && !sciTool)) return 'That tool is not yours.';
+    if ((mole && !MOLE_TOOLS.includes(key) && !SCI_TOOLS.includes(key)) || (!mole && !sciTool)) return 'That tool is not yours.';
     if (TOOL_SWITCH[key] && !g.opts[TOOL_SWITCH[key]]) return 'Your teacher switched that tool off.';
     if (key === 'powercut' && !g.opts.power) return 'Lab Power is off in this game.';
     if (key === 'alarm' && !g.opts.emergencies) return 'Lab alarms are off in this game.';
@@ -1752,8 +1754,12 @@ export const molehunt = {
       round: g.round || 1
     });
     if (g.phase === 'play') {
-      out.tools = (mole ? MOLE_TOOLS : SCI_TOOLS).filter((k) => (!TOOL_SWITCH[k] || g.opts[TOOL_SWITCH[k]]) && (k !== 'powercut' || g.opts.power) && (k !== 'alarm' || g.opts.emergencies))
-        .map((k) => ({ key: k, cost: this.mhCost(k, p) }));
+      // Everyone gets the same lab tools, so a peek at a screen gives no Mole
+      // away (Donny, 2026-11-19); a Mole's sabotage tools come separately, for
+      // the Secret tools drawer every screen has.
+      const usable = (k) => (!TOOL_SWITCH[k] || g.opts[TOOL_SWITCH[k]]) && (k !== 'powercut' || g.opts.power) && (k !== 'alarm' || g.opts.emergencies);
+      out.tools = SCI_TOOLS.filter(usable).map((k) => ({ key: k, cost: this.mhCost(k, p) }));
+      out.secret = mole ? MOLE_TOOLS.filter(usable).map((k) => ({ key: k, cost: this.mhCost(k, p) })) : [];
       if (p.job === 'detective') out.freeScanAt = p.freeScanAt;
       if (p.job === 'medic') out.canProtect = p.protectRound !== g.round;
       out.scansLeft = g.scansLeft;

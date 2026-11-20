@@ -96,6 +96,41 @@
     return you ? t.replace(/^I think you is /, 'I think you are ').replace(/ their /g, ' your ').replace(/ they /g, ' you ').replace(/ them/g, ' you') : t;
   }
 
+  // Keeps a list on the screen in step with the game without drawing it again
+  // (Donny, 2026-11-19: "the screen keeps flashing when something new is
+  // added"): what is still there stays put, so nothing flashes, jumps or loses
+  // its place; new items are made and marked "fresh" (not on the first draw),
+  // and items no longer there are taken away. key(item): a name that stays the
+  // same for the same item. make(item): a new element. update(el, item):
+  // optional, for an item that is still there. Gives back the new elements.
+  function syncList(box, items, key, make, update) {
+    var have = {};
+    [].slice.call(box.children).forEach(function (n) {
+      if (n.dataset.k != null && !have[n.dataset.k]) have[n.dataset.k] = n;
+      else n.remove();
+    });
+    var first = box.dataset.synced !== '1';
+    box.dataset.synced = '1';
+    var made = [];
+    var want = items.map(function (it, i) {
+      var k = String(key(it, i));
+      var n = have[k];
+      if (n) { delete have[k]; if (update) update(n, it, i); return n; }
+      n = make(it, i);
+      n.dataset.k = k;
+      if (!first) { n.classList.add('fresh'); made.push(n); }
+      return n;
+    });
+    Object.keys(have).forEach(function (k) { have[k].remove(); });
+    want.forEach(function (n, i) { if (box.children[i] !== n) box.insertBefore(n, box.children[i] || null); });
+    return made;
+  }
+  // A new item's slide-in plays once: if it moves later it does not play again.
+  document.addEventListener('animationend', function (e) {
+    var t = e.target;
+    if (t && t.classList && t.classList.contains('fresh') && e.animationName === 'mh-fresh') t.classList.remove('fresh');
+  });
+
   // "4:05" from milliseconds.
   function clock(ms) {
     var s = Math.max(0, Math.ceil(ms / 1000));
@@ -105,5 +140,5 @@
   function stop(text) { return /[.!?]$/.test(text) ? text : text + '.'; }
   function plural(n, one, many) { return n + ' ' + (n === 1 ? one : (many || one + 's')); }
 
-  window.MH = { mk: mk, heroURL: heroURL, heroImg: heroImg, chip: chip, mole: mole, MOLE: MOLE, TOOLS: TOOLS, JOBS: JOBS, EMERGENCY: EMERGENCY, NOTE_SAYS: NOTE_SAYS, NOTE_WHY: NOTE_WHY, noteText: noteText, clock: clock, plural: plural, stop: stop, heroes: heroByKey };
+  window.MH = { mk: mk, heroURL: heroURL, heroImg: heroImg, chip: chip, mole: mole, MOLE: MOLE, TOOLS: TOOLS, JOBS: JOBS, EMERGENCY: EMERGENCY, NOTE_SAYS: NOTE_SAYS, NOTE_WHY: NOTE_WHY, noteText: noteText, clock: clock, plural: plural, stop: stop, heroes: heroByKey, syncList: syncList };
 })();
