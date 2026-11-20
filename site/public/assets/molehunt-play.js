@@ -7,8 +7,9 @@
    see their secret role. Then, until a Lab Meeting:
    - Questions: one after another; a right answer is energy. A missed one
      comes back later worth double (Second Chance), streaks earn bonuses.
-   - Lab tools: Scientists scan, peek and call meetings; Moles fake scans,
-     cut scans, smudge, disguise, cut the power and sound alarms.
+   - Lab tools: everyone scans, peeks and calls meetings; behind the Secret
+     tools button (on every screen) Moles fake scans, cut scans, smudge,
+     disguise, cut the power and sound alarms.
    - Evidence Board: drag classmates into Trust, Not sure and Suspect; every
      scan and clue pins itself on as a card; notes made with taps ("I think
      ___ is a Mole because my scan said Not sure"), no typing.
@@ -30,7 +31,8 @@
   var AV = window.SuperAvatars;
   var STEPS = ['mpCode', 'mpPass', 'mpName', 'mpLobby', 'mpGame', 'mpPaused', 'mpDone', 'mpGone'];
   var CODE = /^[A-HJ-NP-Z2-9]{6}$/;
-  var COLORS = ['#e8590c', '#1c7ed6', '#2f9e44', '#c2255c'];
+  // Marker colors from the notebook look (no green or red, which mean right and wrong).
+  var COLORS = ['#2a60c4', '#0d7f8c', '#7343b8', '#b8327a'];
   var SAVE = 'is8-molehunt-play-v1';
   var ws = null, code = '', me = null, leaving = false, retries = 0, pingTimer = null, hello = null, view = null, skew = null;
 
@@ -962,7 +964,7 @@
       (mole ? [
         'Sabotage the lab without getting caught.',
         v.mates.length ? M.stop('Your fellow Moles: ' + v.mates.map(function (m) { return m.name; }).join(', ')) + ' Keep it secret!' : 'You are the only Mole. Good luck!',
-        'Answer questions for energy, then use your Lab tools: fake scans, cutting scans, smudges, disguises.',
+        'Answer questions for energy. In Lab tools, tap Secret tools for your sabotage: fake scans, cutting scans, smudges, disguises. Everyone has that button, so it gives nothing away.',
         'At meetings, blend in and vote for a Scientist.'
       ] : [
         M.plural(n, 'Mole is', 'Moles are') + ' hiding in the lab. Find them and vote them out!',
@@ -1233,6 +1235,10 @@
       box.appendChild(mk('div', 'big', '✔️'));
       box.appendChild(mk('p', '', p.text || 'Done.'));
     }
+    // A mission the tool just finished comes along under its result (the
+    // result is never hidden behind it). A Mole's missions say only the energy
+    // while the secrets are covered.
+    if (p.mission) box.appendChild(mk('p', 'mh-pop-mission', '🎯 ' + (secretOpen ? 'Mission complete: ' + p.mission.text + ': +' + p.mission.reward + ' ⚡' : 'Mission complete! +' + p.mission.reward + ' ⚡')));
     var ok = mk('button', 'btn', 'OK');
     ok.type = 'button';
     ok.addEventListener('click', function () { $('mpPopBack').hidden = true; popSecret = false; });

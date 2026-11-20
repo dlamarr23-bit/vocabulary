@@ -600,7 +600,9 @@ export const molehunt = {
   /* ---------------- lab tools ---------------- */
 
   async mhTool(pid, m) {
-    const r = this.mhUseTool(pid, String(m.key || ''), String(m.target || ''), Date.now());
+    this.mhToolFor = pid;
+    let r;
+    try { r = this.mhUseTool(pid, String(m.key || ''), String(m.target || ''), Date.now()); } finally { this.mhToolFor = ''; }
     if (r) this.notice(pid, r);
     await this.save();
     this.toEveryone();
@@ -659,10 +661,10 @@ export const molehunt = {
       }
       this.mhMission(p, 'scan', 1);
       this.mhNote(t, p.name + ' scanned you.', 'scanned', p.id);
-      p.pop = { t: 'scan', name: t.name, hero: t.hero, clear, pub: key === 'public', at: now };
+      this.mhSetPop(p, { t: 'scan', name: t.name, hero: t.hero, clear, pub: key === 'public', at: now });
     } else if (key === 'peek') {
       const names = (list) => (list || []).map((id) => (g.players[id] ? g.players[id].name : '')).filter(Boolean);
-      p.pop = { t: 'peek', name: t.name, hero: t.hero, text: t.notesText || '', notes: (t.myNotes || []).filter((n) => g.players[n.who]).map((n) => ({ name: g.players[n.who].name, v: n.v, why: n.why })), board: { trust: names(t.board.trust), unsure: names(t.board.unsure), suspect: names(t.board.suspect) }, at: now };
+      this.mhSetPop(p, { t: 'peek', name: t.name, hero: t.hero, text: t.notesText || '', notes: (t.myNotes || []).filter((n) => g.players[n.who]).map((n) => ({ name: g.players[n.who].name, v: n.v, why: n.why })), board: { trust: names(t.board.trust), unsure: names(t.board.unsure), suspect: names(t.board.suspect) }, at: now });
       this.mhNote(t, 'Someone peeked at your notes.', 'peeked');
       this.mhNote(p, 'You peeked at ' + t.name + '\'s notes.', 'peek', t.id);
       secret(p.name + ' peeked at ' + t.name + '\'s notes');
@@ -680,7 +682,7 @@ export const molehunt = {
       t.smudged = false;
       secret(p.name + ' (Medic) protected ' + t.name + (was ? ' and wiped off a smudge' : ''));
       this.mhNote(p, 'You protected ' + t.name + ' for this round.', 'tool', t.id);
-      p.pop = { t: 'protect', name: t.name, hero: t.hero, at: now };
+      this.mhSetPop(p, { t: 'protect', name: t.name, hero: t.hero, at: now });
     } else if (key === 'fake') {
       both(p.name + ' scanned ' + t.name, p.name + ' FAKE scan on ' + t.name);
       file(p.name + ' faked a scan on ' + t.name);
@@ -688,7 +690,7 @@ export const molehunt = {
       p.fakes += 1;
       this.mhMission(p, 'fake2', 1);
       if (g.clear.includes(t.id)) this.mhMission(p, 'fakeClear', 1);
-      p.pop = { t: 'done', text: 'Your fake scan on ' + t.name + ' is on the Lab log.', at: now };
+      this.mhSetPop(p, { t: 'done', text: 'Your fake scan on ' + t.name + ' is on the Lab log.', at: now });
     } else if (key === 'cut') {
       if (g.scansLeft <= 0) return 'The class has no scans left to cut.';
       if (now - (g.cutAt || 0) < CUT_GAP_MS) return 'The scans were just cut. Try again in a little while.';
@@ -698,24 +700,24 @@ export const molehunt = {
       both('The class lost ' + plural(n, 'scan') + '!', p.name + (p.job === 'hacker' ? ' (Hacker)' : '') + ' cut ' + plural(n, 'scan'));
       file(p.name + ' cut ' + plural(n, 'scan'));
       this.mhMission(p, 'cut', 1);
-      p.pop = { t: 'done', text: 'You cut ' + plural(n, 'scan') + ' from the class.', at: now };
+      this.mhSetPop(p, { t: 'done', text: 'You cut ' + plural(n, 'scan') + ' from the class.', at: now });
     } else if (key === 'smudge') {
       if (t.protectedRound === g.round) {
         p.energy -= cost;
         secret(p.name + ' tried to smudge ' + t.name + ' (protected by the Medic)');
-        p.pop = { t: 'done', text: t.name + ' is protected by the Medic this round. Your smudge did not stick.', at: now };
+        this.mhSetPop(p, { t: 'done', text: t.name + ' is protected by the Medic this round. Your smudge did not stick.', at: now });
         return '';
       }
       t.smudged = true;
       secret(p.name + ' smudged ' + t.name);
       file(p.name + ' smudged ' + t.name);
-      p.pop = { t: 'done', text: t.name + ' will never come up Clear now.', at: now };
+      this.mhSetPop(p, { t: 'done', text: t.name + ' will never come up Clear now.', at: now });
     } else if (key === 'disguise') {
       if (p.disguise) return 'You already have a disguise on.';
       p.disguise = true;
       secret(p.name + ' put on a disguise');
       file(p.name + ' put on a disguise');
-      p.pop = { t: 'done', text: 'Disguised! The next scan on you says Clear.', at: now };
+      this.mhSetPop(p, { t: 'done', text: 'Disguised! The next scan on you says Clear.', at: now });
     } else if (key === 'powercut') {
       if (!g.power) return 'Lab Power is off in this game.';
       if (now - (g.powerCutAt || 0) < POWERCUT_GAP_MS) return 'The power was just cut. Try again in a minute.';
@@ -724,7 +726,7 @@ export const molehunt = {
       g.powerCutAt = now;
       both('Power cut! A Mole drained 10% of the Lab Power.', p.name + ' cut the power (-' + n + ')');
       file(p.name + ' cut the Lab Power');
-      p.pop = { t: 'done', text: 'You drained the Lab Power.', at: now };
+      this.mhSetPop(p, { t: 'done', text: 'You drained the Lab Power.', at: now });
     } else if (key === 'alarm') {
       if (g.emergency) return 'An alarm is already going.';
       if (now - (g.emergencyEndedAt || 0) < EMERGENCY_GAP_MS) return 'The lab just had an emergency. Try again in a little while.';
@@ -1057,7 +1059,7 @@ export const molehunt = {
     p.whispered = true;
     const text = this.mhRumor('', 'ghost', Date.now());
     if (text) this.mhLog('A ghost whispers: ' + text, false);
-    p.pop = { t: 'done', text: text ? 'Your whisper went out: ' + text : 'There was nothing to whisper.', at: Date.now() };
+    this.mhSetPop(p, { t: 'done', text: text ? 'Your whisper went out: ' + text : 'There was nothing to whisper.', at: Date.now() });
     await this.save();
     this.toEveryone();
   },
@@ -1076,7 +1078,7 @@ export const molehunt = {
     p.jar = 0;
     this.mhNote(t, 'A ghost gave you ' + n + ' energy!', 'gift');
     this.mhLog('A ghost gave ' + t.name + ' ' + n + ' energy.', true);
-    p.pop = { t: 'done', text: 'You gave ' + t.name + ' ' + n + ' energy.', at: Date.now() };
+    this.mhSetPop(p, { t: 'done', text: 'You gave ' + t.name + ' ' + n + ' energy.', at: Date.now() });
     await this.save();
     this.toEveryone();
   },
@@ -1104,8 +1106,19 @@ export const molehunt = {
       this.mhGain(p, x.reward);
       if (x.badge) this.mhBadge(p, x.badge);
       if (p.done === 3) this.mhBadge(p, 'Lab Hero');
-      p.pop = { t: 'mission', text: x.text, reward: x.reward, at: Date.now() };
+      // A mission finished by a tool rides along on that tool's result, so
+      // the result (a scan, a peek) is never hidden behind it.
+      const pop0 = p.pop;
+      if (pop0 && pop0.t !== 'mission' && this.mhToolFor === p.id) pop0.mission = { text: x.text, reward: x.reward };
+      else p.pop = { t: 'mission', text: x.text, reward: x.reward, at: Date.now() };
     });
+  },
+  // A tool's result for the student's pop-up. A mission that tool just
+  // finished (set a moment before) comes along with it.
+  mhSetPop(p, pop) {
+    const was = p.pop;
+    if (was && was.t === 'mission' && this.mhToolFor === p.id && (pop.at || Date.now()) - was.at < 1500) pop.mission = { text: was.text, reward: was.reward };
+    p.pop = pop;
   },
   mhBadge(p, name) { if (!p.badges.includes(name)) p.badges.push(name); },
 

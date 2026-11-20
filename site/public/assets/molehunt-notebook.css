@@ -1,0 +1,491 @@
+/* ============================================================
+   Mole Hunt, the hand drawn lab notebook look (Donny, 2026-11-19: "let's go
+   with style 1"; the mockup is Desktop\code\Mole Hunt style ideas
+   (2026.11.19)\Style 1). Cream graph paper, ink outlines that wobble (drawn
+   by molehunt-ink.js from the --ink-* variables below), boxes taped in like
+   index cards, rumors on sticky notes, the Lab log as a ruled ledger, marker
+   and highlighter colors, and ink doodles for every icon. Headings, numbers
+   and buttons: Kalam (marker handwriting). Log, rumors, small notes: Patrick
+   Hand. Questions and long sentences: Atkinson Hyperlegible, made for easy
+   reading. Dark mode is the same notebook at night.
+   It covers the game itself (the projector, the lobby and the end, the
+   students' game screens and the Teacher Remote); the setup page and the join
+   steps keep the site's own look.
+   ============================================================ */
+@font-face{ font-family:'Kalam'; font-style:normal; font-weight:400; font-display:swap; src:url('fonts/kalam-400.woff2') format('woff2'); }
+@font-face{ font-family:'Kalam'; font-style:normal; font-weight:700; font-display:swap; src:url('fonts/kalam-700.woff2') format('woff2'); }
+@font-face{ font-family:'Patrick Hand'; font-style:normal; font-weight:400; font-display:swap; src:url('fonts/patrick-hand-400.woff2') format('woff2'); }
+@font-face{ font-family:'Atkinson Hyperlegible'; font-style:normal; font-weight:400; font-display:swap; src:url('fonts/atkinson-400.woff2') format('woff2'); }
+@font-face{ font-family:'Atkinson Hyperlegible'; font-style:normal; font-weight:700; font-display:swap; src:url('fonts/atkinson-700.woff2') format('woff2'); }
+
+/* ---------------- the inks and papers ---------------- */
+.mh-page{
+  --nb-paper:#f6f0dc; --nb-grid:rgba(58,118,170,.17); --nb-vignette:rgba(140,100,40,.13); --nb-noise:.18;
+  --nb-card:#fffdf6; --nb-card2:#f3ecd6; --nb-ink:#1b1a1e; --nb-pencil:#555a66; --nb-blue:#23397a;
+  --nb-rule:#b9d0e8; --nb-margin:#e39090; --nb-shade:rgba(27,26,30,.28);
+  --nb-mole:#d0281f; --nb-mole-ink:#a81a14; --nb-mole-hl:#ffb4a8;
+  --nb-sci:#16883a; --nb-sci-ink:#0e6a2b; --nb-sci-hl:#a4ee97;
+  --nb-maybe:#e48a00; --nb-maybe-ink:#9c5c00; --nb-maybe-hl:#ffd37a;
+  --nb-hl:#fff16a; --nb-sticky:#ffe27a; --nb-sticky2:#cfe8fa; --nb-kraft:#d9b98b; --nb-kraft-d:#b8945f;
+  --nb-tint-green:#e3f6dc; --nb-tint-red:#fde3dd; --nb-tint-blue:#e2ecfb; --nb-tint-amber:#ffefc9; --nb-tint-violet:#ece2fb;
+  --nb-tab2:#cfe8fa; --nb-tab3:#ffe9a8; --nb-tab4:#e6d8f6; --nb-tab-ink:#1b1a1e;
+  --nb-hand:'Kalam', 'Comic Sans MS', cursive; --nb-note:'Patrick Hand', 'Kalam', cursive; --nb-read:'Atkinson Hyperlegible', Arial, sans-serif;
+  /* the game's older color names, in notebook inks */
+  --mh-bg:var(--nb-paper); --mh-panel:var(--nb-card); --mh-panel2:var(--nb-card2); --mh-line:rgba(27,26,30,.4);
+  --mh-ink:var(--nb-ink); --mh-muted:var(--nb-pencil);
+  --mh-mint:var(--nb-sci-ink); --mh-mint-bg:var(--nb-tint-green); --mh-mint-line:var(--nb-sci);
+  --mh-mole:var(--nb-mole-ink); --mh-mole-bg:var(--nb-tint-red); --mh-mole-line:var(--nb-mole);
+  --mh-en:#7a5200; --mh-en-bg:var(--nb-hl); --mh-en-line:#c9a200;
+  --mh-amber:var(--nb-maybe-ink); --mh-amber-bg:var(--nb-tint-amber);
+  --mh-violet:#6a3fb0; --mh-violet-bg:var(--nb-tint-violet); --mh-violet-line:#a98be0;
+  --mh-blue:#2757c4; --mh-blue-bg:var(--nb-tint-blue);
+  --mh-paper:var(--nb-sticky); --mh-paper-ink:#1b1a1e; --mh-shadow:none;
+  /* what molehunt-ink.js draws with, unless a box says otherwise */
+  --ink-fill:var(--nb-card); --ink-line:var(--nb-ink); --ink-shade:var(--nb-shade); --ink-hatch:transparent; --ink-stripe:transparent;
+  --mhi-line:var(--nb-ink);
+}
+html[data-theme="dark"] .mh-page{
+  --nb-paper:#1c1f26; --nb-grid:rgba(150,180,230,.09); --nb-vignette:rgba(0,0,0,.35); --nb-noise:.1;
+  --nb-card:#282c35; --nb-card2:#323742; --nb-ink:#ece6d6; --nb-pencil:#aeaba0; --nb-blue:#9db8ff;
+  --nb-rule:rgba(150,186,224,.28); --nb-margin:rgba(227,144,144,.55); --nb-shade:rgba(0,0,0,.5);
+  --nb-mole:#ff6b5e; --nb-mole-ink:#ff8d80; --nb-mole-hl:rgba(255,120,100,.3);
+  --nb-sci:#4fd47a; --nb-sci-ink:#74e698; --nb-sci-hl:rgba(110,230,140,.3);
+  --nb-maybe:#ffb347; --nb-maybe-ink:#ffc673; --nb-maybe-hl:rgba(255,190,90,.32);
+  --nb-hl:#f0d84a; --nb-sticky:#eed56c; --nb-sticky2:#b8d6f0; --nb-kraft:#5a4932; --nb-kraft-d:#47392a;
+  --nb-tint-green:#1f3a29; --nb-tint-red:#40211f; --nb-tint-blue:#1f2d47; --nb-tint-amber:#3d3220; --nb-tint-violet:#2f2744;
+  --nb-tab2:#26405a; --nb-tab3:#4a4022; --nb-tab4:#3a2f55; --nb-tab-ink:#ece6d6;
+  --mh-bg:var(--nb-paper); --mh-panel:var(--nb-card); --mh-panel2:var(--nb-card2); --mh-line:rgba(236,230,214,.35);
+  --mh-ink:var(--nb-ink); --mh-muted:var(--nb-pencil);
+  --mh-mint:var(--nb-sci-ink); --mh-mint-bg:var(--nb-tint-green); --mh-mint-line:var(--nb-sci);
+  --mh-mole:var(--nb-mole-ink); --mh-mole-bg:var(--nb-tint-red); --mh-mole-line:var(--nb-mole);
+  --mh-en:#ffd84a; --mh-en-bg:#4a4018; --mh-en-line:#b59a2c;
+  --mh-amber:var(--nb-maybe-ink); --mh-amber-bg:var(--nb-tint-amber);
+  --mh-violet:#c3adff; --mh-violet-bg:var(--nb-tint-violet); --mh-violet-line:#8d72d6;
+  --mh-blue:#8fb0ff; --mh-blue-bg:var(--nb-tint-blue);
+  --mh-paper:var(--nb-sticky); --mh-paper-ink:#1b1a1e; --mh-shadow:none;
+  --ink-fill:var(--nb-card); --ink-line:var(--nb-ink); --ink-shade:var(--nb-shade);
+  --mhi-line:var(--nb-ink);
+}
+
+/* Graph paper, a little grain and a soft edge. Fixed to the window, so the
+   grid lines up wherever two papers meet. */
+#mhLobby, #mhPlay, #mhDone, .mh-game, #mpDone, .mh-game .mh-overlay, #mhPlay .mh-cover, .mh-remote #mrMain{
+  background-color:var(--nb-paper);
+  background-image:
+    radial-gradient(ellipse at 50% 45%, transparent 62%, var(--nb-vignette) 100%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .38 0 0 0 0 .3 0 0 0 0 .18 0 0 0 .18 0'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23g)'/%3E%3C/svg%3E"),
+    linear-gradient(var(--nb-grid) 1.5px, transparent 1.5px),
+    linear-gradient(90deg, var(--nb-grid) 1.5px, transparent 1.5px);
+  background-size:100% 100%, 260px 260px, 2rem 2rem, 2rem 2rem;
+  background-attachment:fixed;
+  color:var(--nb-ink);
+  font-family:var(--nb-read);
+}
+#mhLobby{ border-radius:var(--radius); padding:1.1rem 1.3rem 1.4rem; }
+.mh-remote #mrMain{ border-radius:var(--radius); padding:.7rem; }
+
+/* What molehunt-ink.js adds: its drawing sits behind the box's own content. */
+.mh-ink{ position:absolute; z-index:-1; pointer-events:none; overflow:visible; max-width:none !important; max-height:none !important; }
+/* Each inked box starts from these (they would otherwise pass from a box to
+   the boxes inside it); the rules below change them box by box. */
+:where(.mh-inked){ --ink-fill:var(--nb-card); --ink-line:var(--nb-ink); --ink-shade:var(--nb-shade); --ink-hatch:transparent; --ink-hatch-gap:0; --ink-stripe:transparent; --ink-stripe-w:0; --ink-shadow:0; --ink-dasharray:none; --ink-pass2:.8; --ink-w:3; }
+.mh-ink-on .mh-inked{ background:transparent !important; border-color:transparent !important; box-shadow:none !important; isolation:isolate; border-radius:0 !important; }
+/* The ink doodles that stand in for emoji. */
+.mh-ic{ display:inline-block; width:1.2em; height:1.2em; vertical-align:-.26em; flex:none; overflow:visible; color:var(--mhi-line); }
+/* Superheroes get an ink outline, like stickers. */
+:is(#mhLobby, #mhPlay, #mhDone, .mh-game, #mpDone, .mh-remote) .rb-hero{ border-radius:0; filter:drop-shadow(1.4px 0 0 var(--nb-ink)) drop-shadow(-1.4px 0 0 var(--nb-ink)) drop-shadow(0 1.4px 0 var(--nb-ink)) drop-shadow(0 -1.4px 0 var(--nb-ink)); }
+:is(#mhLobby, #mhPlay, #mhDone, .mh-game, #mpDone, .mh-remote) .rb-hero.gray{ filter:grayscale(1) drop-shadow(1.4px 0 0 var(--nb-pencil)) drop-shadow(-1.4px 0 0 var(--nb-pencil)) drop-shadow(0 1.4px 0 var(--nb-pencil)) drop-shadow(0 -1.4px 0 var(--nb-pencil)); opacity:.55; }
+/* Masking tape, on the index cards. */
+#mhPlay .mh-stat::before, #mhPlay .mh-panel::before, #mhPlay .mh-named::before, #mhDone .mh-panel::before, #mhLobby .lv-joinbox::before{
+  content:""; position:absolute; z-index:6; width:6rem; height:1.6rem; left:calc(50% - 3rem); top:-.8rem; pointer-events:none; transform:rotate(-3deg);
+  background:linear-gradient(90deg, rgba(255,255,255,.22), rgba(255,255,255,0) 30%, rgba(255,255,255,.14) 70%, rgba(255,255,255,.25)), rgba(228,214,166,.86);
+  clip-path:polygon(2% 0, 98% 0, 100% 18%, 97% 34%, 100% 52%, 97% 70%, 100% 86%, 98% 100%, 2% 100%, 0 84%, 3% 66%, 0 50%, 3% 32%, 0 16%);
+}
+#mhPlay .mh-stat:nth-child(even)::before{ transform:rotate(3deg); left:calc(42% - 3rem); }
+#mhPlay .mh-p-clear::before{ left:-1.4rem; top:.5rem; transform:rotate(-38deg); }
+#mhPlay .mh-p-radio::before, #mhPlay .mh-named::before{ left:auto; right:-1.3rem; top:.4rem; transform:rotate(36deg); }
+html[data-theme="dark"] .mh-page :is(.mh-stat, .mh-panel, .mh-named, .lv-joinbox)::before{ opacity:.7; }
+
+/* Things that are paper with dark writing in both modes: highlighter yellow,
+   sticky notes, kraft paper. */
+.nb-dark-ink, #mhPlay .mh-codechip, #mhPlay .mh-rumor, .mh-clue, .mh-game .mh-en, .mh-banner.rumor, .mh-badges span, #mhDone .mh-aw,
+#mhPlay .mh-timer-pill, #mhPlay .mh-cb.hot, .mh-game .btn:not(.secondary), #mpDone .btn:not(.secondary),
+#mhLobby .btn:not(.secondary), #mhDone .btn:not(.secondary), .mh-nb .mh-nb-say{
+  color:#1b1a1e; --ink-line:#1b1a1e; --mhi-line:#1b1a1e;
+}
+
+/* ================= the teacher's screen ================= */
+#mhPlay .mh-bar{ background:transparent; border:0; padding:.15rem .3rem; gap:.6rem .8rem; }
+#mhPlay .mh-brand{ font-family:var(--nb-hand); font-weight:700; font-size:2rem; gap:.75rem; line-height:1; }
+#mhPlay .mh-brand .mh-mole{ height:3.5rem; width:auto; background:#fffdf6; border:.14rem solid #1b1a1e; padding:.15rem .3rem; border-radius:0; transform:rotate(-3deg); box-shadow:.25rem .3rem 0 var(--nb-shade); }
+#mhPlay .mh-brand span{ padding-top:.2em; text-decoration:underline wavy var(--nb-blue); text-decoration-thickness:.07em; text-underline-offset:.2em; }
+#mhPlay .mh-phase{ flex:0 1 auto; margin-right:auto; font-family:var(--nb-note); font-weight:400; font-size:1.15rem; color:var(--nb-ink); line-height:1.2; padding:0 .3em;
+  background:linear-gradient(100deg, transparent .15em, var(--nb-hl) .3em calc(100% - .3em), transparent calc(100% - .15em)); }
+html[data-theme="dark"] #mhPlay .mh-phase{ background:linear-gradient(100deg, transparent .15em, rgba(240,216,74,.25) .3em calc(100% - .3em), transparent calc(100% - .15em)); }
+#mhPlay .mh-clock-box{ border:0; background:transparent; padding:.3rem .5rem; gap:.5rem; --ink-w:3.2; }
+#mhPlay .mh-clock{ font-family:var(--nb-hand); font-weight:700; font-size:2.45rem; line-height:1; padding-top:.18em; min-width:5.2rem; }
+#mhPlay .mh-clock.low{ color:var(--nb-mole-ink); }
+#mhPlay .mh-tb{ font-family:var(--nb-hand); font-weight:700; font-size:1.05rem; padding:.35rem .65rem .2rem; --ink-w:2.4; }
+#mhPlay .mh-clock-set select{ font-family:var(--nb-hand); font-weight:700; font-size:1rem; border:.13rem solid var(--nb-ink); border-radius:.15rem; background:var(--nb-card); color:var(--nb-ink); padding:.3rem .35rem .15rem; }
+#mhPlay .mh-bar-right{ gap:.6rem; }
+#mhPlay .mh-codechip{ --ink-fill:var(--nb-hl); --ink-shadow:4; font-family:var(--nb-hand); font-weight:700; font-size:1.05rem; padding:.4rem .9rem .2rem; transform:rotate(1.5deg); }
+#mhPlay .mh-codechip strong{ font-size:1.65rem; letter-spacing:.08em; margin-left:.2rem; }
+#mhPlay .mh-tool{ font-family:var(--nb-hand); font-weight:700; font-size:1.05rem; padding:.45rem .8rem .25rem; color:var(--nb-ink); }
+#mhPlay .mh-tool[aria-expanded="true"]{ --ink-fill:var(--nb-tint-blue); --ink-line:var(--nb-blue); }
+#mhPlay .mh-tool .mh-ic{ width:1.5em; height:1.5em; vertical-align:-.4em; margin-right:.15rem; }
+#mhPlay .rb-music{ font-family:var(--nb-hand); font-weight:700; }
+#mhPlay .rb-music .lv-music-btn{ font-family:var(--nb-hand); border:.12rem solid var(--nb-ink); border-radius:.15rem; background:var(--nb-card); color:var(--nb-ink); }
+
+/* The four big numbers, taped in. */
+#mhPlay .mh-stats{ gap:1.4rem; padding:.45rem .4rem .1rem; }
+#mhPlay .mh-stat{ position:relative; display:flex; align-items:center; justify-content:center; gap:.65rem; padding:.55rem .9rem .35rem; text-align:left; --ink-w:3.2; }
+#mhPlay .mh-stat:nth-child(1){ transform:rotate(-.7deg); } #mhPlay .mh-stat:nth-child(2){ transform:rotate(.6deg); }
+#mhPlay .mh-stat:nth-child(3){ transform:rotate(-.4deg); } #mhPlay .mh-stat:nth-child(4){ transform:rotate(.8deg); }
+#mhPlay .mh-stat-ic{ font-size:3rem; line-height:1; }
+#mhPlay .mh-stat-ic .mh-ic{ vertical-align:middle; }
+#mhPlay .mh-stat b{ display:inline-block; font-family:var(--nb-hand); font-weight:700; font-size:3.5rem; line-height:1; padding-top:.16em; white-space:nowrap; color:var(--nb-ink); }
+#mhPlay .mh-stat.red b{ color:var(--nb-mole-ink); --ink-line:var(--nb-mole); --ink-w:3.4; padding:.16em .3em 0; }
+#mhPlay .mh-stat.red > span:last-child{ margin-left:.45rem; }
+#mhPlay .mh-stat.mint b{ color:var(--nb-sci-ink); }
+#mhPlay .mh-stat:nth-child(2) b{ color:var(--nb-blue); }
+#mhPlay .mh-stat > span:last-child{ font-family:var(--nb-hand); font-weight:700; font-size:1.2rem; letter-spacing:.04em; line-height:1.02; text-transform:uppercase; color:var(--nb-ink); max-width:6.5rem; padding-top:.3em; }
+
+/* Lab Power: a hatched green marker filling toward the flag. */
+#mhPlay .mh-power{ background:transparent; border:0; padding:.1rem .3rem 0; }
+#mhPlay .mh-pw-head{ align-items:center; gap:.4rem 1rem; }
+#mhPlay .mh-pw-head b{ font-family:var(--nb-hand); font-weight:700; font-size:1.9rem; letter-spacing:.02em; color:var(--nb-ink); line-height:1; padding-top:.15em; }
+#mhPlay .mh-pw-head span{ font-family:var(--nb-read); font-weight:700; font-size:1.1rem; color:var(--nb-ink); }
+#mhPlay .mh-pw-bar{ height:2.5rem; margin:.45rem 2.8rem .2rem .2rem; --ink-w:3.2; }
+#mhPlay .mh-pw-bar::after{ content:""; position:absolute; left:.35rem; right:.35rem; bottom:.15rem; height:.6rem; z-index:0; pointer-events:none;
+  background:repeating-linear-gradient(90deg, transparent 0 calc(10% - 2px), var(--nb-pencil) calc(10% - 2px) 10%); opacity:.6; }
+#mhPlay .mh-pw-fill{ z-index:1; left:.3rem; top:.3rem; bottom:.3rem; border-radius:.1rem; background:repeating-linear-gradient(-55deg, var(--nb-sci) 0 .15rem, var(--nb-sci-hl) .15rem .65rem); }
+#mhPlay .mh-pw-pct{ z-index:2; right:1rem; font-family:var(--nb-hand); font-weight:700; font-size:1.7rem; color:var(--nb-sci-ink); padding-top:.15em; }
+#mhPlay .mh-pw-flag{ z-index:3; right:-2.9rem; top:-1.9rem; font-size:3.2rem; line-height:1; }
+
+/* The three panels. */
+#mhPlay .mh-main{ gap:1.4rem; padding:.45rem .5rem .25rem; }
+html.mh-projecting #mhPlay .mh-panel{ overflow:visible; }
+#mhPlay .mh-panel{ position:relative; padding:.75rem 1.1rem .7rem; --ink-w:3.2; }
+#mhPlay .mh-p-clear{ transform:rotate(-.35deg); }
+#mhPlay .mh-p-radio{ transform:rotate(.3deg); --ink-fill:var(--nb-kraft); --ink-hatch:var(--nb-kraft-d); --ink-hatch-gap:9; }
+#mhPlay .mh-panel h3, #mhDone .mh-panel h3, #mhPlay .mh-claims h3, #mhPlay .mh-named h3{
+  display:flex; align-items:center; gap:.5rem; margin:0 0 .45rem; font-family:var(--nb-hand); font-weight:700; font-size:1.8rem; line-height:1; letter-spacing:0; text-transform:none; color:var(--nb-ink);
+}
+#mhPlay .mh-panel h3 .mh-ic, #mhDone .mh-panel h3 .mh-ic, #mhPlay .mh-claims h3 .mh-ic, #mhPlay .mh-named h3 .mh-ic{ width:2.2rem; height:2.2rem; vertical-align:middle; }
+#mhPlay .mh-panel .mh-empty{ font-family:var(--nb-note); font-size:1.3rem; line-height:1.2; color:var(--nb-pencil); }
+#mhPlay .mh-p-clear .mh-chips{ flex-direction:column; flex-wrap:nowrap; gap:.85rem; padding:.5rem .4rem .4rem; }
+#mhPlay .mh-p-clear .mh-chip{ --ink-fill:var(--nb-tint-green); --ink-w:2.6; gap:.6rem; padding:.45rem .7rem .35rem .55rem; font-family:var(--nb-hand); font-weight:700; font-size:1.6rem; color:var(--nb-ink); max-width:none; }
+#mhPlay .mh-p-clear .mh-chip:nth-child(3n+2){ transform:rotate(.8deg); } #mhPlay .mh-p-clear .mh-chip:nth-child(3n){ transform:rotate(-.6deg); }
+#mhPlay .mh-p-clear .mh-chip .rb-hero{ width:2.7rem; height:2.7rem; }
+#mhPlay .mh-p-clear .mh-chip-name{ padding-top:.15em; }
+.mh-chip.clear::after, .mh-person.clear::after{ content:""; display:inline-block; width:1.3em; height:1.3em; flex:none; margin-left:auto;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M7.6 25.6C11.4 28.6 15 32.6 18.6 37.4 24.4 26.6 31.4 17.6 41.6 9' fill='none' stroke='%2316883a' stroke-width='6.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat; }
+/* The Lab log: a ruled ledger with a red margin. */
+#mhPlay .mh-log{ margin:0 -1.1rem; border-top:.13rem solid var(--nb-rule); }
+#mhPlay .mh-log li, #mhPlay .mh-log li:last-child{ display:flex; align-items:center; gap:0; padding:.28rem 1rem .22rem 0; border-bottom:.13rem solid var(--nb-rule); font-family:var(--nb-note); font-size:1.45rem; line-height:1.15; color:var(--nb-ink); }
+#mhPlay .mh-log .t{ flex:none; width:4.3rem; align-self:stretch; display:flex; align-items:center; justify-content:center; margin:-.28rem .8rem -.22rem 0; border-right:.18rem solid var(--nb-margin);
+  font-family:var(--nb-hand); font-weight:700; font-size:1.2rem; color:var(--nb-blue); padding-top:.15em; }
+#mhPlay .mh-log .alarm{ color:var(--nb-mole-ink); font-family:var(--nb-hand); font-weight:700; text-decoration:underline wavy var(--nb-mole); text-decoration-thickness:.07em; text-underline-offset:.22em; }
+#mhPlay .mh-log .good{ color:var(--nb-ink); font-weight:400; padding:0 .3em;
+  background:linear-gradient(100deg, transparent .15em, var(--nb-sci-hl) .3em calc(100% - .3em), transparent calc(100% - .15em)); }
+#mhPlay .mh-log .teach{ color:var(--nb-blue); font-weight:400; }
+/* The Lab radio: sticky notes on kraft paper. */
+#mhPlay .mh-rumors{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); align-content:start; gap:1.1rem 1.1rem; padding:.5rem .5rem .7rem .3rem; }
+#mhPlay .mh-rumor{ --ink-fill:var(--nb-sticky); --ink-w:2.4; --ink-shadow:4; padding:.7rem .9rem .6rem; font-family:var(--nb-note); font-size:1.35rem; line-height:1.18; }
+#mhPlay .mh-rumor.ghost{ --ink-fill:var(--nb-sticky2); }
+#mhPlay .mh-rumor:nth-child(4n+1){ transform:rotate(-1.8deg); } #mhPlay .mh-rumor:nth-child(4n+2){ transform:rotate(1.4deg); }
+#mhPlay .mh-rumor:nth-child(4n+3){ transform:rotate(1.2deg); } #mhPlay .mh-rumor:nth-child(4n){ transform:rotate(-1.3deg); }
+#mhPlay .mh-rumor b{ font-family:var(--nb-hand); font-weight:700; font-size:1.45rem; letter-spacing:0; text-transform:none; color:#1b1a1e; margin-bottom:.25rem; }
+#mhPlay .mh-next{ font-family:var(--nb-note); font-weight:400; font-size:1.4rem; color:var(--nb-ink); text-align:right; }
+@media (max-width:1100px){ #mhPlay .mh-rumors{ grid-template-columns:1fr; } }
+/* A lab alarm. */
+#mhPlay .mh-alarm{ --ink-fill:var(--nb-tint-red); --ink-line:var(--nb-mole); --ink-w:3.4; --ink-hatch:var(--nb-mole-hl); --ink-hatch-gap:14; animation:none; color:var(--nb-mole-ink); font-family:var(--nb-hand); }
+#mhPlay .mh-alarm .bar{ border:.13rem solid var(--nb-mole); border-radius:.1rem; background:var(--nb-card); }
+
+/* The teacher's control bar: kraft paper with paper buttons. */
+#mhPlay .mh-ctrl{ --ink-fill:var(--nb-kraft); --ink-hatch:var(--nb-kraft-d); --ink-hatch-gap:9; --ink-w:3.2; padding:.65rem .9rem; gap:.55rem; justify-content:space-between; }
+#mhPlay .mh-cb{ flex-direction:row; gap:.4rem; min-width:0; white-space:nowrap; padding:.5rem .7rem .3rem; font-family:var(--nb-hand); font-weight:700; font-size:1.12rem; line-height:1; color:var(--nb-ink); --ink-w:3; --ink-shadow:5; }
+#mhPlay .mh-cb > span{ font-size:1.65rem; line-height:1; }
+#mhPlay .mh-cb small, #mhPlay .mh-cb b{ font:inherit; margin-left:.28em; }
+#mhPlay .mh-cb > b + small{ margin-left:.28em; }
+#mhPlay .mh-cb.hot{ --ink-fill:var(--nb-hl); }
+#mhPlay .mh-cb.on{ --ink-fill:var(--nb-tint-green); }
+#mhPlay .mh-cb.red{ --ink-fill:#1b1a1e; --ink-hatch:rgba(255,255,255,.12); --ink-hatch-gap:8; --ink-line:#1b1a1e; color:#fffdf6; --mhi-line:#fffdf6; }
+html[data-theme="dark"] #mhPlay .mh-cb.red{ --ink-fill:#7c1d17; --ink-line:#ece6d6; }
+#mhPlay .mh-cb.armed{ --ink-fill:#a81a14; outline:.2rem solid var(--nb-hl); }
+#mhPlay .mh-cb:disabled{ opacity:.55; --ink-dasharray:10 8; --ink-pass2:0; --ink-shade:transparent; }
+#mhPlay .mh-cb:not(:disabled):hover{ translate:0 -2px; }
+#mhPlay .mh-pop{ --ink-w:3.2; --ink-shadow:6; border-radius:0; font-family:var(--nb-read); }
+#mhPlay .mh-pop h3{ font-family:var(--nb-hand); font-size:1.5rem; }
+#mhPlay .mh-pop-item{ font-family:var(--nb-hand); font-weight:700; border-radius:.15rem; border:.12rem solid var(--nb-ink); background:var(--nb-card); color:var(--nb-ink); }
+#mhPlay .mh-pop-item:hover, #mhPlay .mh-pop-item.on{ background:var(--nb-hl); color:#1b1a1e; }
+
+/* The full-stage screens: the story, a meeting, the reveal, paused. */
+/* A little bigger than the stage, so no outline from the board peeks out. */
+#mhPlay .mh-cover{ border-radius:0; inset:-.45rem -.75rem; }
+#mhPlay .mh-cover h2{ font-family:var(--nb-hand); font-weight:700; font-size:clamp(2.2rem, 4.6vw, 3.6rem); line-height:1.05; color:var(--nb-ink); }
+#mhPlay .mh-cover p{ font-family:var(--nb-note); font-size:clamp(1.15rem, 2.1vw, 1.6rem); color:var(--nb-ink); }
+#mhPlay .mh-cover .ring{ font-size:4rem; }
+#mhPlay .mh-story .line{ font-family:var(--nb-hand); font-weight:700; font-size:clamp(1.5rem, 3vw, 2.4rem); color:var(--nb-ink); }
+#mhPlay .mh-story .line i{ color:var(--nb-mole-ink); }
+#mhPlay .mh-story .who{ font-family:var(--nb-hand); font-size:1.4rem; }
+#mhPlay .mh-cover .btn{ font-family:var(--nb-hand); }
+#mhPlay .mh-timer-pill{ --ink-fill:var(--nb-hl); --ink-w:3.2; --ink-shadow:4; font-family:var(--nb-hand); font-weight:700; font-size:2rem; line-height:1; padding:.45rem 1.1rem .2rem; transform:rotate(-1.2deg); }
+#mhPlay .mh-meet-head{ gap:.4rem 1.4rem; }
+#mhPlay .mh-meet-head h2{ text-decoration:underline wavy var(--nb-blue); text-decoration-thickness:.05em; text-underline-offset:.18em; padding-top:.1em; }
+#mhPlay .mh-meet-head h2 .mh-ic{ width:1.15em; height:1.15em; vertical-align:-.18em; margin-right:.15em; }
+#mhPlay .mh-cover p.mh-vote-count{ font-family:var(--nb-hand); font-weight:700; font-size:1.7rem; color:var(--nb-ink); }
+#mhPlay .mh-cover:not(.mh-with-claims) p.mh-vote-count{ font-size:clamp(2.4rem, 6vw, 4.4rem); }
+#mhPlay .mh-vote-bar{ overflow:visible; --ink-w:2.6; height:1.3rem; }
+#mhPlay .mh-vote-bar i{ position:relative; margin:.22rem; height:calc(100% - .44rem); max-width:calc(100% - .44rem); border-radius:.1rem; background:repeating-linear-gradient(-55deg, var(--nb-blue) 0 .13rem, var(--nb-tint-blue) .13rem .55rem); }
+#mhPlay .mh-cover p.mh-meet-sub{ font-size:1.5rem; }
+/* What the lab is saying: notes pinned on kraft paper, oldest first. */
+#mhPlay .mh-meet-body{ gap:1.4rem; margin-top:.5rem; }
+#mhPlay .mh-claims{ --ink-fill:var(--nb-kraft); --ink-hatch:var(--nb-kraft-d); --ink-hatch-gap:9; --ink-w:3.2; padding:.8rem 1rem .6rem; }
+#mhPlay .mh-claims .mh-empty, #mhPlay .mh-named .mh-empty{ font-family:var(--nb-note); font-size:1.35rem; color:var(--nb-ink); }
+#mhPlay .mh-claims-n{ font-size:.75em; color:var(--nb-pencil); }
+#mhPlay .mh-claim-feed{ gap:1.3rem 1.1rem; padding:1rem .6rem .7rem .4rem; }
+#mhPlay .mh-claim{ --ink-w:2.6; --ink-shadow:4; --ink-stripe-w:9; --ink-stripe:var(--nb-pencil); align-items:flex-start; padding:.6rem .8rem .55rem 1.7rem; }
+#mhPlay .mh-claim.mole{ --ink-stripe:var(--nb-mole); } #mhPlay .mh-claim.sci{ --ink-stripe:var(--nb-sci); } #mhPlay .mh-claim.unsure{ --ink-stripe:var(--nb-maybe); }
+#mhPlay .mh-claim:nth-child(3n+1){ transform:rotate(-.6deg); } #mhPlay .mh-claim:nth-child(3n+2){ transform:rotate(.5deg); } #mhPlay .mh-claim:nth-child(3n){ transform:rotate(-.4deg); }
+#mhPlay .mh-claim .rb-hero.small{ width:2.7rem; height:2.7rem; }
+#mhPlay .mh-claim b{ font-family:var(--nb-hand); font-weight:700; font-size:1.3rem; color:var(--nb-ink); }
+#mhPlay .mh-claim .txt span{ font-family:var(--nb-read); font-weight:400; font-size:1.15rem; line-height:1.25; color:var(--nb-ink); }
+#mhPlay .mh-claim-feed[data-n="many"] .mh-claim .txt span{ font-size:clamp(.95rem, .55rem + .55vw, 1.12rem); }
+#mhPlay .mh-claim::before{ content:"MOLE"; position:absolute; right:.8rem; top:-.8rem; z-index:4; font-family:var(--nb-hand); font-weight:700; font-size:.85rem; line-height:1; letter-spacing:.06em;
+  padding:.32rem .5rem .12rem; background:var(--nb-card); border:.13rem solid currentColor; transform:rotate(-3deg); color:var(--nb-mole-ink); }
+#mhPlay .mh-claim.sci::before{ content:"SCIENTIST"; color:var(--nb-sci-ink); }
+#mhPlay .mh-claim.unsure::before{ content:"MIGHT BE"; color:var(--nb-maybe-ink); }
+#mhPlay .mh-claim.newest::after{ top:auto; bottom:-.75rem; right:-.5rem; background:var(--nb-hl); color:#1b1a1e; border:.13rem solid #1b1a1e; border-radius:.1rem; font-family:var(--nb-hand); font-size:1.05rem; padding:.3rem .6rem .1rem; transform:rotate(-8deg); }
+#mhPlay .mh-feed-more{ font-family:var(--nb-hand); font-size:1.1rem; border-radius:.15rem; background:var(--nb-hl); color:#1b1a1e; border:.13rem solid #1b1a1e; }
+/* Names on the table: a ruled list with marker tallies. */
+#mhPlay .mh-named{ transform:rotate(.35deg); --ink-w:3.2; }
+#mhPlay .mh-named-list{ gap:0; margin:0 -.9rem; padding:0; border-top:.13rem solid var(--nb-rule); }
+#mhPlay .mh-nrow{ background:transparent; border:0; border-bottom:.13rem solid var(--nb-rule); border-radius:0; padding:.5rem .9rem .45rem; }
+#mhPlay .mh-nrow b{ font-family:var(--nb-hand); font-weight:700; font-size:1.45rem; padding-top:.1em; }
+#mhPlay .mh-nrow .says{ font-family:var(--nb-read); font-weight:700; font-size:1rem; }
+#mhPlay .mh-nrow .tally{ height:.6rem; border-radius:.1rem; }
+#mhPlay .mh-nrow .tally .mole{ background:repeating-linear-gradient(90deg, var(--nb-mole) 0 .22rem, transparent .22rem .42rem); }
+#mhPlay .mh-nrow .tally .sci{ background:repeating-linear-gradient(90deg, var(--nb-sci) 0 .22rem, transparent .22rem .42rem); }
+#mhPlay .mh-nrow .tally .unsure{ background:repeating-linear-gradient(90deg, var(--nb-maybe) 0 .22rem, transparent .22rem .42rem); }
+/* The reveal. */
+#mhPlay .mh-reveal .was{ font-family:var(--nb-note); font-size:clamp(1.3rem, min(2.8vw, 3.8vh), 2.1rem); color:var(--nb-ink); }
+#mhPlay .mh-reveal .res{ font-family:var(--nb-hand); font-weight:700; font-size:clamp(2.6rem, min(7vw, 10vh), 5.6rem); line-height:1.05; }
+#mhPlay .mh-reveal .res.mole{ color:var(--nb-mole-ink); } #mhPlay .mh-reveal .res.sci{ color:var(--nb-sci-ink); }
+#mhPlay .mh-reveal .res.mh-dots{ color:var(--nb-pencil); }
+#mhPlay .mh-reveal .left{ font-family:var(--nb-hand); font-size:1.4rem; color:var(--nb-mole-ink); }
+#mhPlay .mh-bar-row .nm, #mhPlay .mh-bar-row b{ font-family:var(--nb-hand); font-weight:700; color:var(--nb-ink); }
+#mhPlay .mh-bar-row .bar{ border:.14rem solid var(--nb-ink); border-radius:.12rem; background:var(--nb-card); height:1.6rem; }
+#mhPlay .mh-bar-row .bar i{ border-radius:0; background:repeating-linear-gradient(-55deg, var(--nb-blue) 0 .14rem, var(--nb-tint-blue) .14rem .6rem); }
+#mhPlay .mh-bar-row.top .bar i{ background:repeating-linear-gradient(-55deg, var(--nb-maybe) 0 .14rem, var(--nb-maybe-hl) .14rem .6rem); }
+#mhPlay .mh-bar-row.skip .bar i{ background:repeating-linear-gradient(-55deg, var(--nb-pencil) 0 .14rem, transparent .14rem .6rem); }
+#mhPlay .mh-tally .mh-chip, #mhPlay .mh-reason{ font-family:var(--nb-hand); font-weight:700; font-size:1.05rem; --ink-w:2.2; }
+#mhPlay .mh-reason{ --ink-fill:var(--nb-tint-amber); color:var(--nb-maybe-ink); }
+#mhPlay .mh-warn{ --ink-fill:var(--nb-tint-red); --ink-line:var(--nb-mole); font-family:var(--nb-hand); }
+#mhPlay .mh-voters{ font-family:var(--nb-note); font-size:1rem; color:var(--nb-ink); }
+
+/* ================= the lobby and the end (projected too) ================= */
+#mhLobby .lv-joinbox{ position:relative; --ink-w:3.4; }
+#mhLobby .lv-join-step{ font-family:var(--nb-note); font-size:1.6rem; color:var(--nb-ink); }
+#mhLobby .lv-code{ font-family:var(--nb-hand); font-weight:700; color:var(--nb-blue); }
+#mhLobby .lv-qr{ transform:rotate(1.5deg); border:.15rem solid #1b1a1e; border-radius:.1rem; }
+#mhLobby .lv-join-or, #mhLobby .lv-count{ font-family:var(--nb-hand); color:var(--nb-ink); }
+#mhLobby .lv-count{ font-size:1.5rem; }
+#mhLobby .rb-player{ --ink-w:2.4; color:var(--nb-ink); font-family:var(--nb-hand); }
+#mhLobby .rb-player:nth-child(3n+1){ transform:rotate(-.8deg); } #mhLobby .rb-player:nth-child(3n){ transform:rotate(.7deg); }
+#mhLobby .rb-player-name{ font-weight:700; font-size:1.15rem; }
+#mhLobby .lv-roll, #mhLobby .rb-lobby-opts{ --ink-w:2.6; color:var(--nb-ink); font-family:var(--nb-hand); }
+#mhLobby .rb-lobby-opts select, #mhLobby .lv-roll select, #mhLobby .lv-lobby-roll select{ font-family:var(--nb-hand); font-weight:700; border:.12rem solid var(--nb-ink); border-radius:.12rem; background:var(--nb-card); color:var(--nb-ink); }
+#mhLobby .btn, #mhPlay .btn, #mhDone .btn, .mh-host .lv-roster .btn{ font-family:var(--nb-hand); font-weight:700; border-radius:0; --ink-shadow:5; --ink-w:3; color:var(--nb-ink); }
+#mhLobby .btn:not(.secondary), #mhPlay .btn:not(.secondary), #mhDone .btn:not(.secondary){ --ink-fill:var(--nb-hl); }
+#mhLobby .btn:hover, #mhDone .btn:hover, #mhPlay .btn:hover{ translate:0 -2px; }
+#mhDone{ padding:1rem 1.2rem 1.4rem; }
+#mhDone .mh-done-head h2{ font-family:var(--nb-hand); font-weight:700; font-size:clamp(2.6rem, 5.5vw, 4.4rem); }
+#mhDone .mh-done-head.sci h2{ color:var(--nb-sci-ink); } #mhDone .mh-done-head.mole h2{ color:var(--nb-mole-ink); }
+#mhDone .mh-done-head p{ font-family:var(--nb-note); font-size:1.5rem; color:var(--nb-ink); }
+#mhDone .mh-mcap{ --ink-fill:var(--nb-tint-red); --ink-line:var(--nb-mole); --ink-w:2.6; }
+#mhDone .mh-mcap b{ font-family:var(--nb-hand); font-size:1.3rem; }
+#mhDone .mh-mcap:nth-child(even){ transform:rotate(-1deg); } #mhDone .mh-mcap:nth-child(odd){ transform:rotate(.8deg); }
+#mhDone .mh-panel{ position:relative; --ink-w:3.2; }
+#mhDone .mh-tl li{ font-family:var(--nb-note); font-size:1.25rem; border-bottom:.13rem solid var(--nb-rule); }
+#mhDone .mh-tl i{ font-family:var(--nb-hand); color:var(--nb-blue); }
+#mhDone .mh-aw{ --ink-fill:var(--nb-sticky); --ink-shadow:4; --ink-w:2.4; }
+#mhDone .mh-aw:nth-child(odd){ transform:rotate(-1deg); } #mhDone .mh-aw:nth-child(even){ transform:rotate(.9deg); }
+#mhDone .mh-aw b{ font-family:var(--nb-hand); color:#7a5200; } #mhDone .mh-aw strong{ font-family:var(--nb-hand); font-size:1.2rem; } #mhDone .mh-aw small{ color:#3d3a33; }
+#mhDone .mh-report h3{ font-family:var(--nb-hand); font-size:1.6rem; }
+#mhDone .mh-table th{ font-family:var(--nb-hand); font-size:.85rem; background:var(--nb-card2); color:var(--nb-ink); }
+#mhDone .mh-table td{ border-top:.13rem solid var(--nb-rule); }
+#mhDone .mh-lb-note{ font-family:var(--nb-hand); color:var(--nb-sci-ink); }
+.mh-host .lv-roster{ --ink-w:3.2; font-family:var(--nb-read); }
+.mh-host .lv-roster h2{ font-family:var(--nb-hand); }
+
+/* ================= the students' screens ================= */
+.mh-game{ gap:.55rem; }
+.mh-game .mh-me-bar{ background:transparent; border:0; padding:.15rem .3rem; gap:.7rem; }
+.mh-game .mh-me-bar .who{ font-family:var(--nb-hand); font-weight:700; font-size:1.5rem; gap:.55rem; }
+.mh-game .mh-me-bar .who .rb-hero{ width:2.8rem; height:2.8rem; }
+.mh-game .mh-role{ --ink-fill:var(--nb-kraft); --ink-shadow:4; --ink-w:2.8; font-family:var(--nb-hand); font-weight:700; font-size:1.1rem; letter-spacing:0; text-transform:none; padding:.5rem .95rem .3rem; transform:rotate(-1deg); }
+.mh-game .mh-role{ color:var(--nb-ink); }
+.mh-game .mh-role.sci{ --ink-fill:var(--nb-tint-green); color:var(--nb-sci-ink); } .mh-game .mh-role.mole{ --ink-fill:var(--nb-tint-red); color:var(--nb-mole-ink); } .mh-game .mh-role.ghost{ --ink-fill:var(--nb-tint-violet); color:var(--mh-violet); }
+.mh-game .mh-role .mh-hide-left{ font-family:var(--nb-note); font-weight:400; }
+.mh-game .mh-en{ --ink-fill:var(--nb-hl); --ink-w:2.8; font-family:var(--nb-hand); font-weight:700; font-size:1.45rem; padding:.35rem .85rem .15rem; transform:rotate(1deg); }
+.mh-game .mh-streak{ --ink-fill:#ffe3c9; --ink-w:2.4; font-family:var(--nb-hand); font-weight:700; font-size:1.15rem; color:#9a3d06; padding:.35rem .7rem .15rem; }
+html[data-theme="dark"] .mh-game .mh-streak{ --ink-fill:#4a2c18; color:#ffb070; }
+.mh-game .mh-mini-clock{ font-family:var(--nb-hand); font-weight:700; font-size:1.4rem; color:var(--nb-ink); }
+.mh-banner{ --ink-w:2.6; font-family:var(--nb-hand); font-weight:700; font-size:1.1rem; padding:.5rem .9rem .35rem; }
+.mh-banner.alarm{ --ink-fill:var(--nb-tint-red); --ink-line:var(--nb-mole); animation:none; color:var(--nb-mole-ink); }
+.mh-banner.rumor{ --ink-fill:var(--nb-sticky); font-family:var(--nb-note); font-weight:400; font-size:1.25rem; }
+.mh-banner.power{ --ink-fill:transparent; --ink-line:transparent; padding:.1rem .3rem; color:var(--nb-ink); }
+.mh-banner.power .bar, .mh-banner.alarm .bar{ height:1rem; border:.13rem solid var(--nb-ink); border-radius:.1rem; background:var(--nb-card); }
+.mh-banner.power .bar i{ background:repeating-linear-gradient(-55deg, var(--nb-sci) 0 .12rem, var(--nb-sci-hl) .12rem .5rem); }
+/* Notebook divider tabs over the page. */
+.mh-game .mh-tabs{ position:relative; z-index:2; gap:.45rem; padding-left:1.2rem; align-items:flex-end; margin-bottom:-.6rem; }
+.mh-game .mh-tab{ --ink-w:2.8; font-family:var(--nb-hand); font-weight:700; font-size:1.15rem; padding:.55rem 1.05rem .55rem; color:var(--nb-tab-ink); }
+.mh-game .mh-tab:nth-child(2){ --ink-fill:var(--nb-tab2); } .mh-game .mh-tab:nth-child(3){ --ink-fill:var(--nb-tab3); } .mh-game .mh-tab:nth-child(4){ --ink-fill:var(--nb-tab4); }
+.mh-game .mh-tab[aria-selected="true"]{ --ink-fill:var(--nb-card); color:var(--nb-ink); padding-bottom:.85rem; font-size:1.25rem; z-index:3; }
+.mh-game .mh-tab .dot{ top:-.45rem; right:-.45rem; min-width:1.5rem; height:1.5rem; line-height:1.55rem; font-family:var(--nb-hand); font-size:.9rem; background:var(--nb-blue); color:var(--nb-card); }
+.mh-game .mh-pane{ position:relative; z-index:1; padding:.95rem 1.2rem .8rem; --ink-w:3.2; }
+.mh-game .mh-pane-q .mh-q img.mh-qimg{ max-height:clamp(6rem, 24vh, 22rem); }
+.mh-game .mh-pane-q .mh-ans{ grid-auto-rows:minmax(3.7rem, 1fr); }
+.mh-game .mh-pane-q::after{ content:""; position:absolute; inset:.7rem .5rem; z-index:-1; pointer-events:none;
+  background:repeating-linear-gradient(transparent 0 2.15rem, var(--nb-rule) 2.15rem calc(2.15rem + 2px)); opacity:.55; }
+/* Questions and answers. */
+.mh-game .mh-ribbon{ font-family:var(--nb-hand); border-radius:.1rem; border:.13rem dashed var(--nb-maybe); background:var(--nb-tint-amber); color:var(--nb-maybe-ink); }
+.mh-game .mh-q{ background:transparent; border:0; padding:.2rem .3rem .4rem; text-align:left; }
+.mh-game .mh-pane-q .mh-q p{ font-family:var(--nb-read); font-weight:700; line-height:1.25; color:var(--nb-ink); }
+.mh-game .mh-ans{ gap:1.1rem 1.4rem; padding:.3rem .5rem .5rem .2rem; }
+.mh-game .mh-ans button{ --ink-fill:var(--tile); --ink-hatch:rgba(255,255,255,.16); --ink-hatch-gap:10; --ink-w:3.2; --ink-shadow:6; --ink-line:#1b1a1e;
+  font-family:var(--nb-hand); font-weight:700; font-size:calc(clamp(1.3rem, 2.5vw, 2.3rem) * var(--fit, 1)); line-height:1.15; color:#fffdf6; text-shadow:2px 2px 0 rgba(27,26,30,.55); }
+.mh-game .mh-ans button > span{ padding-top:.15em; }
+.mh-game .mh-ans button:nth-child(4n+1){ transform:rotate(-.6deg); } .mh-game .mh-ans button:nth-child(4n+2){ transform:rotate(.5deg); }
+.mh-game .mh-ans button:nth-child(4n+3){ transform:rotate(.4deg); } .mh-game .mh-ans button:nth-child(4n){ transform:rotate(-.5deg); }
+.mh-game .mh-ans button:hover:not(:disabled){ filter:brightness(1.08); translate:0 -2px; }
+.mh-game .mh-ans button.right{ --ink-fill:#16883a; } .mh-game .mh-ans button.wrong{ --ink-fill:#b42335; } .mh-game .mh-ans button.dim{ opacity:.35; }
+.mh-game .mh-feedback{ font-family:var(--nb-hand); font-size:1.6rem; }
+.mh-game .mh-feedback small{ font-family:var(--nb-note); font-weight:400; font-size:1.15rem; }
+.mh-game .mh-streak-meter{ font-family:var(--nb-hand); font-size:1.1rem; color:var(--nb-ink); gap:.5rem; }
+.mh-game .mh-streak-meter i{ width:2.4rem; height:1.1rem; border:.14rem solid var(--nb-ink); border-radius:.1rem; background:var(--nb-card); }
+.mh-game .mh-streak-meter i.on{ background:repeating-linear-gradient(-55deg, #e0661a 0 .12rem, #ff9636 .12rem .45rem); border-color:var(--nb-ink); }
+/* Lab tools and the Secret tools drawer. */
+.mh-game .mh-pane > .lv-small{ font-family:var(--nb-note); font-size:1.15rem; color:var(--nb-ink); }
+.mh-game .mh-tools{ gap:1rem; }
+.mh-game .mh-toolbtn{ --ink-w:2.8; --ink-shadow:4; padding:.75rem .85rem .65rem; color:var(--nb-ink); }
+.mh-game .mh-toolbtn:nth-child(odd){ transform:rotate(-.4deg); } .mh-game .mh-toolbtn:nth-child(even){ transform:rotate(.4deg); }
+.mh-game .mh-toolbtn .ic{ font-size:2.1rem; }
+.mh-game .mh-toolbtn b{ font-family:var(--nb-hand); font-weight:700; font-size:1.25rem; padding-top:.1em; }
+.mh-game .mh-toolbtn small{ font-family:var(--nb-note); font-size:1.05rem; color:var(--nb-pencil); }
+.mh-game .mh-toolbtn .price{ font-family:var(--nb-hand); font-size:1.05rem; color:var(--mh-en); }
+.mh-game .mh-toolbtn.picked{ outline:none; --ink-fill:var(--nb-tint-blue); --ink-line:var(--nb-blue); --ink-w:3.6; }
+.mh-game .mh-drawer-btn{ --ink-fill:var(--nb-kraft); }
+.mh-game .mh-drawer-btn small{ color:var(--nb-ink); opacity:.8; }
+.mh-game .mh-drawer-btn .price{ color:var(--nb-ink); }
+.mh-game .mh-drawer{ --ink-fill:transparent; --ink-dasharray:11 8; --ink-pass2:0; --ink-w:2.6; }
+.mh-game .mh-drawer h4, .mh-game .mh-pickwho h4, .mh-game .mh-missions h4{ font-family:var(--nb-hand); font-size:1.3rem; letter-spacing:0; text-transform:none; color:var(--nb-ink); }
+.mh-game .mh-mates{ font-family:var(--nb-hand); font-size:1.15rem; color:var(--nb-mole-ink); }
+.mh-game .mh-pickwho{ --ink-line:var(--nb-blue); --ink-w:3.2; }
+.mh-game .mh-person{ --ink-w:2; font-family:var(--nb-hand); font-weight:700; font-size:1.1rem; padding:.2rem .6rem .1rem .25rem; color:var(--nb-ink); }
+.mh-game .mh-person.sus, .mh-game .mh-person.mate{ --ink-fill:var(--nb-tint-red); }
+.mh-game .mh-person.tru{ --ink-fill:var(--nb-tint-green); }
+.mh-game .mh-person[aria-pressed="true"]{ --ink-fill:var(--nb-blue); color:var(--nb-card); --ink-w:2.8; }
+/* The Evidence Board and notes. */
+.mh-game .mh-col{ --ink-w:2.8; padding:.6rem .6rem .7rem; }
+.mh-game .mh-col h4{ font-family:var(--nb-hand); font-size:1.2rem; letter-spacing:.03em; text-decoration:underline wavy currentColor; text-decoration-thickness:.07em; text-underline-offset:.22em; }
+.mh-game .mh-col.trust{ --ink-fill:var(--nb-tint-green); } .mh-game .mh-col.suspect{ --ink-fill:var(--nb-tint-red); } .mh-game .mh-col.unsure{ --ink-fill:var(--nb-tint-amber); }
+.mh-game .mh-col.drop-on{ outline:.2rem dashed var(--nb-blue); outline-offset:.2rem; }
+.mh-game .mh-col .mh-chip{ font-family:var(--nb-hand); font-size:1.05rem; border:.13rem solid var(--nb-ink); border-radius:.15rem; background:var(--nb-card); color:var(--nb-ink); }
+.mh-game .mh-col .mh-chip.mole{ background:var(--nb-tint-red); color:var(--nb-mole-ink); }
+.mh-game .mh-board-help{ font-family:var(--nb-note); font-size:1.05rem; }
+.mh-game .mh-clues{ border:.15rem dashed var(--nb-pencil); border-radius:.1rem; background:var(--nb-kraft); }
+.mh-game .mh-clues h4{ font-family:var(--nb-hand); font-size:1.15rem; color:#1b1a1e; text-transform:none; letter-spacing:0; }
+.mh-clue{ --ink-fill:var(--nb-sticky); --ink-w:2; --ink-shadow:3; font-family:var(--nb-note); font-size:1.1rem; }
+.mh-clue::before{ z-index:2; }
+.mh-game .mh-missions{ --ink-w:2.8; }
+.mh-game .mh-mrow{ border-top:.13rem solid var(--nb-rule); font-family:var(--nb-note); font-size:1.2rem; }
+.mh-game .mh-mrow .box{ border:.16rem solid var(--nb-ink); border-radius:.12rem; }
+.mh-game .mh-mrow .rw{ font-family:var(--nb-hand); }
+.mh-game .mh-lock{ --ink-dasharray:11 8; --ink-pass2:0; --ink-w:2.8; }
+.mh-game .mh-lock h3{ font-family:var(--nb-hand); font-size:1.6rem; }
+.mh-game .mh-lock p{ font-family:var(--nb-note); font-size:1.2rem; color:var(--nb-ink); }
+.mh-game .mh-lock .ic{ font-size:3rem; }
+.mh-game .mh-mynotes{ --ink-w:2.6; }
+.mh-game .mh-case .mh-mynotes{ --ink-fill:transparent; --ink-line:transparent; }
+.mh-game .mh-mynotes-head span{ font-family:var(--nb-note); font-size:1rem; color:var(--nb-pencil); }
+.mh-game .mh-mynotes-head h4, .mh-game .mh-case-sec h4{ font-family:var(--nb-hand); font-size:1.15rem; letter-spacing:.02em; text-transform:none; }
+.mh-game .mh-note{ --ink-w:2.2; --ink-stripe-w:7; --ink-stripe:var(--nb-pencil); padding:.35rem .5rem .3rem 1.2rem; font-family:var(--nb-read); font-weight:700; }
+.mh-game .mh-note.mole{ --ink-stripe:var(--nb-mole); } .mh-game .mh-note.sci{ --ink-stripe:var(--nb-sci); } .mh-game .mh-note.unsure{ --ink-stripe:var(--nb-maybe); }
+.mh-game .mh-nb{ --ink-line:var(--nb-blue); --ink-w:3; }
+.mh-game .mh-nb .mh-nb-say{ background:var(--nb-sticky); border-radius:.1rem; font-family:var(--nb-hand); font-size:1.15rem; }
+.mh-game .mh-nb .mh-nb-step{ font-family:var(--nb-hand); font-size:1rem; }
+.mh-game .mh-tell{ --ink-fill:var(--nb-tint-blue); --ink-line:var(--nb-blue); --ink-w:2.2; font-family:var(--nb-hand); font-size:.95rem; color:var(--nb-blue); padding:.3rem .7rem .15rem; }
+.mh-game .mh-told{ font-family:var(--nb-hand); }
+.mh-game .mh-said-one{ font-family:var(--nb-note); font-size:1.1rem; }
+.mh-game .mh-case{ border:.15rem solid var(--nb-ink); border-radius:.15rem; background:var(--nb-card); }
+.mh-game .mh-case-sec .mh-rumor{ background:var(--nb-sticky); color:#1b1a1e; border:0; border-radius:.1rem; font-family:var(--nb-note); font-size:1.05rem; }
+.mh-game .mh-reason-pick button{ --ink-w:2.2; font-family:var(--nb-hand); font-weight:700; font-size:1rem; padding:.35rem .8rem .2rem; color:var(--nb-ink); }
+.mh-game .mh-reason-pick button[aria-pressed="true"]{ --ink-fill:var(--nb-maybe-hl); color:var(--nb-ink); }
+.mh-game .mh-vote-key{ font-family:var(--nb-note); font-size:1.05rem; }
+/* Big moments: the role card, a meeting, frozen, pop-ups. */
+.mh-game .mh-overlay h2{ font-family:var(--nb-hand); font-weight:700; font-size:clamp(1.8rem, 4.4vw, 2.8rem); }
+.mh-game .mh-overlay p{ font-family:var(--nb-note); font-size:1.25rem; color:var(--nb-ink); }
+.mh-game .mh-timer-pill{ --ink-fill:var(--nb-hl); --ink-line:#1b1a1e; --ink-shadow:3; color:#1b1a1e; font-family:var(--nb-hand); font-size:1.3rem; padding:.4rem .9rem .2rem; transform:rotate(-1deg); }
+.mh-game .mh-rolecard{ --ink-w:4; --ink-shadow:6; padding:1.2rem 1.3rem; }
+.mh-game .mh-rolecard.sci{ --ink-line:var(--nb-sci); } .mh-game .mh-rolecard.mole{ --ink-line:var(--nb-mole); }
+.mh-game .mh-rolecard .rn{ font-family:var(--nb-hand); font-size:2.6rem; }
+.mh-game .mh-rolecard li, .mh-game .mh-rolecard small{ font-family:var(--nb-read); }
+.mh-game .mh-rolecard .job{ background:var(--nb-sticky); color:#1b1a1e; border-radius:.1rem; font-family:var(--nb-note); font-size:1.1rem; }
+.mh-game .mh-cover-btn{ --ink-fill:var(--nb-blue); --ink-shadow:6; --ink-w:3.4; color:#fffdf6; --mhi-line:#fffdf6; font-family:var(--nb-hand); font-size:1.5rem; }
+html[data-theme="dark"] .mh-game .mh-cover-btn{ --ink-fill:#2f56b8; }
+.mh-game .mh-secret-btn{ --ink-fill:var(--nb-kraft); --ink-w:2.4; color:var(--nb-ink); font-family:var(--nb-hand); font-weight:700; padding:.45rem 1rem .25rem; }
+.mh-game .mh-secret.open{ --ink-w:2.8; }
+.mh-game .mh-secret.open.sci{ --ink-line:var(--nb-sci); } .mh-game .mh-secret.open.mole{ --ink-line:var(--nb-mole); }
+.mh-game .mh-secret .txt{ font-family:var(--nb-hand); font-size:1.2rem; }
+.mh-game .mh-frozen{ font-family:var(--nb-hand); }
+.mh-game .mh-frozen > div:nth-child(2){ --ink-fill:var(--nb-card); color:var(--nb-ink); padding:.6rem 1rem .4rem; }
+.mh-game .mh-reveal .was{ font-family:var(--nb-note); font-size:1.5rem; color:var(--nb-ink); }
+.mh-game .mh-reveal .res{ font-family:var(--nb-hand); font-weight:700; }
+.mh-game .mh-reveal .res.mole{ color:var(--nb-mole-ink); } .mh-game .mh-reveal .res.sci{ color:var(--nb-sci-ink); }
+.mh-game .mh-tally .mh-chip{ font-family:var(--nb-hand); border:.13rem solid var(--nb-ink); border-radius:.12rem; background:var(--nb-card); }
+.mh-popup{ --ink-w:3.4; --ink-shadow:6; font-family:var(--nb-read); color:var(--nb-ink); }
+.mh-popup h3{ font-family:var(--nb-hand); font-size:1.7rem; }
+.mh-popup p{ color:var(--nb-ink); }
+.mh-popup .ok{ color:var(--nb-sci-ink); } .mh-popup .no{ color:var(--nb-maybe-ink); }
+.mh-popup .big .mh-ic{ width:1.1em; height:1.1em; }
+.mh-popup .peek{ background:var(--nb-card2); border-radius:.1rem; font-family:var(--nb-note); font-size:1.1rem; }
+.mh-badges span{ --ink-fill:var(--nb-sticky); --ink-w:2; font-family:var(--nb-hand); }
+.mh-game .btn, #mpDone .btn{ font-family:var(--nb-hand); font-weight:700; border-radius:0; --ink-w:3; --ink-shadow:5; color:var(--nb-ink); }
+.mh-game .btn:not(.secondary), #mpDone .btn:not(.secondary){ --ink-fill:var(--nb-hl); }
+.mh-game .btn:hover:not(:disabled), #mpDone .btn:hover:not(:disabled){ translate:0 -2px; }
+.mh-game .btn:disabled{ opacity:.55; --ink-dasharray:10 8; --ink-pass2:0; --ink-shade:transparent; }
+.mh-game .mh-ghost-top h2, .mh-game .mh-jar b{ font-family:var(--nb-hand); }
+#mpDone .mh-done-head h2{ font-family:var(--nb-hand); font-weight:700; }
+#mpDone .lv-me, #mpDone .lv-lede{ font-family:var(--nb-hand); color:var(--nb-ink); }
+#mpDone .mh-aw{ --ink-fill:var(--nb-sticky); color:#1b1a1e; }
+
+/* ================= the Teacher Remote ================= */
+.mh-remote .mh-rm-head{ --ink-fill:#1b1a1e; --ink-line:#1b1a1e; color:#fffdf6; font-family:var(--nb-hand); }
+html[data-theme="dark"] .mh-remote .mh-rm-head{ --ink-fill:#3a1814; --ink-line:#ece6d6; }
+.mh-remote .mh-stat{ --ink-w:2.6; }
+.mh-remote .mh-stat b{ font-family:var(--nb-hand); }
+.mh-remote .mh-stat span{ font-family:var(--nb-hand); font-weight:700; letter-spacing:.02em; }
+.mh-remote .mh-cb{ --ink-w:2.6; --ink-shadow:4; font-family:var(--nb-hand); color:var(--nb-ink); }
+.mh-remote .mh-cb.hot{ --ink-fill:var(--nb-hl); color:#1b1a1e; --mhi-line:#1b1a1e; }
+.mh-remote .mh-cb.red{ --ink-fill:#1b1a1e; color:#fffdf6; --mhi-line:#fffdf6; }
+.mh-remote .mh-tab{ --ink-w:2.4; font-family:var(--nb-hand); color:var(--nb-tab-ink); }
+.mh-remote .mh-tab[aria-selected="true"]{ --ink-fill:var(--nb-card); color:var(--nb-ink); }
+.mh-remote .mh-prow .nm, .mh-remote .mh-acts button{ font-family:var(--nb-hand); }
+.mh-remote .mh-truth{ --ink-w:2.4; font-family:var(--nb-note); font-size:1.05rem; }
+
+@media (prefers-reduced-motion:reduce){
+  #mhPlay .mh-cb:not(:disabled):hover, .mh-game .mh-ans button:hover:not(:disabled), .mh-game .btn:hover:not(:disabled){ translate:none; }
+}
+
+/* Messages on the teacher's screen: a note on yellow paper. */
+html .mh-page.mh-host .lv-toast{ font-family:var(--nb-hand); font-weight:700; font-size:1.2rem; background:var(--nb-hl); color:#1b1a1e; border:.14rem solid #1b1a1e; border-radius:.15rem; box-shadow:.25rem .3rem 0 var(--nb-shade); }
+
+/* The lobby and the end use the whole screen too. */
+body[data-mh-step="mhLobby"] main.mh-page, body[data-mh-step="mhDone"] main.mh-page{ max-width:min(120rem, 100%); }
+#mhDone .mh-moles-row > .mh-empty{ font-family:var(--nb-hand); font-size:1.2rem; color:var(--nb-ink); }
+#mhDone .mh-table td, #mhDone .mh-missed{ font-family:var(--nb-read); }
+#mhDone .mh-report h4{ font-family:var(--nb-hand); font-size:1.2rem; }
+
+.mh-popup .mh-pop-mission{ font-family:var(--nb-hand); font-weight:700; color:var(--nb-sci-ink); margin:.2rem 0 .7rem; }

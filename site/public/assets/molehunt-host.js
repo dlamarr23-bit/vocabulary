@@ -393,15 +393,21 @@
     $('mhPhase').textContent = phase;
     drawClock(b);
     var order = [];
-    order.push(part('stats', JSON.stringify(st), function (el) {
+    // The four big numbers, each with its doodle: built once, then only the
+    // numbers change.
+    var SV = [['red', st.molesLeft, 'Moles left', '🕳️'], ['', st.meetingsLeft, 'Meetings left', '🔔'], ['mint', st.scansLeft, 'Scans left', '🔍'], ['', st.alive + (st.alive !== st.players ? ' / ' + st.players : ''), 'In the lab', '🧪']];
+    var sp = part('stats', 'four', function (el) {
       el.className = 'mh-part mh-stats';
-      [['red', st.molesLeft, 'Moles left'], ['', st.meetingsLeft, 'Meetings left'], ['mint', st.scansLeft, 'Scans left'], ['', st.alive + (st.alive !== st.players ? ' / ' + st.players : ''), 'In the lab']].forEach(function (x) {
+      SV.forEach(function (x) {
         var s = mk('div', 'mh-stat ' + x[0]);
-        s.appendChild(mk('b', '', String(x[1])));
+        s.appendChild(mk('span', 'mh-stat-ic', x[3]));
+        s.appendChild(mk('b', '', ''));
         s.appendChild(mk('span', '', x[2]));
         el.appendChild(s);
       });
-    }));
+    });
+    [].forEach.call(sp.querySelectorAll('.mh-stat > b'), function (n, i) { var v = String(SV[i][1]); if (n.textContent !== v) n.textContent = v; });
+    order.push(sp);
     // The alarm, Lab Power and the three panels are built once and then
     // changed in place, so they never flash or lose their place.
     if (b.emergency) {
@@ -481,15 +487,15 @@
       var li = mk('li');
       li.appendChild(mk('span', 't', ago(x.at)));
       var cls = /ALARM|lost|Power cut|A MOLE/.test(x.text) ? 'alarm' : /Clear|Fixed|Not a Mole/.test(x.text) ? 'good' : /teacher/i.test(x.text) ? 'teach' : '';
-      li.appendChild(mk('span', cls, x.text));
+      li.appendChild(mk('span', cls, (cls === 'alarm' ? '⚠️ ' : '') + x.text + (cls === 'good' ? ' ✔️' : '')));
       return li;
     });
     empty(l, log.length ? '' : 'Scans and sabotage show up here as they happen.');
     var r = panel('radio');
     var rumors = (b.rumors || []).slice().reverse();
     M.syncList(r.querySelector('.mh-rumors'), rumors, function (x) { return x.n + '|' + x.at + '|' + x.text; }, function (x) {
-      var d = mk('div', 'mh-rumor');
-      d.appendChild(mk('b', '', x.by ? 'A ghost whispers' : 'Rumor ' + x.n));
+      var d = mk('div', 'mh-rumor' + (x.by ? ' ghost' : ''));
+      d.appendChild(mk('b', '', x.by ? '👻 A ghost whispers' : 'Rumor ' + x.n));
       d.appendChild(document.createTextNode(x.text));
       return d;
     });
